@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: linda_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-linda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lindapassword}
+      POSTGRES_DB: ${POSTGRES_DB:-linda_fashion}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linda_web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-linda}:${POSTGRES_PASSWORD:-lindapassword}@postgres:5432/${POSTGRES_DB:-linda_fashion}?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-linda-fashion-super-secret-key-32-chars-minimum}
+    depends_on:
+      - postgres
+    volumes:
+      - uploads_data:/app/public/uploads
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linda_worker
+    restart: always
+    command: npx ts-node src/worker/index.ts
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-linda}:${POSTGRES_PASSWORD:-lindapassword}@postgres:5432/${POSTGRES_DB:-linda_fashion}?schema=public
+    depends_on:
+      - postgres
+      - web
+    volumes:
+      - uploads_data:/app/public/uploads
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-cream: #FAF8F4;
+  --color-sand: #E4D9C8;
+  --color-espresso: #2B2019;
+  --color-cognac: #7A4B32;
+  --color-sage: #405023; /* Přesná nová hluboká olivová barva #405023 */
+  --color-sage-light: #F1F4EB;
+  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-espresso);
+  font-family: var(--font-jakarta);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6, .font-editorial {
+  font-family: var(--font-cormorant);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF8F4;
+}
+::-webkit-scrollbar-thumb {
+  background: #405023;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2B2019;
+}
+
+/* Vlastní jemná textura v Hero sekci (opacita 0.15 - trošku průhledná) */
+.texture-hero-user {
+  position: relative;
+  background-color: #FAF8F4;
+}
+
+.texture-hero-user::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/textures/hero-texture.jpg');
+  background-repeat: repeat;
+  background-size: 320px auto;
+  opacity: 0.15; /* Jemná elegantní průhlednost */
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Glassmorphism & Soft Effects */
+.glass-panel {
+  background: rgba(250, 248, 244, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(228, 217, 200, 0.6);
+}
+
+.editorial-shadow {
+  box-shadow: 0 10px 30px -5px rgba(43, 32, 25, 0.06);
+}
