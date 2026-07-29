@@ -140,9 +140,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Personal Note Teaser / Brand Story - Čistý papírový podklad bez zrnité textury */}
+      {/* Personal Note Teaser / Brand Story s novou jemnou druhou texturou */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#FAF8F4] border border-[#E4D9C8] rounded-3xl p-8 sm:p-14 relative overflow-hidden shadow-card grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="texture-secondary-user border border-[#E4D9C8] rounded-3xl p-8 sm:p-14 relative overflow-hidden shadow-card grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-6">
             <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-[#7A4B32]">
               <Heart className="w-4 h-4 fill-[#7A4B32]" />

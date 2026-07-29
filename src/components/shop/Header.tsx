@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Heart, User, Menu, X, Search, Sparkles } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -18,13 +18,30 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Cart & Favorites Context
   const { totalItemCount: cartCount } = useCart();
   const { favoritesCount } = useFavorites();
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 30) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 bg-[#FAF8F4]/95 backdrop-blur-md border-b border-[#E4D9C8]/80 shadow-sm transition-all duration-300">
+    <header
+      className={`sticky top-0 z-40 bg-white border-b border-[#E4D9C8] transition-all duration-300 ${
+        isScrolled ? 'shadow-md py-1' : 'shadow-sm py-0'
+      }`}
+    >
       {/* Vacation mode banner */}
       {vacationMode?.active && (
         <div className="bg-[#7A4B32] text-[#FAF8F4] text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2">
@@ -34,10 +51,13 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        {/* 3-Column Grid with Navigation Pushed to Far Left Edge */}
-        <div className="grid grid-cols-12 items-center h-24">
-          
-          {/* Left Column (5 cols): Nav links shifted slightly to the right */}
+        {/* 3-Column Grid with Shrinking Height on Scroll */}
+        <div
+          className={`grid grid-cols-12 items-center transition-all duration-300 ${
+            isScrolled ? 'h-16' : 'h-24'
+          }`}
+        >
+          {/* Left Column (5 cols): Nav links */}
           <div className="col-span-5 flex items-center justify-start pl-4 lg:pl-8">
             {/* Mobile menu button */}
             <button
@@ -48,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            {/* Desktop Navigation - Shifted to the far left */}
+            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-3 xl:space-x-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-[#2B2019] whitespace-nowrap">
               <Link href="/produkty" className="hover:text-[#7A4B32] transition-colors">
                 Kolekce
@@ -74,16 +94,22 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Center Column (2 cols): Centered Brand Logo */}
           <div className="col-span-2 flex flex-col items-center justify-center text-center px-2">
             <Link href="/" className="inline-block group text-center">
-              <span className="font-serif text-2xl sm:text-3xl tracking-[0.2em] text-[#2B2019] uppercase font-medium group-hover:text-[#7A4B32] transition-colors block whitespace-nowrap">
+              <span
+                className={`font-serif uppercase font-medium text-[#2B2019] group-hover:text-[#7A4B32] transition-all duration-300 block whitespace-nowrap ${
+                  isScrolled ? 'text-xl sm:text-2xl tracking-[0.15em]' : 'text-2xl sm:text-3xl tracking-[0.2em]'
+                }`}
+              >
                 LINDA FASHION
               </span>
-              <span className="block text-[9px] tracking-[0.35em] text-[#405023] uppercase font-sans font-semibold -mt-1">
-                Moda Italiana
-              </span>
+              {!isScrolled && (
+                <span className="block text-[9px] tracking-[0.35em] text-[#405023] uppercase font-sans font-semibold -mt-1 transition-all duration-300">
+                  Moda Italiana
+                </span>
+              )}
             </Link>
           </div>
 
-          {/* Right Column (5 cols): Action icons pushed to far right */}
+          {/* Right Column (5 cols): Action icons */}
           <div className="col-span-5 flex items-center justify-end space-x-3 sm:space-x-5 text-[#2B2019] pr-0 -mr-2">
             {/* Search */}
             <button
@@ -126,7 +152,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </Link>
           </div>
-
         </div>
 
         {/* Expandable Search Input */}
@@ -152,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile drawer menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#FAF8F4] border-b border-[#E4D9C8] px-6 pt-2 pb-6 space-y-3 text-xs font-medium uppercase tracking-wider text-[#2B2019] text-center">
+        <div className="lg:hidden bg-white border-b border-[#E4D9C8] px-6 pt-2 pb-6 space-y-3 text-xs font-medium uppercase tracking-wider text-[#2B2019] text-center">
           <Link href="/produkty" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
             Kolekce
           </Link>

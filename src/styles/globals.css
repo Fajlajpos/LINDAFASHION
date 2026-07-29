@@ -44,7 +44,7 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   background: #2B2019;
 }
 
-/* Vlastní jemná textura v Hero sekci (opacita 0.15 - trošku průhledná) */
+/* 🎨 1. Celý obrázek v kuse pro Hero sekci */
 .texture-hero-user {
   position: relative;
   background-color: #FAF8F4;
@@ -55,9 +55,49 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   position: absolute;
   inset: 0;
   background-image: url('/textures/hero-texture.jpg');
-  background-repeat: repeat;
-  background-size: 320px auto;
-  opacity: 0.15; /* Jemná elegantní průhlednost */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.15;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* 🎨 2. Celý druhý obrázek v kuse pro vzkaz zakladatelky */
+.texture-secondary-user {
+  position: relative;
+  background-color: #FAF8F4;
+}
+
+.texture-secondary-user::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/textures/secondary-texture.jpg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* 🎨 3. Vlastní velmi jemná a průhledná textura v o něco světlejší hnědé (#3E2E25) pro patičku */
+.texture-footer-user {
+  position: relative;
+  background-color: #3E2E25; /* O něco světlejší hřejivá čokoládově hnědá */
+}
+
+.texture-footer-user::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/textures/footer-texture.jpg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.12; /* Vkusná, velmi jemná průhledná textura */
   mix-blend-mode: multiply;
   pointer-events: none;
 }
