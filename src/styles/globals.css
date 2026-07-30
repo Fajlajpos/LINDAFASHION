@@ -83,10 +83,10 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   border-radius: inherit;
 }
 
-/* 🎨 3. Vlastní velmi jemná a průhledná textura v o něco světlejší hnědé (#3E2E25) pro patičku */
+/* 🎨 3. Vlastní zřetelněji viditelná průhledná textura pro patičku v hnědé #3E2E25 */
 .texture-footer-user {
   position: relative;
-  background-color: #3E2E25; /* O něco světlejší hřejivá čokoládově hnědá */
+  background-color: #3E2E25; /* Hřejivá čokoládově hnědá */
 }
 
 .texture-footer-user::before {
@@ -97,8 +97,8 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  opacity: 0.12; /* Vkusná, velmi jemná průhledná textura */
-  mix-blend-mode: multiply;
+  opacity: 0.20; /* Jemně zvýrazněná průhlednost pro zřetelnou viditelnost */
+  mix-blend-mode: overlay;
   pointer-events: none;
 }
 
