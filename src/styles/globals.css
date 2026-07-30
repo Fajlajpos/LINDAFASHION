@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+/* Fonty se načítají přes next/font v src/app/layout.tsx (samohostované, bez
+   render-blocking requestu na fonts.googleapis.com). next/font nastavuje
+   --font-cormorant a --font-jakarta na <html>. */
 
 @tailwind base;
 @tailwind components;
@@ -11,21 +13,86 @@
   --color-cognac: #7A4B32;
   --color-sage: #405023; /* Přesná nová hluboká olivová barva #405023 */
   --color-sage-light: #F1F4EB;
-  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
-  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
 }
 
 body {
   background-color: var(--color-cream);
   color: var(--color-espresso);
-  font-family: var(--font-jakarta);
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6, .font-editorial {
-  font-family: var(--font-cormorant);
+  font-family: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Přístupnost: viditelný focus pro klávesnici.
+
+   Řada formulářů používá `focus:outline-none` (Tailwind → průhledný outline).
+   Prstenec je proto vykreslený přes box-shadow, který `outline-none` nemůže
+   přebít – jedním pravidlem tak platí napříč celým webem.
+   `:focus-visible` = jen klávesnice, myš prstenec nevyvolá.
+--------------------------------------------------------------------------- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--color-cream),
+    0 0 0 4px var(--color-cognac);
+  border-radius: inherit;
+}
+
+/* Odkaz pro přeskočení navigace – viditelný až při fokusu klávesnicí */
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: 0.5rem;
+  transform: translate(-50%, -150%);
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: 9999px;
+  background-color: var(--color-espresso);
+  color: var(--color-cream);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: transform 200ms ease-out;
+}
+
+.skip-link:focus-visible {
+  transform: translate(-50%, 0);
+}
+
+/* ---------------------------------------------------------------------------
+   Respekt k prefers-reduced-motion (WCAG 2.3.3).
+
+   Záměrně NEvypínáme všechny přechody plošně. WCAG 2.3.3 míří na pohyb, který
+   může vyvolat nevolnost – posuny, zoomování, parallax, plynulé skrolování.
+   Přechody barvy, stínu a průhlednosti pohyb nepředstavují a jejich vypnutím
+   by web jen ztratil plynulost, kterou uživatel čekává (hover stavy,
+   zmenšování hlavičky při skrolu).
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  /* Plynulé skrolování → skok. Tohle je skutečný vestibulární problém. */
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  /* Zvětšování obrázků a ikon při hoveru = pohyb → zrušit,
+     barevná změna u téhož prvku ale zůstává. */
+  [class*="group-hover:scale"],
+  [class*="hover:scale"] {
+    transform: none !important;
+  }
+
+  /* Žádná animace nesmí běžet donekonečna. */
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* Custom Scrollbar */

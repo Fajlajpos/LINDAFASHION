@@ -13,9 +13,9 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
   return (
     <CartProvider>
       <FavoritesProvider>
-        <div className="min-h-screen flex flex-col bg-[#FAF8F4] text-[#2B2019] selection:bg-[#7A4B32] selection:text-white">
+        <div className="min-h-screen flex flex-col bg-linda-cream text-linda-espresso selection:bg-linda-cognac selection:text-white">
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="obsah" className="flex-1">{children}</main>
           <Footer onOpenCookieSettings={() => setCookieSettingsOpen(true)} />
           <CookieBanner
             isOpenExternal={cookieSettingsOpen}

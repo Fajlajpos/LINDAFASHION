@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc -l)",
+      "Bash(c:/Users/Fajlajp/AppData/Local/Programs/Python/Python312/python.exe --version)",
+      "Bash(c:/Users/Fajlajp/AppData/Local/Programs/Python/Python312/python.exe c:/Users/Fajlajp/.claude/skills/ui-ux-pro-max/scripts/search.py 'luxury fashion e-commerce women clothing boutique' --domain product -n 3)",
+      "PowerShell($machine = [Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); if \\($machine -match \"Python312\"\\) { \"PATH updated \\(user\\): OK\" } else { \"Python312 NOT in user PATH\" }; \"--- py launcher ---\"; if \\(Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\Python\\\\Launcher\\\\py.exe\"\\) { \"py.exe present\" } else { Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source })",
+      "Bash(c:/Users/Fajlajp/AppData/Local/Programs/Python/Python312/python.exe c:/Users/Fajlajp/.claude/skills/ui-ux-pro-max/scripts/search.py 'product listing image optimization accessibility forms' --stack nextjs -n 8)",
+      "Bash(c:/Users/Fajlajp/AppData/Local/Programs/Python/Python312/python.exe c:/Users/Fajlajp/.claude/skills/ui-ux-pro-max/scripts/search.py 'focus visible keyboard accessibility touch target reduced motion' --domain ux -n 6)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npm run lint 2>&1)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell($out = npm run build 2>&1 | Out-String; if \\($out -match 'Compiled successfully'\\) { \"BUILD OK\" } else { $out.Substring\\([Math]::Max\\(0,$out.Length-2000\\)\\) })"
+    ]
+  }
+}

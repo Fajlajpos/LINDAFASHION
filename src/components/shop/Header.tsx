@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Heart, User, Menu, X, Search, Sparkles } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -11,6 +11,18 @@ interface HeaderProps {
   vacationMode?: { active: boolean; message?: string | null };
 }
 
+const NAV_LINKS = [
+  { href: '/produkty', label: 'Kolekce' },
+  { href: '/produkty/saty', label: 'Šaty' },
+  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
+  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
+  { href: '/produkty/darkove-poukazy', label: 'Poukazy', accent: true },
+  { href: '/o-mne', label: 'O mně' },
+];
+
+/** Počty nad 9 zkracujeme, aby se odznak nerozjel mimo ikonu. */
+const formatBadge = (count: number) => (count > 9 ? '9+' : String(count));
+
 export const Header: React.FC<HeaderProps> = ({
   user,
   vacationMode,
@@ -20,32 +32,60 @@ export const Header: React.FC<HeaderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchToggleRef = useRef<HTMLButtonElement>(null);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+
   // Cart & Favorites Context
   const { totalItemCount: cartCount } = useCart();
   const { favoritesCount } = useFavorites();
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 30) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 30);
     };
-    window.addEventListener('scroll', handleScroll);
+    // passive: scroll handler nikdy nevolá preventDefault, prohlížeč tak
+    // nemusí čekat a scrollování zůstává plynulé
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Escape zavře otevřené vyhledávání i mobilní menu a vrátí fokus na spouštěč
+  useEffect(() => {
+    if (!searchOpen && !mobileMenuOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (searchOpen) {
+        setSearchOpen(false);
+        searchToggleRef.current?.focus();
+      }
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        menuToggleRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen, mobileMenuOpen]);
+
+  // Fokus do pole hned po otevření vyhledávání (nahrazuje autoFocus, který
+  // by se spustil i při prvním vykreslení stránky)
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
   return (
     <header
-      className={`sticky top-0 z-40 bg-white border-b border-[#E4D9C8] transition-all duration-300 ${
+      className={`sticky top-0 z-40 bg-white border-b border-linda-sand transition-all duration-300 ${
         isScrolled ? 'shadow-md py-1' : 'shadow-sm py-0'
       }`}
     >
       {/* Vacation mode banner */}
       {vacationMode?.active && (
-        <div className="bg-[#7A4B32] text-[#FAF8F4] text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2">
-          <Sparkles className="w-3.5 h-3.5" />
+        <div className="bg-linda-cognac text-linda-cream text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           <span>{vacationMode.message || 'Momentálně čerpáme dovolenou. Objednávky přijímáme a expedujeme ihned po návratu.'}</span>
         </div>
       )}
@@ -57,82 +97,101 @@ export const Header: React.FC<HeaderProps> = ({
             isScrolled ? 'h-16' : 'h-24'
           }`}
         >
-          {/* Left Column (5 cols): Nav links */}
-          <div className="col-span-5 flex items-center justify-start pl-4 lg:pl-8">
+          {/* Left Column: Nav links */}
+          <div className="col-span-3 lg:col-span-5 flex items-center justify-start lg:pl-8">
             {/* Mobile menu button */}
             <button
+              ref={menuToggleRef}
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-[#2B2019] hover:text-[#7A4B32] transition-colors focus:outline-none lg:hidden"
-              aria-label="Otevřít menu"
+              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer text-linda-espresso hover:text-linda-cognac transition-colors lg:hidden"
+              aria-label={mobileMenuOpen ? 'Zavřít menu' : 'Otevřít menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobilni-menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
             </button>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-3 xl:space-x-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-[#2B2019] whitespace-nowrap">
-              <Link href="/produkty" className="hover:text-[#7A4B32] transition-colors">
-                Kolekce
-              </Link>
-              <Link href="/produkty/saty" className="hover:text-[#7A4B32] transition-colors">
-                Šaty
-              </Link>
-              <Link href="/produkty/halenky-a-kosile" className="hover:text-[#7A4B32] transition-colors">
-                Halenky
-              </Link>
-              <Link href="/produkty/svetry-a-kardigany" className="hover:text-[#7A4B32] transition-colors">
-                Svetry
-              </Link>
-              <Link href="/produkty/darkove-poukazy" className="hover:text-[#7A4B32] transition-colors text-[#7A4B32] font-semibold">
-                Poukazy
-              </Link>
-              <Link href="/o-mne" className="hover:text-[#7A4B32] transition-colors">
-                O mně
-              </Link>
+            <nav
+              aria-label="Hlavní navigace"
+              className="hidden lg:flex items-center gap-3 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
+            >
+              {NAV_LINKS.map(({ href, label, accent }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`py-2 rounded-sm hover:text-linda-cognac transition-colors ${
+                    accent ? 'text-linda-cognac font-semibold' : ''
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
             </nav>
           </div>
 
-          {/* Center Column (2 cols): Centered Brand Logo */}
-          <div className="col-span-2 flex flex-col items-center justify-center text-center px-2">
-            <Link href="/" className="inline-block group text-center">
+          {/* Center Column: Centered Brand Logo */}
+          <div className="col-span-6 lg:col-span-2 flex flex-col items-center justify-center text-center px-2">
+            <Link href="/" className="inline-block group text-center rounded-sm" aria-label="LINDA FASHION – domovská stránka">
               <span
-                className={`font-serif uppercase font-medium text-[#2B2019] group-hover:text-[#7A4B32] transition-all duration-300 block whitespace-nowrap ${
+                className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-all duration-300 block whitespace-nowrap ${
                   isScrolled ? 'text-xl sm:text-2xl tracking-[0.15em]' : 'text-2xl sm:text-3xl tracking-[0.2em]'
                 }`}
               >
                 LINDA FASHION
               </span>
               {!isScrolled && (
-                <span className="block text-[9px] tracking-[0.35em] text-[#405023] uppercase font-sans font-semibold -mt-1 transition-all duration-300">
+                <span className="block text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold -mt-1 transition-all duration-300">
                   Moda Italiana
                 </span>
               )}
             </Link>
           </div>
 
-          {/* Right Column (5 cols): Action icons */}
-          <div className="col-span-5 flex items-center justify-end space-x-3 sm:space-x-5 text-[#2B2019] pr-0 -mr-2">
+          {/* Right Column: Action icons */}
+          <div className="col-span-3 lg:col-span-5 flex items-center justify-end gap-1 sm:gap-2 text-linda-espresso">
             {/* Search */}
             <button
+              ref={searchToggleRef}
+              type="button"
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 hover:text-[#7A4B32] transition-colors"
-              aria-label="Vyhledávání"
+              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
+              aria-label={searchOpen ? 'Zavřít vyhledávání' : 'Otevřít vyhledávání'}
+              aria-expanded={searchOpen}
+              aria-controls="vyhledavani"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-5 h-5" aria-hidden="true" />
             </button>
 
             {/* Favorites */}
-            <Link href="/oblibene" className="p-2 hover:text-[#7A4B32] transition-colors relative" aria-label="Oblíbené položky">
-              <Heart className="w-5 h-5" />
+            <Link
+              href="/oblibene"
+              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors relative"
+              aria-label={
+                favoritesCount > 0
+                  ? `Oblíbené položky (${favoritesCount})`
+                  : 'Oblíbené položky'
+              }
+            >
+              <Heart className="w-5 h-5" aria-hidden="true" />
               {favoritesCount > 0 && (
-                <span className="absolute -top-0.5 -right-1 bg-[#405023] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {favoritesCount}
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-linda-sage text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
+                >
+                  {formatBadge(favoritesCount)}
                 </span>
               )}
             </Link>
 
             {/* Account / Admin */}
-            <Link href={user ? '/muj-ucet' : '/prihlaseni'} className="p-2 hover:text-[#7A4B32] transition-colors flex items-center gap-1.5" aria-label="Účet">
-              <User className="w-5 h-5" />
+            <Link
+              href={user ? '/muj-ucet' : '/prihlaseni'}
+              className="min-h-touch flex items-center justify-center gap-1.5 px-2 cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
+              aria-label={user ? 'Můj účet' : 'Přihlásit se'}
+            >
+              <User className="w-5 h-5 shrink-0" aria-hidden="true" />
               {user && (
                 <span className="hidden md:inline text-xs font-medium max-w-[90px] truncate">
                   {user.jmeno || user.email.split('@')[0]}
@@ -141,34 +200,51 @@ export const Header: React.FC<HeaderProps> = ({
             </Link>
 
             {/* Cart */}
-            <Link href="/kosik" className="p-2 hover:text-[#7A4B32] transition-colors relative flex items-center gap-2 group" aria-label="Košík">
-              <div className="relative">
-                <ShoppingBag className="w-5 h-5 group-hover:scale-105 transition-transform" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-[#7A4B32] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                    {cartCount}
-                  </span>
-                )}
-              </div>
+            <Link
+              href="/kosik"
+              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors relative group"
+              aria-label={
+                cartCount > 0
+                  ? `Košík (${cartCount} ${cartCount === 1 ? 'položka' : cartCount < 5 ? 'položky' : 'položek'})`
+                  : 'Košík je prázdný'
+              }
+            >
+              <ShoppingBag className="w-5 h-5 group-hover:scale-105 transition-transform" aria-hidden="true" />
+              {cartCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-linda-cognac text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
+                >
+                  {formatBadge(cartCount)}
+                </span>
+              )}
             </Link>
           </div>
         </div>
 
         {/* Expandable Search Input */}
         {searchOpen && (
-          <div className="py-3 border-t border-[#E4D9C8]/60 animate-fadeIn">
-            <form action="/produkty" method="GET" className="relative max-w-md mx-auto">
+          <div id="vyhledavani" className="py-3 border-t border-linda-sand/60 animate-fadeIn">
+            <form action="/produkty" method="GET" role="search" className="relative max-w-md mx-auto">
+              <label htmlFor="hledat" className="sr-only">
+                Hledat v nabídce
+              </label>
               <input
-                type="text"
+                ref={searchInputRef}
+                id="hledat"
+                type="search"
                 name="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Hledat šaty, halenky, materiály..."
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-full py-2 pl-4 pr-10 text-sm text-[#2B2019] focus:outline-none focus:border-[#7A4B32]"
-                autoFocus
+                className="w-full bg-linda-cream border border-linda-sand rounded-full py-2.5 pl-4 pr-12 text-sm text-linda-espresso placeholder:text-linda-espresso/50 focus:border-linda-cognac"
               />
-              <button type="submit" className="absolute right-3 top-2.5 text-[#7A4B32]">
-                <Search className="w-4 h-4" />
+              <button
+                type="submit"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full text-linda-cognac hover:text-linda-espresso transition-colors"
+                aria-label="Vyhledat"
+              >
+                <Search className="w-4 h-4" aria-hidden="true" />
               </button>
             </form>
           </div>
@@ -177,29 +253,31 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile drawer menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-[#E4D9C8] px-6 pt-2 pb-6 space-y-3 text-xs font-medium uppercase tracking-wider text-[#2B2019] text-center">
-          <Link href="/produkty" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
-            Kolekce
-          </Link>
-          <Link href="/produkty/saty" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
-            Šaty
-          </Link>
-          <Link href="/produkty/halenky-a-kosile" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
-            Halenky
-          </Link>
-          <Link href="/produkty/svetry-a-kardigany" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
-            Svetry
-          </Link>
-          <Link href="/produkty/darkove-poukazy" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40 text-[#7A4B32] font-semibold">
-            Poukazy
-          </Link>
-          <Link href="/o-mne" onClick={() => setMobileMenuOpen(false)} className="block py-2 border-b border-[#E4D9C8]/40">
-            O mně
-          </Link>
-          <Link href="/kontakt" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[#405023]">
+        <nav
+          id="mobilni-menu"
+          aria-label="Mobilní navigace"
+          className="lg:hidden bg-white border-b border-linda-sand px-6 pt-2 pb-6 text-xs font-medium uppercase tracking-wider text-linda-espresso text-center animate-fadeIn"
+        >
+          {NAV_LINKS.map(({ href, label, accent }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center justify-center min-h-touch border-b border-linda-sand/40 ${
+                accent ? 'text-linda-cognac font-semibold' : ''
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+          <Link
+            href="/kontakt"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center justify-center min-h-touch text-linda-sage"
+          >
             Kontakt &amp; Showroom
           </Link>
-        </div>
+        </nav>
       )}
     </header>
   );
