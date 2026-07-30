@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { ArrowRight, Heart } from 'lucide-react';
 
@@ -47,29 +48,43 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-20 pb-20">
-      {/* Hero section s jemně průhlednou vlastností textury */}
-      <section className="relative overflow-hidden texture-hero-user py-24 sm:py-32 border-b border-[#E4D9C8]/80">
+      {/* Hero section – editorial fotografie přes celou plochu, texty na ní */}
+      <section className="relative overflow-hidden bg-linda-espresso min-h-[86vh] sm:min-h-[92vh] flex items-center py-24 sm:py-32">
+        <Image
+          src="/hero-editorial.jpg"
+          alt="Žena v lněných šatech z italské kolekce na terase nad mořem"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[72%_22%] sm:object-[center_22%] saturate-[.7]"
+        />
+        {/* Neutrálně ztmavovací vrstva kvůli čitelnosti textu na fotografii */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-black/55 bg-gradient-to-t from-black/70 via-transparent to-black/35"
+        />
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
 
-          <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-normal text-[#2B2019] tracking-tight max-w-4xl mx-auto leading-[1.1]">
+          <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-normal text-linda-cream tracking-tight max-w-4xl mx-auto leading-[1.1]">
             Nadčasová elegance a kvalita, která neztrácí půvab
           </h1>
 
-          <p className="text-base sm:text-lg text-[#2B2019]/75 max-w-2xl mx-auto font-light leading-relaxed">
+          <p className="text-base sm:text-lg text-linda-cream max-w-2xl mx-auto font-light leading-relaxed">
             Každý kus oblečení dovážíme přímo z tradičních italských dílen. Nepodléháme rychlé módě – věříme v prémiové přírodní materiály, osobní přístup a styl, ve kterém se budete cítit sama sebou.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Link
               href="/produkty"
-              className="w-full sm:w-auto px-8 py-4 bg-[#7A4B32] text-white text-sm font-medium rounded-full hover:bg-[#633B26] transition-all shadow-md flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-8 py-4 bg-linda-cognac text-white text-sm font-medium rounded-full hover:bg-linda-cognacHover transition-all shadow-md flex items-center justify-center gap-2 group"
             >
               Prohlédnout kolekci
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="/o-mne"
-              className="w-full sm:w-auto px-8 py-4 border border-[#2B2019]/30 text-[#2B2019] text-sm font-medium rounded-full hover:border-[#7A4B32] hover:text-[#7A4B32] transition-all"
+              className="w-full sm:w-auto px-8 py-4 border border-linda-cream/70 text-linda-cream text-sm font-medium rounded-full hover:bg-linda-cream hover:text-linda-espresso transition-all"
             >
               Příběh značky LINDA FASHION
             </Link>

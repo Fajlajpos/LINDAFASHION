@@ -10,7 +10,25 @@
       "PowerShell(npx tsc --noEmit 2>&1)",
       "PowerShell(npm run lint 2>&1)",
       "PowerShell(npm run build 2>&1)",
-      "PowerShell($out = npm run build 2>&1 | Out-String; if \\($out -match 'Compiled successfully'\\) { \"BUILD OK\" } else { $out.Substring\\([Math]::Max\\(0,$out.Length-2000\\)\\) })"
+      "PowerShell($out = npm run build 2>&1 | Out-String; if \\($out -match 'Compiled successfully'\\) { \"BUILD OK\" } else { $out.Substring\\([Math]::Max\\(0,$out.Length-2000\\)\\) })",
+      "Bash(cp \"c:/Users/Fajlajp/Desktop/LINDAFASHION/Italian Fashion Editorial.jpg\" \"c:/Users/Fajlajp/Desktop/LINDAFASHION/public/hero-editorial.jpg\" && ls -la \"c:/Users/Fajlajp/Desktop/LINDAFASHION/public/hero-editorial.jpg\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(grep -qE \"Ready in|ready started|Error|EADDRINUSE\" \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Fajlajp-Desktop-LINDAFASHION\\\\\\\\eb8879e1-aca6-4ff7-9521-da351bdb74d8\\\\\\\\tasks\\\\\\\\bq4lmo8ko.output\")",
+      "Bash(tail -5 \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Fajlajp-Desktop-LINDAFASHION\\\\\\\\eb8879e1-aca6-4ff7-9521-da351bdb74d8\\\\\\\\tasks\\\\\\\\bq4lmo8ko.output\")",
+      "Bash(ls \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\.claude\\\\\\\\skills\\\\\\\\\")",
+      "Read(//c/Users/Fajlajp/AppData/Local/ms-playwright/**)",
+      "Bash(ls -R \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\.claude\\\\\\\\skills\\\\\\\\webapp-testing\")",
+      "Bash(npx --no-install playwright --version)",
+      "Bash(python -c \"import playwright; print\\(playwright.__file__\\)\")",
+      "Bash(python \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Fajlajp-Desktop-LINDAFASHION\\\\\\\\eb8879e1-aca6-4ff7-9521-da351bdb74d8\\\\\\\\scratchpad\\\\\\\\shot.py\")",
+      "Bash(cd \"C:\\\\\\\\Users\\\\\\\\Fajlajp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Fajlajp-Desktop-LINDAFASHION\\\\\\\\eb8879e1-aca6-4ff7-9521-da351bdb74d8\\\\\\\\scratchpad\")",
+      "Bash(sed -i 's/localhost:3002/localhost:3003/' shot.py)",
+      "Bash(python shot.py)",
+      "Bash(sed -i 's/localhost:3003/localhost:3004/' shot.py)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Fajlajp\\Desktop\\LINDAFASHION"
     ]
   }
 }
