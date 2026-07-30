@@ -11,12 +11,14 @@ interface HeaderProps {
   vacationMode?: { active: boolean; message?: string | null };
 }
 
+/* Katalog filtruje přes query parametr – route `/produkty/[slug]` neexistuje,
+   odkazy typu `/produkty/saty` proto dřív končily na 404. */
 const NAV_LINKS = [
   { href: '/produkty', label: 'Kolekce' },
-  { href: '/produkty/saty', label: 'Šaty' },
-  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
-  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty/darkove-poukazy', label: 'Poukazy', accent: true },
+  { href: '/produkty?kategorie=saty', label: 'Šaty' },
+  { href: '/produkty?kategorie=halenky-a-kosile', label: 'Halenky' },
+  { href: '/produkty?kategorie=svetry-a-kardigany', label: 'Svetry' },
+  { href: '/produkty?kategorie=darkove-poukazy', label: 'Poukazy', accent: true },
   { href: '/o-mne', label: 'O mně' },
 ];
 
@@ -135,8 +137,13 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="col-span-6 lg:col-span-2 flex flex-col items-center justify-center text-center px-2">
             <Link href="/" className="inline-block group text-center rounded-sm" aria-label="LINDA FASHION – domovská stránka">
               <span
+                /* Na 375 px má prostřední sloupec jen ~170 px. Logo proto na
+                   nejmenších displejích zmenšujeme a stahujeme prostrkání,
+                   jinak přeteče pod ikony vpravo. */
                 className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-all duration-300 block whitespace-nowrap ${
-                  isScrolled ? 'text-xl sm:text-2xl tracking-[0.15em]' : 'text-2xl sm:text-3xl tracking-[0.2em]'
+                  isScrolled
+                    ? 'text-sm tracking-[0.1em] sm:text-2xl sm:tracking-[0.15em]'
+                    : 'text-[15px] tracking-[0.1em] sm:text-3xl sm:tracking-[0.2em]'
                 }`}
               >
                 LINDA FASHION

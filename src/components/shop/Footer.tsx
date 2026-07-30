@@ -77,22 +77,22 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
                 </Link>
               </li>
               <li>
-                <Link href="/produkty/saty" className="hover:text-[#E4D9C8] transition-colors">
+                <Link href="/produkty?kategorie=saty" className="hover:text-[#E4D9C8] transition-colors">
                   Šaty
                 </Link>
               </li>
               <li>
-                <Link href="/produkty/halenky-a-kosile" className="hover:text-[#E4D9C8] transition-colors">
+                <Link href="/produkty?kategorie=halenky-a-kosile" className="hover:text-[#E4D9C8] transition-colors">
                   Halenky
                 </Link>
               </li>
               <li>
-                <Link href="/produkty/svetry-a-kardigany" className="hover:text-[#E4D9C8] transition-colors">
+                <Link href="/produkty?kategorie=svetry-a-kardigany" className="hover:text-[#E4D9C8] transition-colors">
                   Svetry
                 </Link>
               </li>
               <li>
-                <Link href="/produkty/darkove-poukazy" className="hover:text-[#E4D9C8] transition-colors text-[#E4D9C8] font-medium">
+                <Link href="/produkty?kategorie=darkove-poukazy" className="hover:text-[#E4D9C8] transition-colors text-[#E4D9C8] font-medium">
                   Poukazy
                 </Link>
               </li>
