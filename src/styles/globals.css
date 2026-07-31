@@ -150,24 +150,8 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   border-radius: inherit;
 }
 
-/* 🎨 3. Vlastní zřetelněji viditelná průhledná textura pro patičku v hnědé #3E2E25 */
-.texture-footer-user {
-  position: relative;
-  background-color: #3E2E25; /* Hřejivá čokoládově hnědá */
-}
-
-.texture-footer-user::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url('/textures/footer-texture.jpg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  opacity: 0.20; /* Jemně zvýrazněná průhlednost pro zřetelnou viditelnost */
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
+/* Fotografická textura patičky byla odstraněna – pod drobným písmem snižovala
+   čitelnost. Patička jede na plné `linda-chocolate` s vlasovou linkou nahoře. */
 
 /* Glassmorphism & Soft Effects */
 .glass-panel {

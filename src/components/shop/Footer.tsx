@@ -2,203 +2,217 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Instagram, Facebook, Send, Heart } from 'lucide-react';
+import { ArrowRight, Facebook, Instagram } from 'lucide-react';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
 }
 
+const KOLEKCE_ODKAZY = [
+  { href: '/produkty', label: 'Všechny kolekce' },
+  { href: '/produkty?kategorie=saty', label: 'Šaty' },
+  { href: '/produkty?kategorie=halenky-a-kosile', label: 'Halenky' },
+  { href: '/produkty?kategorie=svetry-a-kardigany', label: 'Svetry' },
+  { href: '/produkty?kategorie=darkove-poukazy', label: 'Poukazy' },
+  { href: '/o-mne', label: 'O mně' },
+];
+
+const SERVIS_ODKAZY = [
+  { href: '/doprava-a-platba', label: 'Doprava a platba' },
+  { href: '/kontakt', label: 'Kontakt a prodejna' },
+  { href: '/obchodni-podminky', label: 'Obchodní podmínky' },
+  { href: '/ochrana-osobnich-udaju', label: 'Ochrana údajů' },
+  { href: '/reklamacni-rad', label: 'Reklamační řád' },
+];
+
+const SITE = [
+  { href: 'https://instagram.com', label: 'Instagram', Ikona: Instagram },
+  { href: 'https://facebook.com', label: 'Facebook', Ikona: Facebook },
+];
+
+/** Skupina odkazů: štítek nad, odkazy pod ním do šířky. */
+const SkupinaOdkazu: React.FC<{
+  nadpis: string;
+  odkazy: { href: string; label: string }[];
+  children?: React.ReactNode;
+}> = ({ nadpis, odkazy, children }) => (
+  <div>
+    <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-sand">
+      {nadpis}
+    </h2>
+    <ul className="mt-1 flex flex-wrap items-center gap-x-4 text-xs text-linda-cream/75">
+      {odkazy.map(({ href, label }) => (
+        <li key={href}>
+          <Link
+            href={href}
+            className="inline-flex items-center py-1 transition-colors hover:text-linda-sand"
+          >
+            {label}
+          </Link>
+        </li>
+      ))}
+      {children}
+    </ul>
+  </div>
+);
+
+/**
+ * Patička.
+ *
+ * Fotografická textura šla pryč – pod drobným písmem snižovala čitelnost
+ * a patička kvůli ní působila těžce. Podklad je teď plná čokoládová barva,
+ * hloubku dělá jen vlasová linka nahoře s přechodem do koňaku.
+ *
+ * Výška je hlavní požadavek: značka, odkazy i newsletter sdílejí jeden řádek,
+ * odkazy se sázejí vodorovně místo do vysokých sloupců a sociální ikony sedí
+ * ve spodní liště u copyrightu. Oproti původnímu rozvržení je patička zhruba
+ * o polovinu nižší.
+ */
 export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
   const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
+  const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');
 
+  // TODO: napojit na `POST /api/newsletter` (vč. ošetření chyb a duplicit).
+  // Do té doby jen potvrdíme přijetí – nikde se nic neukládá, takže nesmíme
+  // tvrdit, že odběr už vznikl.
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setEmail('');
-    }
+    if (!email) return;
+    setStav('odesilam');
+    setStav('hotovo');
+    setEmail('');
   };
 
   return (
-    <footer className="relative bg-[#3E2E25] text-[#FAF8F4] py-8 sm:py-10 border-t border-[#E4D9C8]/20 texture-footer-user overflow-hidden">
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Compact 4-Column Footer Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8 pb-8 border-b border-[#FAF8F4]/15">
-          
-          {/* Column 1 (4 cols): Brand Story & Socials */}
-          <div className="lg:col-span-4 space-y-3">
-            <Link href="/" className="inline-block group">
-              <span className="font-serif text-2xl sm:text-3xl tracking-[0.18em] text-[#E4D9C8] uppercase font-medium group-hover:text-white transition-colors block">
+    <footer className="relative bg-linda-chocolate text-linda-cream">
+      {/* Vlasová linka místo bývalé fotografické textury */}
+      <div
+        aria-hidden="true"
+        className="h-px w-full bg-gradient-to-r from-transparent via-linda-cognac to-transparent"
+      />
+
+      <div className="mx-auto max-w-7xl px-4 pb-4 pt-7 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-12">
+          {/* Značka */}
+          <div className="lg:col-span-3">
+            <Link href="/" className="group inline-block">
+              <span className="block font-serif text-xl font-medium uppercase tracking-[0.18em] text-linda-sand transition-colors group-hover:text-white">
                 LINDA FASHION
               </span>
-              <span className="block text-[9px] tracking-[0.35em] text-[#E4D9C8]/80 uppercase font-sans font-semibold mt-0.5">
+              <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.35em] text-linda-sand/75">
                 Moda Italiana
               </span>
             </Link>
 
-            <p className="text-xs text-[#FAF8F4]/80 leading-relaxed font-light">
-              Příběh o lásce k eleganci, poctivým přírodním materiálům a osobitému italskému stylu. Každý kus vybíráme osobně na cestách po provinciích Itálie.
+            <p className="mt-2 max-w-xs text-xs leading-relaxed text-linda-cream/75">
+              Kousky vybírané osobně na cestách po Itálii.
             </p>
-
-            {/* Social media monochrome icons */}
-            <div className="pt-1 flex items-center space-x-3 text-[#E4D9C8]">
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-[#FAF8F4]/5 border border-[#E4D9C8]/20 rounded-full hover:bg-[#7A4B32] hover:border-[#7A4B32] hover:text-white transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-[#FAF8F4]/5 border border-[#E4D9C8]/20 rounded-full hover:bg-[#7A4B32] hover:border-[#7A4B32] hover:text-white transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
-          {/* Column 2 (2 cols): Navigation & Categories */}
-          <div className="lg:col-span-2 space-y-2.5">
-            <h4 className="font-serif text-xs text-[#E4D9C8] tracking-wider uppercase border-b border-[#FAF8F4]/15 pb-1.5 font-semibold">
-              Kolekce
-            </h4>
-            <ul className="space-y-1.5 text-xs text-[#FAF8F4]/80 font-light">
+          {/* Odkazy – vodorovně, ať nerostou do výšky */}
+          <nav aria-label="Odkazy v patičce" className="space-y-3 lg:col-span-6">
+            <SkupinaOdkazu nadpis="Kolekce" odkazy={KOLEKCE_ODKAZY} />
+            <SkupinaOdkazu nadpis="Servis" odkazy={SERVIS_ODKAZY}>
               <li>
-                <Link href="/produkty" className="hover:text-[#E4D9C8] transition-colors">
-                  Všechny kolekce
-                </Link>
-              </li>
-              <li>
-                <Link href="/produkty?kategorie=saty" className="hover:text-[#E4D9C8] transition-colors">
-                  Šaty
-                </Link>
-              </li>
-              <li>
-                <Link href="/produkty?kategorie=halenky-a-kosile" className="hover:text-[#E4D9C8] transition-colors">
-                  Halenky
-                </Link>
-              </li>
-              <li>
-                <Link href="/produkty?kategorie=svetry-a-kardigany" className="hover:text-[#E4D9C8] transition-colors">
-                  Svetry
-                </Link>
-              </li>
-              <li>
-                <Link href="/produkty?kategorie=darkove-poukazy" className="hover:text-[#E4D9C8] transition-colors text-[#E4D9C8] font-medium">
-                  Poukazy
-                </Link>
-              </li>
-              <li>
-                <Link href="/o-mne" className="hover:text-[#E4D9C8] transition-colors">
-                  O mně
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3 (3 cols): Customer Service & Legal */}
-          <div className="lg:col-span-3 space-y-2.5">
-            <h4 className="font-serif text-xs text-[#E4D9C8] tracking-wider uppercase border-b border-[#FAF8F4]/15 pb-1.5 font-semibold">
-              Zákaznický Servis
-            </h4>
-            <ul className="space-y-1.5 text-xs text-[#FAF8F4]/80 font-light">
-              <li>
-                <Link href="/doprava-a-platba" className="hover:text-[#E4D9C8] transition-colors">
-                  Doprava a platba
-                </Link>
-              </li>
-              <li>
-                <Link href="/kontakt" className="hover:text-[#E4D9C8] transition-colors">
-                  Kontakt &amp; Prodejna
-                </Link>
-              </li>
-              <li>
-                <Link href="/obchodni-podminky" className="hover:text-[#E4D9C8] transition-colors">
-                  Obchodní podmínky
-                </Link>
-              </li>
-              <li>
-                <Link href="/ochrana-osobnich-udaju" className="hover:text-[#E4D9C8] transition-colors">
-                  Ochrana údajů (GDPR)
-                </Link>
-              </li>
-              <li>
-                <Link href="/reklamacni-rad" className="hover:text-[#E4D9C8] transition-colors">
-                  Reklamační řád
-                </Link>
-              </li>
-              <li>
-                {/* Permanent GDPR Cookie Settings Trigger Button */}
                 <button
+                  type="button"
                   onClick={onOpenCookieSettings}
-                  className="hover:text-[#E4D9C8] transition-colors text-left underline underline-offset-2 text-[#E4D9C8] font-medium"
+                  className="inline-flex cursor-pointer items-center py-1 text-linda-sand underline underline-offset-2 transition-colors hover:text-white"
                 >
                   Nastavení cookies
                 </button>
               </li>
-            </ul>
-          </div>
+            </SkupinaOdkazu>
+          </nav>
 
-          {/* Column 4 (3 cols): Newsletter Signup */}
-          <div className="lg:col-span-3 space-y-2.5">
-            <h4 className="font-serif text-xs text-[#E4D9C8] tracking-wider uppercase border-b border-[#FAF8F4]/15 pb-1.5 font-semibold">
-              Inspirace Do Schránky
-            </h4>
-            <p className="text-xs text-[#FAF8F4]/80 leading-relaxed font-light">
-              Získejte přístup k novým italským kolekcím a akciím.
-            </p>
+          {/* Newsletter */}
+          <div className="lg:col-span-3">
+            {/* Nadpis zároveň pojmenovává pole (aria-labelledby), takže popisek
+                nese viditelný text – ne placeholder – a nestojí řádek navíc. */}
+            <h2
+              id="newsletter-paticka-nadpis"
+              className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-sand"
+            >
+              Novinky do schránky
+            </h2>
 
-            {subscribed ? (
-              <div className="p-2.5 bg-[#7A4B32]/30 border border-[#7A4B32] rounded-xl text-xs text-[#FAF8F4] flex items-center gap-2">
-                <Heart className="w-4 h-4 text-[#E4D9C8] fill-[#E4D9C8]" />
-                <span>Přihlášení proběhlo úspěšně!</span>
-              </div>
+            {stav === 'hotovo' ? (
+              <p
+                role="status"
+                className="mt-2 rounded-xl border border-linda-cognac/60 bg-linda-cognac/25 px-3 py-2 text-xs text-linda-cream"
+              >
+                Děkujeme, přihlášku jsme přijali.
+              </p>
             ) : (
-              <form onSubmit={handleSubscribe} className="space-y-2">
-                <div className="relative">
+              <form onSubmit={handleSubscribe} className="mt-2">
+                <div className="flex items-center gap-2">
                   <input
+                    id="newsletter-paticka"
                     type="email"
+                    name="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Váš e-mail..."
-                    className="w-full bg-[#FAF8F4]/10 border border-[#E4D9C8]/30 rounded-full py-1.5 pl-3.5 pr-9 text-xs text-[#FAF8F4] placeholder-[#FAF8F4]/50 focus:outline-none focus:border-[#E4D9C8]"
+                    aria-labelledby="newsletter-paticka-nadpis"
+                    aria-describedby="newsletter-paticka-info"
+                    placeholder="vas@email.cz"
+                    className="min-h-touch w-full min-w-0 flex-1 rounded-full border border-linda-sand/25 bg-linda-cream/10 px-4 text-xs text-linda-cream transition-colors placeholder:text-linda-cream/45 focus:border-linda-sand"
                   />
                   <button
                     type="submit"
-                    className="absolute right-1 top-1 p-1 bg-[#7A4B32] hover:bg-[#633B26] text-white rounded-full transition-colors"
-                    aria-label="Odeslat newsletter"
+                    disabled={stav === 'odesilam'}
+                    aria-label="Přihlásit se k odběru novinek"
+                    className="flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cognac text-white transition-colors duration-200 hover:bg-linda-cognacHover disabled:opacity-60"
                   >
-                    <Send className="w-3 h-3" />
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
-                <p className="text-[10px] text-[#FAF8F4]/60 font-light">
-                  Bez spamu. Odběr zrušíte 1 klikem.
+
+                <p id="newsletter-paticka-info" className="mt-1.5 text-[11px] text-linda-cream/60">
+                  Bez spamu.{' '}
+                  <Link
+                    href="/ochrana-osobnich-udaju"
+                    className="underline underline-offset-2 transition-colors hover:text-linda-sand"
+                  >
+                    Zpracování údajů
+                  </Link>
                 </p>
               </form>
             )}
           </div>
-
         </div>
 
-        {/* Compact Bottom Bar */}
-        <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#FAF8F4]/60 font-light text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} LINDA FASHION s.r.o. Všechna práva vyhrazena.</p>
-          <div className="flex items-center gap-2 text-[10px] uppercase font-mono text-[#E4D9C8]">
-            <span className="px-2 py-0.5 bg-[#FAF8F4]/5 rounded border border-[#E4D9C8]/20">GoPay</span>
-            <span className="px-2 py-0.5 bg-[#FAF8F4]/5 rounded border border-[#E4D9C8]/20">QR Platba</span>
-            <span className="px-2 py-0.5 bg-[#FAF8F4]/5 rounded border border-[#E4D9C8]/20">Zásilkovna / PPL</span>
+        {/* Spodní lišta */}
+        <div className="mt-5 flex flex-col items-center gap-3 border-t border-linda-cream/10 pt-3 text-center text-[11px] text-linda-cream/60 sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex items-center gap-2">
+            {SITE.map(({ href, label, Ikona }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${label} – LINDA FASHION`}
+                className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full border border-linda-sand/25 text-linda-sand transition-colors duration-200 hover:border-linda-cognac hover:bg-linda-cognac hover:text-white"
+              >
+                <Ikona className="h-4 w-4" aria-hidden="true" />
+              </a>
+            ))}
+            <p className="ml-1 text-left">
+              &copy; {new Date().getFullYear()} LINDA FASHION s.r.o.
+            </p>
           </div>
-        </div>
 
+          <ul className="flex flex-wrap items-center justify-center gap-2 text-[11px] uppercase tracking-wider text-linda-sand/85">
+            {['GoPay', 'QR platba', 'Zásilkovna', 'PPL'].map((sluzba) => (
+              <li
+                key={sluzba}
+                className="rounded border border-linda-sand/20 bg-linda-cream/5 px-2 py-1"
+              >
+                {sluzba}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </footer>
   );

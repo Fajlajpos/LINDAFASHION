@@ -41,20 +41,21 @@ export interface HomeTrustItem {
   description: string;
 }
 
+/**
+ * Tvar odpovídá props komponenty `ProductCard`, aby se dal rovnou rozprostřít.
+ * Homepage a katalog tak ukazují úplně stejnou kartu.
+ */
 export interface HomeProduct {
   id: string;
   nazev: string;
   slug: string;
   cena: number;
   cenaPoSleve?: number | null;
+  znacka?: string | null;
   kategorieNazev: string;
-  obrazek: string | null;
-  /**
-   * Hodnocení zákazníků. Záměrně nevyplněno – hvězdičky se vykreslí teprve
-   * až budou k dispozici skutečné recenze, aby se nezobrazovala smyšlená čísla.
-   */
-  hodnoceni?: number;
-  pocetHodnoceni?: number;
+  obrazekUrl?: string | null;
+  doporuceny?: boolean;
+  jeDarkovyPoukaz?: boolean;
 }
 
 /** Kruhové zkratky nad úvodní sekcí. Všechny cíle vedou na existující route. */
@@ -142,23 +143,28 @@ export const VYHODY: HomeTrustItem[] = [
   },
 ];
 
-/** Nejoblíbenější kousky – ukázková data, než se napojí katalog z databáze. */
+/**
+ * Nejoblíbenější kousky – ukázková data, než se napojí katalog z databáze.
+ * Záznamy odpovídají produktům v `/produkty`, aby slugy a značky seděly.
+ */
 export const NEJPRODAVANEJSI: HomeProduct[] = [
   {
     id: 'p1',
     nazev: 'Hedvábné šaty Bellissima',
     slug: 'hedvabne-saty-bellissima',
     cena: 3490,
+    znacka: 'Milano Elegance',
     kategorieNazev: 'Šaty',
-    obrazek: null,
+    doporuceny: true,
   },
   {
     id: 'p2',
     nazev: 'Lněná halenka Firenze',
     slug: 'lnena-halenka-firenze',
     cena: 1890,
+    znacka: 'Toscana Style',
     kategorieNazev: 'Halenky & Košile',
-    obrazek: null,
+    doporuceny: false,
   },
   {
     id: 'p3',
@@ -166,31 +172,17 @@ export const NEJPRODAVANEJSI: HomeProduct[] = [
     slug: 'kasmirovy-svetr-roma',
     cena: 2990,
     cenaPoSleve: 2390,
+    znacka: 'Roma Knitwear',
     kategorieNazev: 'Svetry & Kardigany',
-    obrazek: null,
+    doporuceny: true,
   },
   {
     id: 'p4',
     nazev: 'Vlněný kabát Venezia',
     slug: 'vlneny-kabat-venezia',
     cena: 5490,
+    znacka: 'Venezia Tailoring',
     kategorieNazev: 'Saka & Kabáty',
-    obrazek: null,
-  },
-  {
-    id: 'p5',
-    nazev: 'Sako Milano',
-    slug: 'sako-milano',
-    cena: 4290,
-    kategorieNazev: 'Saka & Kabáty',
-    obrazek: null,
-  },
-  {
-    id: 'p6',
-    nazev: 'Dárkový poukaz',
-    slug: 'darkovy-poukaz',
-    cena: 1000,
-    kategorieNazev: 'Dárkové poukazy',
-    obrazek: null,
+    doporuceny: true,
   },
 ];
