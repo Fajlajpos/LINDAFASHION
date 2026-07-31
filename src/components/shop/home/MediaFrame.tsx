@@ -56,8 +56,10 @@ export const MediaFrame: React.FC<MediaFrameProps> = ({
       aria-hidden="true"
       className={`absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-linda-sandLight via-linda-cream to-linda-sand/60 ${className}`}
     >
-      <span className="font-serif text-3xl leading-none text-linda-cognac/45">L</span>
-      <span className="text-[9px] font-semibold uppercase tracking-[0.3em] text-linda-espresso/35">
+      {/* Krytí /45 a /35 dávalo kolem 2:1 – výplň byla sotva vidět.
+          Pořád je to jen zástupný obsah do příchodu fotek, ale čitelný. */}
+      <span className="font-serif text-3xl leading-none text-linda-cognac/75">L</span>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-linda-espresso/65">
         Moda Italiana
       </span>
     </div>

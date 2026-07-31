@@ -153,6 +153,25 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
 /* Fotografická textura patičky byla odstraněna – pod drobným písmem snižovala
    čitelnost. Patička jede na plné `linda-chocolate` s vlasovou linkou nahoře. */
 
+/* Textura textového panelu v heru.
+
+   Reliéf omítky jen naznačíme: `multiply` prokreslí pouze stíny ve spárách,
+   světlá místa nechá být, takže krémový podklad zůstane krémový. Držíme se
+   nízké krytí, aby pod titulkem a odstavcem nevznikaly tmavé skvrny –
+   kontrast textu měřený na nejtmavším místě zůstává nad 4,5:1.
+
+   Prvek s touto třídou musí mít `isolate` (vlastní stacking context), aby
+   `-z-10` schovalo texturu pod text, ale ne pod pozadí sekce. */
+.texture-hero-panel {
+  background-image: url('/textures/hero-panel-texture.webp');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
 /* Glassmorphism & Soft Effects */
 .glass-panel {
   background: rgba(250, 248, 244, 0.88);

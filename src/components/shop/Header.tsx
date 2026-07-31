@@ -94,13 +94,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* 3-Column Grid with Shrinking Height on Scroll */}
+        {/* Pod `lg` jde o flex: pevná mřížka 3/6/3 dávala ikonám jen ~86 px,
+            ačkoli čtyři dotykové cíle po 44 px potřebují 176 – ikony proto
+            přetékaly doleva přes logo. Ve flexu si krajní bloky vezmou, co
+            potřebují, a logo dostane zbytek. Od `lg` zůstává mřížka 4/4/4. */}
         <div
-          className={`grid grid-cols-12 items-center transition-all duration-300 ${
+          className={`flex items-center justify-between gap-2 transition-all duration-300 lg:grid lg:grid-cols-12 ${
             isScrolled ? 'h-16' : 'h-24'
           }`}
         >
-          {/* Left Column: Nav links */}
-          <div className="col-span-3 lg:col-span-5 flex items-center justify-start lg:pl-8">
+          {/* Left Column: Nav links.
+              Sloupce jsou 4/4/4 (dřív 5/2/5) – na 1024 px měl střed jen ~160 px
+              a logo přetékalo pod odkaz „O mně“. */}
+          <div className="flex shrink-0 items-center justify-start lg:col-span-4 lg:pl-0 xl:pl-8">
             {/* Mobile menu button */}
             <button
               ref={menuToggleRef}
@@ -117,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Desktop Navigation */}
             <nav
               aria-label="Hlavní navigace"
-              className="hidden lg:flex items-center gap-3 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
+              className="hidden lg:flex items-center gap-2 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
             >
               {NAV_LINKS.map(({ href, label, accent }) => (
                 <Link
@@ -134,16 +140,21 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Center Column: Centered Brand Logo */}
-          <div className="col-span-6 lg:col-span-2 flex flex-col items-center justify-center text-center px-2">
+          {/* `overflow-hidden`: pod ~350 px už na logo místo není (menu + čtyři
+              ikony po 44 px sežerou skoro celou šířku). Raději ať se ořízne,
+              než aby přeteklo přes ikony. Od 360 px se vejde celé. */}
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden px-1 text-center lg:col-span-4 lg:flex-none lg:px-2">
             <Link href="/" className="inline-block group text-center rounded-sm" aria-label="LINDA FASHION – domovská stránka">
               <span
                 /* Na 375 px má prostřední sloupec jen ~170 px. Logo proto na
                    nejmenších displejích zmenšujeme a stahujeme prostrkání,
                    jinak přeteče pod ikony vpravo. */
-                className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-all duration-300 block whitespace-nowrap ${
+                /* `whitespace-nowrap` až od `sm`. Na velmi úzkých displejích
+                   se tak nápis raději zalomí na dva řádky, než aby se ořízl. */
+                className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-all duration-300 block sm:whitespace-nowrap ${
                   isScrolled
-                    ? 'text-sm tracking-[0.1em] sm:text-2xl sm:tracking-[0.15em]'
-                    : 'text-[15px] tracking-[0.1em] sm:text-3xl sm:tracking-[0.2em]'
+                    ? 'text-[13px] tracking-[0.05em] sm:text-xl sm:tracking-[0.12em] xl:text-2xl xl:tracking-[0.15em]'
+                    : 'text-[13px] tracking-[0.05em] sm:text-2xl sm:tracking-[0.14em] xl:text-3xl xl:tracking-[0.2em]'
                 }`}
               >
                 LINDA FASHION
@@ -157,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Column: Action icons */}
-          <div className="col-span-3 lg:col-span-5 flex items-center justify-end gap-1 sm:gap-2 text-linda-espresso">
+          <div className="flex shrink-0 items-center justify-end gap-0 text-linda-espresso sm:gap-1 lg:col-span-4 lg:gap-2">
             {/* Search */}
             <button
               ref={searchToggleRef}

@@ -119,12 +119,17 @@ export const PROMO_BANNERY: HomePromo[] = [
   },
 ];
 
-/** Kompaktní verze pro úzký pruh v heru (jen první tři položky). */
+/**
+ * Kompaktní verze pro úzký pruh v heru (jen první tři položky).
+ *
+ * V částce je nezlomitelná mezera (` `) – jinak se „2 500 Kč“ v úzkém
+ * sloupci láme uprostřed čísla, což je typografická chyba.
+ */
 export const VYHODY: HomeTrustItem[] = [
   {
     icon: 'truck',
     title: 'Doprava zdarma',
-    description: 'Při nákupu nad 2 500 Kč',
+    description: 'Při nákupu nad 2 500 Kč',
   },
   {
     icon: 'package',
