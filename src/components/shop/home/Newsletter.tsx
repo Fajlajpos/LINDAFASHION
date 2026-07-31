@@ -33,7 +33,7 @@ export const Newsletter: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 overflow-hidden rounded-2xl bg-linda-sandLight lg:grid-cols-12">
+      <div className="grid grid-cols-1 overflow-hidden rounded-2xl bg-linda-sandLight shadow-neu lg:grid-cols-12">
         {/* Obrazová část – fotka zatím chybí, MediaFrame vykreslí značkovou výplň. */}
         <div className="relative min-h-[220px] lg:col-span-4 lg:min-h-[340px]">
           <MediaFrame src={null} alt="" sizes="(max-width: 1024px) 100vw, 33vw" />
@@ -73,12 +73,17 @@ export const Newsletter: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vas@email.cz"
                 aria-describedby="newsletter-souhlas"
-                className="min-h-touch flex-1 rounded-full border border-linda-sand bg-white px-5 text-sm text-linda-espresso transition-colors placeholder:text-linda-espresso/40 focus:border-linda-cognac"
+                /* Pole je prohlubeň ve stejné barvě jako panel – tvar sám říká
+                   „sem se píše“, rámeček by ho jen zdvojil. Placeholder je
+                   zesvětlený jen na /55; /40 by na písku spadl pod 4,5:1.
+                   Prstenec fokusu řeší globální `:focus-visible` v globals.css
+                   a inset stín přebije, takže je i tady dobře vidět. */
+                className="min-h-touch flex-1 rounded-full bg-linda-sandLight px-5 text-sm text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/55"
               />
               <button
                 type="submit"
                 disabled={odesilam}
-                className="min-h-touch cursor-pointer rounded-full bg-linda-espresso px-8 text-sm font-medium text-linda-cream transition-colors hover:bg-linda-cognac disabled:cursor-not-allowed disabled:opacity-70"
+                className="min-h-touch cursor-pointer rounded-full bg-linda-espresso px-8 text-sm font-medium text-linda-cream shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-neuSm"
               >
                 {odesilam ? 'Odesílám…' : 'Odebírat'}
               </button>

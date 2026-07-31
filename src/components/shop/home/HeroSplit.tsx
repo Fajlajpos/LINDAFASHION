@@ -79,7 +79,7 @@ export const HeroSplit: React.FC = () => (
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
           <Link
             href="/produkty"
-            className="group inline-flex min-h-touch min-w-touch cursor-pointer items-center gap-2 rounded-full bg-linda-espresso px-8 py-4 text-sm font-medium text-linda-cream transition-colors duration-200 hover:bg-linda-cognac"
+            className="group inline-flex min-h-touch min-w-touch cursor-pointer items-center gap-2 rounded-full bg-linda-espresso px-8 py-4 text-sm font-medium text-linda-cream shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm"
           >
             Prohlédnout kolekci
             <ArrowRight
@@ -94,7 +94,7 @@ export const HeroSplit: React.FC = () => (
           >
             {/* Původně tu byla ikona přehrávání, odkaz ale vede na textovou
                 stránku – šipka slibuje to, co se opravdu stane. */}
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-linda-espresso/25 transition-colors duration-200 group-hover:border-linda-cognac group-hover:bg-linda-cognac group-hover:text-white">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linda-cream shadow-neu transition-all duration-200 group-hover:bg-linda-cognac group-hover:text-white group-hover:shadow-neuSm">
               <ArrowUpRight className="h-5 w-5" aria-hidden="true" />
             </span>
             Příběh značky

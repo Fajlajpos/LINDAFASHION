@@ -39,12 +39,15 @@ export const CategoryShowcase: React.FC = () => (
             key={tile.href}
             href={tile.href}
             /* Hover řeší stín, ne obarvení okraje – stejně jako karty
-               v sekci „Nejčastěji volené kousky“. */
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-linda-sand/50 bg-white shadow-card transition-all duration-300 hover:shadow-elevated"
+               v sekci „Nejčastěji volené kousky“. Karta je krémová jako
+               stránka a od podkladu ji dělí jen reliéf, proto tu není rámeček:
+               linka i stín naráz už je dvojí ohraničení jedné hrany. */
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-linda-cream shadow-neu transition-all duration-300 hover:shadow-neuLg"
           >
-            {/* Ilustrace v oblouku – tvar odkazuje na výlohu butiku */}
+            {/* Ilustrace v oblouku – tvar odkazuje na výlohu butiku.
+                Oblouk je vyfrézovaná nika, silueta v ní tedy opravdu leží. */}
             <div className="relative flex justify-center px-6 pt-6">
-              <div className="flex w-full justify-center rounded-t-[999px] rounded-b-2xl bg-gradient-to-b from-linda-sandLight to-linda-cream py-7">
+              <div className="flex w-full justify-center rounded-t-[999px] rounded-b-2xl bg-linda-sandLight py-7 shadow-neuInset">
                 <CategoryGlyph
                   name={tile.glyph}
                   className="h-24 w-24 transition-transform duration-300 group-hover:-translate-y-1 sm:h-28 sm:w-28"
@@ -67,7 +70,7 @@ export const CategoryShowcase: React.FC = () => (
 
               <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-linda-espresso">
                 Prohlédnout
-                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-linda-sand transition-colors duration-200 group-hover:border-linda-cognac group-hover:bg-linda-cognac group-hover:text-white">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-linda-cream shadow-neuSm transition-colors duration-200 group-hover:bg-linda-cognac group-hover:text-white">
                   <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
               </span>

@@ -19,7 +19,7 @@ export const PromoBanners: React.FC = () => (
       {PROMO_BANNERY.map((promo) => (
         <div
           key={promo.cta.href}
-          className="relative flex min-h-[240px] overflow-hidden rounded-2xl bg-linda-sandLight sm:min-h-[280px]"
+          className="relative flex min-h-[240px] overflow-hidden rounded-2xl bg-linda-sandLight shadow-neu sm:min-h-[280px]"
         >
           {/* Fotka vpravo – na mobilu jen úzký pruh, ať zbyde místo na CTA */}
           <div className="absolute inset-y-0 right-0 w-1/3 sm:w-2/5 lg:w-[45%]">
@@ -47,7 +47,7 @@ export const PromoBanners: React.FC = () => (
 
             <Link
               href={promo.cta.href}
-              className="group inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-espresso px-6 py-3.5 text-xs font-medium text-linda-cream transition-colors duration-200 hover:bg-linda-cognac sm:text-sm"
+              className="group inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-espresso px-6 py-3.5 text-xs font-medium text-linda-cream shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm sm:text-sm"
             >
               {promo.cta.label}
               <ArrowRight

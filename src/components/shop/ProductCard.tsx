@@ -18,7 +18,30 @@ export interface ProductCardProps {
   jeDarkovyPoukaz?: boolean;
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
+  /**
+   * Vzhled rámu karty.
+   *
+   * `default` – bílá karta s vlasovým rámečkem, používá katalog.
+   * `soft` – krémová karta bez rámečku držená měkkým reliéfem; jede v ní
+   *   domovská stránka, kde je reliéf společným jazykem všech sekcí.
+   *
+   * Mění se jen obal, obsah karty zůstává v obou režimech totožný.
+   */
+  variant?: 'default' | 'soft';
 }
+
+/** Třídy obalu karty podle varianty – ať zbytek komponenty zůstane čitelný. */
+const RAM: Record<NonNullable<ProductCardProps['variant']>, string> = {
+  default: 'bg-white border border-linda-sand/50 shadow-card hover:shadow-elevated',
+  soft: 'bg-linda-cream shadow-neu hover:shadow-neuLg',
+};
+
+/** Srdíčko leží na fotce, u chybějícího snímku ale na krému splývá. V `soft`
+ *  variantě ho proto drží reliéf místo sotva znatelného `shadow-sm`. */
+const SRDCE_STIN: Record<NonNullable<ProductCardProps['variant']>, string> = {
+  default: 'shadow-sm',
+  soft: 'shadow-neuSm',
+};
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   id,
@@ -33,13 +56,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   jeDarkovyPoukaz,
   isFavorite = false,
   onToggleFavorite,
+  variant = 'default',
 }) => {
   const hasDiscount = Boolean(cenaPoSleve && cenaPoSleve < cena);
   const displayPrice = hasDiscount ? cenaPoSleve : cena;
   const discountPercent = hasDiscount ? Math.round(((cena - cenaPoSleve!) / cena) * 100) : 0;
 
   return (
-    <div className="group relative bg-white rounded-2xl border border-linda-sand/50 overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 flex flex-col h-full">
+    <div
+      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl transition-all duration-300 ${RAM[variant]}`}
+    >
       {/* Badges */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
         {doporuceny && (
@@ -72,7 +98,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           e.preventDefault();
           onToggleFavorite?.(id);
         }}
-        className="absolute top-2 right-2 z-10 min-h-touch min-w-touch flex items-center justify-center cursor-pointer bg-linda-cream/80 backdrop-blur-md rounded-full text-linda-espresso hover:text-linda-cognac hover:bg-white shadow-sm transition-all duration-200"
+        className={`absolute top-2 right-2 z-10 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream/80 text-linda-espresso backdrop-blur-md transition-all duration-200 hover:bg-white hover:text-linda-cognac ${SRDCE_STIN[variant]}`}
         aria-pressed={isFavorite}
         aria-label={
           isFavorite

@@ -30,6 +30,35 @@ const config: Config = {
       boxShadow: {
         card: '0 4px 20px -2px rgba(43, 32, 25, 0.05)',
         elevated: '0 12px 30px -4px rgba(43, 32, 25, 0.08)',
+
+        /* ------------------------------------------------------------------
+           Měkký reliéf (soft UI / tlumené neumorfismus) pro domovskou stránku.
+
+           Světlo přichází zleva shora: bílý přísvit vlevo nahoře, teplý
+           espresso stín vpravo dole. Klasický neumorfismus jede na šedomodré
+           #E0E5EC a na hraně čitelnosti – tady je záměrně utlumený:
+           krytí stínu 0.08–0.12 místo obvyklých 0.25+, takže plocha jen
+           „vystoupí“ z krémového podkladu a nikde nesnižuje kontrast textu.
+
+           Povrch s tímto stínem musí mít stejnou barvu jako podklad
+           (`linda-cream` na stránce, `linda-sandLight` uvnitř pískových
+           panelů) – právě z toho reliéf žije. Barvu nikdy neředíme bílou.
+        ------------------------------------------------------------------ */
+        neu: '8px 8px 20px rgba(43, 32, 25, 0.10), -6px -6px 16px rgba(255, 255, 255, 0.95)',
+        neuSm: '4px 4px 10px rgba(43, 32, 25, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9)',
+        neuLg: '16px 16px 36px rgba(43, 32, 25, 0.12), -10px -10px 28px rgba(255, 255, 255, 1)',
+
+        /* Konkávní varianty – „vyfrézovaná“ prohlubeň. Používáme na místa,
+           kam se něco vkládá: obrázkové niky, vstupní pole, stisknutý stav. */
+        neuInset:
+          'inset 6px 6px 14px rgba(43, 32, 25, 0.13), inset -4px -4px 10px rgba(255, 255, 255, 1)',
+        neuInsetSm:
+          'inset 3px 3px 7px rgba(43, 32, 25, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9)',
+
+        /* Tmavé plochy (espresso tlačítka) reliéf nedrží stejně – vlastní stín
+           je na nich neviditelný. Místo přísvitu proto vnitřní horní linka. */
+        neuDark:
+          '8px 8px 18px rgba(43, 32, 25, 0.22), -6px -6px 16px rgba(255, 255, 255, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.14)',
       },
       keyframes: {
         fadeIn: {

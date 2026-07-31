@@ -19,7 +19,7 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
  */
 export const TrustBar: React.FC = () => (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="rounded-2xl bg-linda-sandLight px-6 py-8 sm:px-10">
+    <div className="rounded-2xl bg-linda-sandLight px-6 py-8 shadow-neu sm:px-10">
       {/* Na lg oddělují sloupce vlasové linky; `divide-x` nekreslí čáru před prvním prvkem. */}
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-linda-sand">
         {VYHODY.map((vyhoda) => {
@@ -30,7 +30,11 @@ export const TrustBar: React.FC = () => (
               key={vyhoda.title}
               className="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0"
             >
-              <Ikona className="h-6 w-6 shrink-0 text-linda-espresso/70" aria-hidden="true" />
+              {/* Ikona sedí na vystouplém terči ve stejné barvě jako panel –
+                  reliéf ji odliší, aniž bychom sáhli po další barvě. */}
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linda-sandLight shadow-neuSm">
+                <Ikona className="h-5 w-5 text-linda-espresso/70" aria-hidden="true" />
+              </span>
               <div>
                 <p className="text-sm font-semibold text-linda-espresso">{vyhoda.title}</p>
                 <p className="text-sm text-linda-espresso/75">{vyhoda.description}</p>
