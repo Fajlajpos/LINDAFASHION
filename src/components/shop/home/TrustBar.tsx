@@ -33,7 +33,7 @@ export const TrustBar: React.FC = () => (
               <Ikona className="h-6 w-6 shrink-0 text-linda-espresso/70" aria-hidden="true" />
               <div>
                 <p className="text-sm font-semibold text-linda-espresso">{vyhoda.title}</p>
-                <p className="text-sm text-linda-espresso/65">{vyhoda.description}</p>
+                <p className="text-sm text-linda-espresso/75">{vyhoda.description}</p>
               </div>
             </li>
           );

@@ -23,12 +23,15 @@ const IKONY: Record<HomeTrustItem['icon'], React.ComponentType<{ className?: str
  * zespoda zanořuje záporným marginem.
  */
 export const HeroSplit: React.FC = () => (
-  <section className="relative overflow-hidden bg-linda-cream pb-28 lg:pb-36">
+  /* Sekce nemá vlastní spodní odsazení – obě poloviny (textura vlevo, fotka
+     vpravo) tak končí přesně na její hraně a karta kategorií se do nich
+     zanoří stejně hluboko. Odstup textu od karty řeší `pb` textového panelu.
+     Dřív měla každá polovina jiný mechanismus (`h-full` vs. záporný margin)
+     a při nízkém okně se rozešly až o 122 px. */
+  <section className="relative overflow-hidden bg-linda-cream">
     <div className="lg:grid lg:grid-cols-12 lg:items-stretch">
-      {/* Fotografie – na mobilu nahoře, na lg vpravo v mřížce (col 7–12).
-          Záporný spodní margin ji protahuje skrz spodní odsazení sekce až k
-          její hraně, aby se karta kategorií měla do čeho zanořit. */}
-      <div className="relative aspect-[4/5] w-full lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:-mb-36 lg:aspect-auto lg:h-full lg:min-h-[88vh]">
+      {/* Fotografie – na mobilu nahoře, na lg vpravo v mřížce (col 7–12) */}
+      <div className="relative aspect-[4/5] w-full lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:aspect-auto lg:h-full lg:min-h-[88vh]">
         <MediaFrame
           src="/hero-editorial.jpg"
           alt="Žena v lněných šatech z italské kolekce"
@@ -48,15 +51,11 @@ export const HeroSplit: React.FC = () => (
 
       {/* Textový panel – na širokých displejích zarovnaný na stejnou levou
           hranu jako obsahový kontejner zbytku stránky (max-w-7xl + px-8). */}
-      <div className="relative isolate px-4 pb-4 pt-12 sm:px-6 lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:justify-center lg:py-20 lg:pl-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:pr-12">
+      {/* Spodní `pb` drží text nad kartou kategorií, která sem shora zasahuje. */}
+      <div className="relative isolate px-4 pb-28 pt-12 sm:px-6 lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:justify-center lg:py-20 lg:pb-40 lg:pl-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:pr-12">
         {/* Reliéf omítky pod textem – jen naznačený, viz `.texture-hero-panel`
-            v globals.css. `-z-10` uvnitř `isolate` ho drží pod obsahem.
-            Záporný spodní okraj protahuje texturu skrz spodní odsazení sekce,
-            jinak by nad kartou kategorií vznikla viditelná vodorovná hrana. */}
-        <div
-          aria-hidden="true"
-          className="texture-hero-panel absolute inset-0 -bottom-28 -z-10 lg:-bottom-36"
-        />
+            v globals.css. `-z-10` uvnitř `isolate` ho drží pod obsahem. */}
+        <div aria-hidden="true" className="texture-hero-panel absolute inset-0 -z-10" />
 
         {/* /50 dávalo na krému jen 3,1:1 – pod normou i bez textury. */}
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-linda-espresso/70">

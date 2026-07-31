@@ -9,10 +9,14 @@
  * protože route `/produkty/[slug]` v aplikaci neexistuje.
  */
 
+/** Název plastické ilustrace z `CategoryGlyph`. */
+export type GlyphName = 'vse' | 'saty' | 'halenky' | 'svetry' | 'saka' | 'poukazy';
+
 export interface HomeCategoryChip {
   label: string;
   href: string;
   obrazek: string | null;
+  glyph: GlyphName;
   /** Tmavý akcentní chip na konci řady (v předloze „SALE“). */
   accent?: boolean;
 }
@@ -21,6 +25,9 @@ export interface HomeCategoryTile {
   title: string;
   href: string;
   obrazek: string | null;
+  glyph: GlyphName;
+  /** Krátký doplněk pod názvem – co v kategorii uživatel najde. */
+  popis: string;
   /** Popis fotografie pro čtečky – prázdný u dekorativní výplně. */
   alt: string;
 }
@@ -60,15 +67,26 @@ export interface HomeProduct {
 
 /** Kruhové zkratky nad úvodní sekcí. Všechny cíle vedou na existující route. */
 export const KATEGORIE_CHIPY: HomeCategoryChip[] = [
-  { label: 'Vše', href: '/produkty', obrazek: null },
-  { label: 'Šaty', href: '/produkty?kategorie=saty', obrazek: null },
-  { label: 'Halenky', href: '/produkty?kategorie=halenky-a-kosile', obrazek: null },
-  { label: 'Svetry', href: '/produkty?kategorie=svetry-a-kardigany', obrazek: null },
-  { label: 'Saka', href: '/produkty?kategorie=saka-a-kabaty', obrazek: null },
+  { label: 'Vše', href: '/produkty', obrazek: null, glyph: 'vse' },
+  { label: 'Šaty', href: '/produkty?kategorie=saty', obrazek: null, glyph: 'saty' },
+  {
+    label: 'Halenky',
+    href: '/produkty?kategorie=halenky-a-kosile',
+    obrazek: null,
+    glyph: 'halenky',
+  },
+  {
+    label: 'Svetry',
+    href: '/produkty?kategorie=svetry-a-kardigany',
+    obrazek: null,
+    glyph: 'svetry',
+  },
+  { label: 'Saka', href: '/produkty?kategorie=saka-a-kabaty', obrazek: null, glyph: 'saka' },
   {
     label: 'Poukazy',
     href: '/produkty?kategorie=darkove-poukazy',
     obrazek: null,
+    glyph: 'poukazy',
     accent: true,
   },
 ];
@@ -79,24 +97,32 @@ export const KATEGORIE_DLAZDICE: HomeCategoryTile[] = [
     title: 'Šaty',
     href: '/produkty?kategorie=saty',
     obrazek: null,
+    glyph: 'saty',
+    popis: 'Hedvábí a len na celý rok',
     alt: '',
   },
   {
     title: 'Halenky & Košile',
     href: '/produkty?kategorie=halenky-a-kosile',
     obrazek: null,
+    glyph: 'halenky',
+    popis: 'Základ, který obléknete denně',
     alt: '',
   },
   {
     title: 'Svetry & Kardigany',
     href: '/produkty?kategorie=svetry-a-kardigany',
     obrazek: null,
+    glyph: 'svetry',
+    popis: 'Kašmír a jemná merino vlna',
     alt: '',
   },
   {
     title: 'Saka & Kabáty',
     href: '/produkty?kategorie=saka-a-kabaty',
     obrazek: null,
+    glyph: 'saka',
+    popis: 'Střihy z italských dílen',
     alt: '',
   },
 ];

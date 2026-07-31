@@ -114,7 +114,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <span className="font-serif italic text-lg text-linda-espresso/80 group-hover:text-linda-cognac transition-colors">
               LINDA FASHION
             </span>
-            <span className="text-[10px] tracking-widest uppercase text-linda-cognac/70 mt-1">
+            <span className="text-[11px] tracking-widest uppercase text-linda-cognac mt-1">
               Moda Italiana
             </span>
           </div>
@@ -127,7 +127,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Category & Brand */}
           <div className="flex items-center justify-between text-xs text-linda-cognac font-medium tracking-wide mb-1">
             <span>{kategorieNazev || 'Italská móda'}</span>
-            {znacka && <span className="text-linda-espresso/60 font-serif italic">{znacka}</span>}
+            {znacka && <span className="text-linda-espresso/75 font-serif italic">{znacka}</span>}
           </div>
 
           {/* Title */}
@@ -149,7 +149,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {displayPrice?.toLocaleString('cs-CZ')} Kč
               </span>
               {hasDiscount && (
-                <span className="text-xs text-linda-espresso/60 line-through font-normal">
+                <span className="text-xs text-linda-espresso/75 line-through font-normal">
                   <span className="sr-only">Původní cena </span>
                   {cena.toLocaleString('cs-CZ')} Kč
                 </span>

@@ -29,7 +29,7 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
     className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`}
   >
     <div>
-      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/45">
+      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
         {eyebrow}
       </span>
       <Tag className="font-serif text-3xl leading-[1.15] text-linda-espresso sm:text-[2.6rem]">

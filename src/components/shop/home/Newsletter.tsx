@@ -41,7 +41,7 @@ export const Newsletter: React.FC = () => {
 
         {/* Formulářová část */}
         <div className="flex flex-col justify-center gap-5 p-8 sm:p-12 lg:col-span-8">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/50">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
             Získejte 10 % na první nákup
           </span>
 
@@ -90,7 +90,7 @@ export const Newsletter: React.FC = () => {
             {stav === 'hotovo' ? 'Děkujeme, přihlášku jsme přijali. Ozveme se s první novinkou.' : ''}
           </p>
 
-          <p id="newsletter-souhlas" className="text-xs text-linda-espresso/55">
+          <p id="newsletter-souhlas" className="text-xs text-linda-espresso/70">
             Odesláním souhlasíte se{' '}
             <Link
               href="/ochrana-osobnich-udaju"

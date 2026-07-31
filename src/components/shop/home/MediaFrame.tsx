@@ -59,7 +59,7 @@ export const MediaFrame: React.FC<MediaFrameProps> = ({
       {/* Krytí /45 a /35 dávalo kolem 2:1 – výplň byla sotva vidět.
           Pořád je to jen zástupný obsah do příchodu fotek, ale čitelný. */}
       <span className="font-serif text-3xl leading-none text-linda-cognac/75">L</span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-linda-espresso/65">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-linda-espresso/80">
         Moda Italiana
       </span>
     </div>

@@ -35,7 +35,7 @@ export const PromoBanners: React.FC = () => (
           </div>
 
           <div className="relative z-10 flex w-full flex-col items-start justify-center gap-4 p-6 pr-[40%] sm:gap-5 sm:p-10 sm:pr-[44%] lg:pr-[48%]">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/50">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
               {promo.eyebrow}
             </span>
 
