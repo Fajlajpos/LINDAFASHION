@@ -28,14 +28,14 @@ export const CategoryCircles: React.FC = () => (
               >
                 {chip.accent ? (
                   /* Tmavý akcent – uzavírá řadu a odlišuje poukazy od kategorií */
-                  <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-linda-espresso transition-colors duration-200 group-hover:bg-linda-cognac sm:h-24 sm:w-24">
+                  <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-linda-espresso shadow-card transition-all duration-200 group-hover:bg-linda-cognac group-hover:shadow-elevated sm:h-24 sm:w-24">
                     <CategoryGlyph
                       name={chip.glyph}
                       className="h-14 w-14 opacity-90 transition-transform duration-300 group-hover:scale-105 sm:h-16 sm:w-16"
                     />
                   </span>
                 ) : (
-                  <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-linda-cream to-linda-sand/70 ring-1 ring-linda-sand transition-all duration-200 group-hover:ring-linda-cognac sm:h-24 sm:w-24">
+                  <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-linda-cream to-linda-sand/70 ring-1 ring-linda-sand/60 shadow-card transition-shadow duration-200 group-hover:shadow-elevated sm:h-24 sm:w-24">
                     <CategoryGlyph
                       name={chip.glyph}
                       className="h-14 w-14 transition-transform duration-300 group-hover:scale-105 sm:h-16 sm:w-16"

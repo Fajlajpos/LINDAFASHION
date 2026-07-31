@@ -38,7 +38,9 @@ export const CategoryShowcase: React.FC = () => (
           <Link
             key={tile.href}
             href={tile.href}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-linda-sand bg-white transition-all duration-300 hover:border-linda-cognac hover:shadow-elevated"
+            /* Hover řeší stín, ne obarvení okraje – stejně jako karty
+               v sekci „Nejčastěji volené kousky“. */
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-linda-sand/50 bg-white shadow-card transition-all duration-300 hover:shadow-elevated"
           >
             {/* Ilustrace v oblouku – tvar odkazuje na výlohu butiku */}
             <div className="relative flex justify-center px-6 pt-6">
