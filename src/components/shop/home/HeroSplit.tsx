@@ -1,37 +1,30 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, Headset, Package, ShieldCheck, Truck } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Package, Truck } from 'lucide-react';
 import { MediaFrame } from './MediaFrame';
-import { VYHODY, type HomeTrustItem } from '@/lib/home-data';
-
-/** Názvy ikon z dat mapujeme na komponenty až tady – data zůstávají bez Reactu. */
-const IKONY: Record<HomeTrustItem['icon'], React.ComponentType<{ className?: string }>> = {
-  truck: Truck,
-  package: Package,
-  shield: ShieldCheck,
-  headset: Headset,
-};
 
 /**
  * Úvodní editorial hero: text vlevo na krémové ploše, fotografie vpravo
  * na spad k pravému okraji obrazovky.
  *
- * Na mobilu jde fotografie první (poměr 4/5) a text pod ni – palec tak má
- * tlačítka v dosahu a snímek nesnižuje čitelnost titulku.
- *
- * Spodní odsazení (`pb-28`) je záměrně velké: `CategoryCircles` se do heru
- * zespoda zanořuje záporným marginem.
+ * Na mobilu jde fotografie první a text pod ni – palec tak má tlačítka
+ * v dosahu a snímek nesnižuje čitelnost titulku.
  */
 export const HeroSplit: React.FC = () => (
-  /* Sekce nemá vlastní spodní odsazení – obě poloviny (textura vlevo, fotka
-     vpravo) tak končí přesně na její hraně a karta kategorií se do nich
-     zanoří stejně hluboko. Odstup textu od karty řeší `pb` textového panelu.
-     Dřív měla každá polovina jiný mechanismus (`h-full` vs. záporný margin)
-     a při nízkém okně se rozešly až o 122 px. */
+  /* Obě poloviny (textura vlevo, fotka vpravo) končí přesně na hraně sekce.
+     Dřív měla každá jiný mechanismus (`h-full` vs. záporný margin) a při
+     nízkém okně se rozešly až o 122 px. */
   <section className="relative overflow-hidden bg-linda-cream">
     <div className="lg:grid lg:grid-cols-12 lg:items-stretch">
       {/* Fotografie – na mobilu nahoře, na lg vpravo v mřížce (col 7–12) */}
-      <div className="relative aspect-[4/5] w-full lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:aspect-auto lg:h-full lg:min-h-[88vh]">
+      {/* 88vh tlačilo na notebooku s 768px výšky pod ohyb i hlavní tlačítko;
+          76vh nechá pod herem vykouknout začátek další sekce, což je zároveň
+          pozvánka ke skrolování.
+
+          Poměr 4/5 platí jen na telefonu (na 375 px = 469 px, rozumné). Na
+          tabletu by z něj bylo 960 px a první obrazovka by byla čistě fotka
+          bez jediného slova – od `sm` proto jede na šířku. */}
+      <div className="relative aspect-[4/5] w-full sm:aspect-[16/10] lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:aspect-auto lg:h-full lg:min-h-[76vh]">
         <MediaFrame
           src="/hero-editorial.jpg"
           alt="Žena v lněných šatech z italské kolekce"
@@ -51,8 +44,10 @@ export const HeroSplit: React.FC = () => (
 
       {/* Textový panel – na širokých displejích zarovnaný na stejnou levou
           hranu jako obsahový kontejner zbytku stránky (max-w-7xl + px-8). */}
-      {/* Spodní `pb` drží text nad kartou kategorií, která sem shora zasahuje. */}
-      <div className="relative isolate px-4 pb-28 pt-12 sm:px-6 lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:justify-center lg:py-20 lg:pb-40 lg:pl-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:pr-12">
+      {/* Spodní `pb` drží text nad kartou kategorií, která se sem zespoda
+          zanořuje (`-mt-14` / `lg:-mt-16`). Karta je vysoká ~104 px, takže
+          96 / 128 px odsazení jí nechá dost místa a text se pod ni nedostane. */}
+      <div className="relative isolate px-4 pb-24 pt-12 sm:px-6 lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:justify-center lg:py-20 lg:pb-32 lg:pl-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:pr-12">
         {/* Reliéf omítky pod textem – jen naznačený, viz `.texture-hero-panel`
             v globals.css. `-z-10` uvnitř `isolate` ho drží pod obsahem. */}
         <div aria-hidden="true" className="texture-hero-panel absolute inset-0 -z-10" />
@@ -65,7 +60,10 @@ export const HeroSplit: React.FC = () => (
         {/* Mezi 1024 a 1280 px má textový sloupec jen ~430 px, na 60 px se
             titulek lámal na tři řádky – v tom pásmu proto jede na 48 px.
             Ruční zalomení platí až od `sm`; na mobilu se text láme sám. */}
-        <h1 className="mt-6 font-serif text-5xl leading-[1.05] text-linda-espresso sm:text-6xl lg:text-5xl xl:text-6xl">
+        {/* Na `xl` jde titulek až na 72 px: Cormorant je displejové písmo,
+            ve 48 px působí krotce, a proti nadpisům sekcí (36 px) teprve
+            takhle vzniká hierarchie, ve které hero opravdu vede. */}
+        <h1 className="mt-6 font-serif text-5xl leading-[1.05] text-linda-espresso sm:text-6xl lg:text-5xl xl:text-7xl">
           Nadčasová elegance
           <br className="hidden sm:block" />{' '}
           pro každý den
@@ -101,33 +99,23 @@ export const HeroSplit: React.FC = () => (
           </Link>
         </div>
 
-        {/* Výhody. Tři sloupce jedou jen tam, kde na ně je místo – mezi 1024
-            a 1280 px je textový panel úzký a popisky se lámaly i uvnitř ceny
-            („2 / 500 Kč“), proto tam jdou výhody pod sebe. */}
-        <div className="mt-12 border-t border-linda-sand pt-6">
-          <ul className="grid grid-cols-1 divide-y divide-linda-sand sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-1 lg:divide-x-0 lg:divide-y xl:grid-cols-3 xl:divide-x xl:divide-y-0">
-            {VYHODY.slice(0, 3).map((vyhoda) => {
-              const Ikona = IKONY[vyhoda.icon];
-
-              return (
-                <li
-                  key={vyhoda.title}
-                  className="flex items-start gap-3 py-3 sm:px-4 sm:py-0 sm:first:pl-0 sm:last:pr-0 lg:px-0 lg:py-2.5 xl:px-4 xl:py-0"
-                >
-                  <Ikona className="h-5 w-5 shrink-0 text-linda-espresso/60" aria-hidden="true" />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-linda-espresso">
-                      {vyhoda.title}
-                    </span>
-                    {/* /60 = 4,18:1, těsně pod normou – zvednuto na /75 */}
-                    <span className="block text-xs text-linda-espresso/75">
-                      {vyhoda.description}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+        {/* Nákupní jistoty jen jako jeden tichý řádek.
+            Dřív tu stál třísloupcový výčet `VYHODY.slice(0, 3)`, jenže tytéž
+            položky nese `TrustBar` níž na stránce – „Doprava zdarma“ i
+            „Vrácení do 14 dnů“ tak byly na homepage dvakrát, jen jinak
+            nastylované. Ujištění nad ohybem má cenu, opakování ne: zůstala
+            jedna řádka, hero se zkrátil a duplicita zmizela.
+            Nezlomitelné mezery drží „2 500 Kč“ i „14 dnů“ pohromadě. */}
+        <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-linda-sand pt-6 text-xs text-linda-espresso/75">
+          <span className="inline-flex items-center gap-2">
+            <Truck className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
+            Doprava zdarma nad 2 500 Kč
+          </span>
+          <span aria-hidden="true" className="hidden h-3 w-px bg-linda-sand sm:block" />
+          <span className="inline-flex items-center gap-2">
+            <Package className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
+            Vrácení do 14 dnů
+          </span>
         </div>
       </div>
     </div>

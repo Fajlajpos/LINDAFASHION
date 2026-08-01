@@ -4,6 +4,27 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Sparkles, Gift } from 'lucide-react';
+import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
+
+/**
+ * Kategorie → ilustrace pro kartu bez fotografie.
+ *
+ * Párujeme přes název kategorie, ne přes slug: karta ho dostává jako jediný
+ * údaj o zařazení. Diakritiku i tvary ošetřují volné regulární výrazy.
+ */
+const GLYF_PODLE_KATEGORIE: ReadonlyArray<readonly [RegExp, CategoryGlyphName]> = [
+  [/pouk|dárk|dark/i, 'poukazy'],
+  [/šat|sat/i, 'saty'],
+  [/halenk|košil|kosil/i, 'halenky'],
+  [/svetr|kardig/i, 'svetry'],
+  [/sak|kabát|kabat/i, 'saka'],
+];
+
+const vyberGlyf = (kategorie?: string, jePoukaz?: boolean): CategoryGlyphName => {
+  if (jePoukaz) return 'poukazy';
+  const nalez = GLYF_PODLE_KATEGORIE.find(([vzor]) => vzor.test(kategorie ?? ''));
+  return nalez ? nalez[1] : 'vse';
+};
 
 export interface ProductCardProps {
   id: string;
@@ -55,15 +76,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <span className="sr-only">Sleva </span>-{discountPercent}%
           </span>
         )}
+        {/* „100% Italský materiál“ visí na každém kusu v nabídce, takže sama
+            o sobě nic neodlišuje – ve dvojici s „Nová kolekce“ nebo slevou jen
+            dělala ze štítků shluk. Zobrazí se proto jen tam, kde karta jiný
+            štítek nemá, a zůstane z ní tichá jistota místo hluku. */}
         {jeDarkovyPoukaz ? (
           <span className="bg-linda-espresso text-linda-sand text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
             <Gift className="w-3 h-3 text-linda-sand" aria-hidden="true" />
             Dárkový poukaz
           </span>
         ) : (
-          <span className="bg-linda-sageLight text-linda-sage text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border border-linda-sage/25">
-            100% Italský materiál
-          </span>
+          !doporuceny &&
+          !hasDiscount && (
+            <span className="bg-linda-sageLight text-linda-sage text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border border-linda-sage/25">
+              100% Italský materiál
+            </span>
+          )
         )}
       </div>
 
@@ -106,19 +134,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          /* Elegant graphic placeholder for missing photo (No AI images used) */
-          <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-linda-cream to-linda-sandLight text-center">
-            <div className="w-16 h-16 rounded-full bg-linda-sand/40 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              {jeDarkovyPoukaz ? (
-                <Gift className="w-8 h-8 text-linda-cognac stroke-[1.5]" aria-hidden="true" />
-              ) : (
-                <Sparkles className="w-8 h-8 text-linda-cognac stroke-[1.5]" aria-hidden="true" />
-              )}
-            </div>
-            <span className="font-serif italic text-lg text-linda-espresso/80 group-hover:text-linda-cognac transition-colors">
-              LINDA FASHION
-            </span>
-            <span className="text-[11px] tracking-widest uppercase text-linda-cognac mt-1">
+          /* Zástupná plocha bez fotografie.
+             Dřív tu byla ikonka jiskřiček a pod ní dvakrát název značky –
+             na mřížce šesti karet vedle sebe vznikla řada identických polí,
+             která čtou jako „chybí obrázek“. Teď plochu drží silueta kousku
+             podle jeho kategorie: karty se od sebe liší, plocha vypadá
+             záměrně a hned je vidět, o jaký typ oblečení jde. */
+          <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-linda-sandLight via-linda-cream to-linda-sand/60">
+            <CategoryGlyph
+              name={vyberGlyf(kategorieNazev, jeDarkovyPoukaz)}
+              className="absolute left-1/2 top-1/2 h-[74%] w-[74%] -translate-x-1/2 -translate-y-1/2 transition-transform duration-500 group-hover:scale-105"
+            />
+            <span className="absolute inset-x-0 bottom-4 text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-linda-espresso/60">
               Moda Italiana
             </span>
           </div>

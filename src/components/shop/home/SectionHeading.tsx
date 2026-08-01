@@ -32,7 +32,10 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
       <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
         {eyebrow}
       </span>
-      <Tag className="font-serif text-3xl leading-[1.15] text-linda-espresso sm:text-[2.6rem]">
+      {/* 42 px bylo jen o kousek pod herem – rozdíl tak malý, že hero
+          nedominoval. Sekce jdou na 36 px, hero na `xl` nahoru na 72 px;
+          teprve mezi těmi dvěma je vidět, co je hlavní nadpis stránky. */}
+      <Tag className="font-serif text-[1.75rem] leading-[1.15] text-linda-espresso sm:text-4xl">
         {title}
       </Tag>
     </div>

@@ -12,24 +12,14 @@
 /** Název plastické ilustrace z `CategoryGlyph`. */
 export type GlyphName = 'vse' | 'saty' | 'halenky' | 'svetry' | 'saka' | 'poukazy';
 
-export interface HomeCategoryChip {
+/** Pole rozcestníku kategorií pod herem. */
+export interface HomeCategoryRow {
+  /** Krátký název – pole pruhu je úzké, delší text by se lámal. */
   label: string;
   href: string;
-  obrazek: string | null;
   glyph: GlyphName;
-  /** Tmavý akcentní chip na konci řady (v předloze „SALE“). */
+  /** Poukazy nejsou kategorie oblečení – pole se odliší tmavým podkladem. */
   accent?: boolean;
-}
-
-export interface HomeCategoryTile {
-  title: string;
-  href: string;
-  obrazek: string | null;
-  glyph: GlyphName;
-  /** Krátký doplněk pod názvem – co v kategorii uživatel najde. */
-  popis: string;
-  /** Popis fotografie pro čtečky – prázdný u dekorativní výplně. */
-  alt: string;
 }
 
 export interface HomePromo {
@@ -38,6 +28,8 @@ export interface HomePromo {
   titleLines: [string, string];
   cta: { label: string; href: string };
   obrazek: string | null;
+  /** Ilustrace, která drží obrazovou plochu, dokud není fotka. */
+  glyph: GlyphName;
   alt: string;
 }
 
@@ -65,65 +57,24 @@ export interface HomeProduct {
   jeDarkovyPoukaz?: boolean;
 }
 
-/** Kruhové zkratky nad úvodní sekcí. Všechny cíle vedou na existující route. */
-export const KATEGORIE_CHIPY: HomeCategoryChip[] = [
-  { label: 'Vše', href: '/produkty', obrazek: null, glyph: 'vse' },
-  { label: 'Šaty', href: '/produkty?kategorie=saty', obrazek: null, glyph: 'saty' },
-  {
-    label: 'Halenky',
-    href: '/produkty?kategorie=halenky-a-kosile',
-    obrazek: null,
-    glyph: 'halenky',
-  },
-  {
-    label: 'Svetry',
-    href: '/produkty?kategorie=svetry-a-kardigany',
-    obrazek: null,
-    glyph: 'svetry',
-  },
-  { label: 'Saka', href: '/produkty?kategorie=saka-a-kabaty', obrazek: null, glyph: 'saka' },
+/**
+ * Rozcestník kategorií v pruhu pod herem.
+ *
+ * Pět polí: na `lg` si každé vezme pětinu šířky obrazovky, pod ním se pruh
+ * posouvá vodorovně. „Vše“ tu není – na celý katalog vede hlavní tlačítko
+ * v heru i položka „Kolekce“ v hlavičce, třetí odkaz na totéž místo by byl
+ * jen šum.
+ */
+export const KATEGORIE_ROZCESTNIK: HomeCategoryRow[] = [
+  { label: 'Šaty', href: '/produkty?kategorie=saty', glyph: 'saty' },
+  { label: 'Halenky', href: '/produkty?kategorie=halenky-a-kosile', glyph: 'halenky' },
+  { label: 'Svetry', href: '/produkty?kategorie=svetry-a-kardigany', glyph: 'svetry' },
+  { label: 'Saka', href: '/produkty?kategorie=saka-a-kabaty', glyph: 'saka' },
   {
     label: 'Poukazy',
     href: '/produkty?kategorie=darkove-poukazy',
-    obrazek: null,
     glyph: 'poukazy',
     accent: true,
-  },
-];
-
-/** Velké dlaždice sekce „Najděte svůj styl“. */
-export const KATEGORIE_DLAZDICE: HomeCategoryTile[] = [
-  {
-    title: 'Šaty',
-    href: '/produkty?kategorie=saty',
-    obrazek: null,
-    glyph: 'saty',
-    popis: 'Hedvábí a len na celý rok',
-    alt: '',
-  },
-  {
-    title: 'Halenky & Košile',
-    href: '/produkty?kategorie=halenky-a-kosile',
-    obrazek: null,
-    glyph: 'halenky',
-    popis: 'Základ, který obléknete denně',
-    alt: '',
-  },
-  {
-    title: 'Svetry & Kardigany',
-    href: '/produkty?kategorie=svetry-a-kardigany',
-    obrazek: null,
-    glyph: 'svetry',
-    popis: 'Kašmír a jemná merino vlna',
-    alt: '',
-  },
-  {
-    title: 'Saka & Kabáty',
-    href: '/produkty?kategorie=saka-a-kabaty',
-    obrazek: null,
-    glyph: 'saka',
-    popis: 'Střihy z italských dílen',
-    alt: '',
   },
 ];
 
@@ -134,6 +85,7 @@ export const PROMO_BANNERY: HomePromo[] = [
     titleLines: ['Novinky sezóny', 'právě dorazily'],
     cta: { label: 'Prohlédnout novinky', href: '/produkty' },
     obrazek: null,
+    glyph: 'saty',
     alt: '',
   },
   {
@@ -141,6 +93,7 @@ export const PROMO_BANNERY: HomePromo[] = [
     titleLines: ['Dárkový poukaz', 'potěší vždy'],
     cta: { label: 'Vybrat poukaz', href: '/produkty?kategorie=darkove-poukazy' },
     obrazek: null,
+    glyph: 'poukazy',
     alt: '',
   },
 ];
@@ -177,6 +130,9 @@ export const VYHODY: HomeTrustItem[] = [
 /**
  * Nejoblíbenější kousky – ukázková data, než se napojí katalog z databáze.
  * Záznamy odpovídají produktům v `/produkty`, aby slugy a značky seděly.
+ *
+ * Šest položek, ne čtyři: ve třech sloupcích tvoří dvě plné řady. Čtyři kusy
+ * na čtyři sloupce dávaly jediný řádek a sortiment vypadal prázdně.
  */
 export const NEJPRODAVANEJSI: HomeProduct[] = [
   {
@@ -215,5 +171,24 @@ export const NEJPRODAVANEJSI: HomeProduct[] = [
     znacka: 'Venezia Tailoring',
     kategorieNazev: 'Saka & Kabáty',
     doporuceny: true,
+  },
+  {
+    id: 'p5',
+    nazev: 'Hedvábná halenka Amalfi',
+    slug: 'hedvabna-halenka-amalfi',
+    cena: 2290,
+    znacka: 'Toscana Style',
+    kategorieNazev: 'Halenky & Košile',
+    doporuceny: false,
+  },
+  {
+    id: 'p6',
+    nazev: 'Kašmírový kardigan Siena',
+    slug: 'kasmirovy-kardigan-siena',
+    cena: 3690,
+    cenaPoSleve: 2990,
+    znacka: 'Roma Knitwear',
+    kategorieNazev: 'Svetry & Kardigany',
+    doporuceny: false,
   },
 ];

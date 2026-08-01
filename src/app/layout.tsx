@@ -46,6 +46,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs" className={`scroll-smooth ${cormorant.variable} ${jakarta.variable}`}>
       <body>
+        {/* Sekce, které naskakují při skrolu (`Reveal`), startují průhledné a
+            viditelnými je dělá až JavaScript. Bez něj by obsah zůstal skrytý
+            napořád – tohle pravidlo je proto vrátí zpět. */}
+        <noscript>
+          {/* eslint-disable-next-line react/no-danger */}
+          <style
+            dangerouslySetInnerHTML={{
+              __html: '.js-reveal{opacity:1 !important;transform:none !important}',
+            }}
+          />
+        </noscript>
         <a href="#obsah" className="skip-link">
           Přeskočit na obsah
         </a>

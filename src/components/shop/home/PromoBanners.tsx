@@ -8,10 +8,14 @@ import { MediaFrame } from './MediaFrame';
 /**
  * Dvojice promo bannerů pod dlaždicemi kategorií.
  *
- * Layout je vodorovně rozdělený: text vlevo v normálním toku, fotka vpravo
- * absolutně. Místo pro fotku si text rezervuje procentuálním pravým paddingem,
- * takže se titulek ani tlačítko nikdy nepřekryjí – ani na 375 px, kde je fotka
- * zúžená na třetinu šířky. Levý přechod fotku vpíjí do pískového panelu.
+ * Layout je vodorovně rozdělený: text vlevo v normálním toku, obrazová plocha
+ * vpravo absolutně. Místo pro ni si text rezervuje procentuálním pravým
+ * paddingem, takže se titulek ani tlačítko nikdy nepřekryjí. Levý přechod
+ * plochu vpíjí do pískového panelu.
+ *
+ * Na mobilu obrazová plocha mizí úplně. Ve `w-1/3` z 375 px z ní zbýval
+ * ~125px svislý proužek pod přechodem – ani obrázek, ani dekorace, spíš dojem
+ * rozbitého layoutu. Text tam dostane celou šířku a banner působí záměrně.
  */
 export const PromoBanners: React.FC = () => (
   <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Aktuální nabídky">
@@ -21,10 +25,11 @@ export const PromoBanners: React.FC = () => (
           key={promo.cta.href}
           className="relative flex min-h-[240px] overflow-hidden rounded-2xl bg-linda-sandLight shadow-neu sm:min-h-[280px]"
         >
-          {/* Fotka vpravo – na mobilu jen úzký pruh, ať zbyde místo na CTA */}
-          <div className="absolute inset-y-0 right-0 w-1/3 sm:w-2/5 lg:w-[45%]">
+          {/* Obrazová plocha vpravo – až od `sm`, na mobilu vypnutá. */}
+          <div className="absolute inset-y-0 right-0 hidden w-2/5 sm:block lg:w-[45%]">
             <MediaFrame
               src={promo.obrazek}
+              glyph={promo.glyph}
               alt={promo.alt}
               sizes="(max-width: 1024px) 40vw, 25vw"
             />
@@ -34,7 +39,7 @@ export const PromoBanners: React.FC = () => (
             />
           </div>
 
-          <div className="relative z-10 flex w-full flex-col items-start justify-center gap-4 p-6 pr-[40%] sm:gap-5 sm:p-10 sm:pr-[44%] lg:pr-[48%]">
+          <div className="relative z-10 flex w-full flex-col items-start justify-center gap-4 p-6 pr-6 sm:gap-5 sm:p-10 sm:pr-[44%] lg:pr-[48%]">
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
               {promo.eyebrow}
             </span>

@@ -30,10 +30,13 @@ export const TrustBar: React.FC = () => (
               key={vyhoda.title}
               className="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0"
             >
-              {/* Ikona sedí na vystouplém terči ve stejné barvě jako panel –
-                  reliéf ji odliší, aniž bychom sáhli po další barvě. */}
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linda-sandLight shadow-neuSm">
-                <Ikona className="h-5 w-5 text-linda-espresso/70" aria-hidden="true" />
+              {/* Ikona sedí ve vyfrézované prohlubni, ne na dalším vystouplém
+                  terči: panel je už vyvýšený a reliéf uvnitř reliéfu jen
+                  rozmělňoval hierarchii. Barva je `sage` – olivová z palety
+                  se dosud nikde na stránce neobjevila, ačkoli patří do brandu,
+                  a klidné informace jsou přesně její role. */}
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linda-sandLight shadow-neuInsetSm">
+                <Ikona className="h-5 w-5 text-linda-sage" aria-hidden="true" />
               </span>
               <div>
                 <p className="text-sm font-semibold text-linda-espresso">{vyhoda.title}</p>

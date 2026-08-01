@@ -34,9 +34,11 @@ export const Newsletter: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 overflow-hidden rounded-2xl bg-linda-sandLight shadow-neu lg:grid-cols-12">
-        {/* Obrazová část – fotka zatím chybí, MediaFrame vykreslí značkovou výplň. */}
+        {/* Obrazová část – dokud fotka chybí, drží plochu velká ilustrace. */}
         <div className="relative min-h-[220px] lg:col-span-4 lg:min-h-[340px]">
-          <MediaFrame src={null} alt="" sizes="(max-width: 1024px) 100vw, 33vw" />
+          {/* Jiná silueta než u promo banneru výš – ať se stejná ilustrace
+              neopakuje dvakrát na jedné obrazovce. */}
+          <MediaFrame src={null} glyph="svetry" alt="" sizes="(max-width: 1024px) 100vw, 33vw" />
         </div>
 
         {/* Formulářová část */}

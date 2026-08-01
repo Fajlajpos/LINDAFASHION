@@ -7,9 +7,12 @@ import { ProductCard } from '@/components/shop/ProductCard';
  * Nejprodávanější kousky.
  *
  * Používá stejnou kartu jako katalog `/produkty`, aby produkt vypadal na obou
- * místech identicky. Mřížka je čtyřsloupcová – karta je vyšší než v původní
- * předloze a v šesti sloupcích by se obsah tísnil; šířka sloupce tak odpovídá
- * katalogu.
+ * místech identicky.
+ *
+ * Tři sloupce a šest kusů, ne čtyři na čtyři. Čtyři karty ve čtyřech sloupcích
+ * dávaly jediný řádek – u sekce, která má ukázat, co se nejvíc prodává, to
+ * působilo, že v obchodě skoro nic není. Dvě plné řady vypadají jako nabídka
+ * a širší sloupec zároveň nechá kartě víc místa na fotku i název.
  *
  * Serverová komponenta vykreslující klientské karty. Handler pro oblíbené se
  * odsud nepředává (funkce nepřejde hranicí server → klient); až bude hotový
@@ -24,7 +27,7 @@ export const BestSellers: React.FC = () => (
         action={{ href: '/produkty', label: 'Zobrazit vše' }}
       />
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {NEJPRODAVANEJSI.map((produkt) => (
           <ProductCard key={produkt.id} {...produkt} />
         ))}
