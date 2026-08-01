@@ -43,13 +43,30 @@ export const Header: React.FC<HeaderProps> = ({
   const { favoritesCount } = useFavorites();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 30);
+    let frame = 0;
+
+    const measure = () => {
+      frame = 0;
+      const y = window.scrollY;
+      // Hystereze: zvětšit zpět až pod 12 px. Bez ní se lišta na hranici
+      // jednoho prahu překlápěla tam a zpět a přechod se pořád restartoval.
+      setIsScrolled((prev) => (prev ? y > 12 : y > 40));
     };
+
+    const handleScroll = () => {
+      // Scroll umí přijít několikrát za snímek; rAF sloučí náraz událostí
+      // do jediného přepočtu, takže React nepřekresluje hlavičku zbytečně.
+      if (frame === 0) frame = window.requestAnimationFrame(measure);
+    };
+
+    measure();
     // passive: scroll handler nikdy nevolá preventDefault, prohlížeč tak
     // nemusí čekat a scrollování zůstává plynulé
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Escape zavře otevřené vyhledávání i mobilní menu a vrátí fokus na spouštěč
@@ -82,8 +99,11 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       /* Krémová jako stránka a bez spodní linky – hlavičku od obsahu odděluje
          měkký reliéf, který se skrolem prohloubí (lišta se „zvedne“). */
-      className={`sticky top-0 z-40 bg-linda-cream transition-all duration-300 ${
-        isScrolled ? 'shadow-neuBarRaised py-1' : 'shadow-neuBar py-0'
+      /* Jen `transition-shadow`: `transition-all` spolu s přepínáním `py`
+         rozjelo druhou, konkurenční animaci výšky vedle té na vnitřní mřížce
+         – lišta pak při skrolu poskakovala. Výšku mění jediné místo. */
+      className={`sticky top-0 z-40 bg-linda-cream transition-shadow duration-300 ${
+        isScrolled ? 'shadow-neuBarRaised' : 'shadow-neuBar'
       }`}
     >
       {/* Vacation mode banner */}
@@ -101,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
             přetékaly doleva přes logo. Ve flexu si krajní bloky vezmou, co
             potřebují, a logo dostane zbytek. Od `lg` zůstává mřížka 4/4/4. */}
         <div
-          className={`flex items-center justify-between gap-2 transition-all duration-300 lg:grid lg:grid-cols-12 ${
+          className={`flex items-center justify-between gap-2 transition-[height] duration-300 ease-out lg:grid lg:grid-cols-12 ${
             isScrolled ? 'h-16' : 'h-24'
           }`}
         >
@@ -153,19 +173,27 @@ export const Header: React.FC<HeaderProps> = ({
                    jinak přeteče pod ikony vpravo. */
                 /* `whitespace-nowrap` až od `sm`. Na velmi úzkých displejích
                    se tak nápis raději zalomí na dva řádky, než aby se ořízl. */
-                className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-all duration-300 block sm:whitespace-nowrap ${
-                  isScrolled
-                    ? 'text-[13px] tracking-[0.05em] sm:text-xl sm:tracking-[0.12em] xl:text-2xl xl:tracking-[0.15em]'
-                    : 'text-[13px] tracking-[0.05em] sm:text-2xl sm:tracking-[0.14em] xl:text-3xl xl:tracking-[0.2em]'
+                /* Zmenšení řešíme `scale`, ne `font-size` + `letter-spacing`:
+                   ty dvě vlastnosti nutí prohlížeč přesázet text v každém
+                   snímku (layout + paint), což byl hlavní zdroj trhání.
+                   `scale` běží na kompozitoru. Poměry odpovídají původním
+                   velikostem – sm 24→20 px (0.833), xl 30→24 px (0.8). */
+                className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-[transform,color] duration-300 ease-out block origin-center transform-gpu text-[13px] tracking-[0.05em] sm:whitespace-nowrap sm:text-2xl sm:tracking-[0.14em] xl:text-3xl xl:tracking-[0.2em] ${
+                  isScrolled ? 'scale-100 sm:scale-[0.833] xl:scale-[0.8]' : 'scale-100'
                 }`}
               >
                 LINDA FASHION
               </span>
-              {!isScrolled && (
-                <span className="block text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold -mt-1 transition-all duration-300">
-                  Moda Italiana
-                </span>
-              )}
+              {/* Podtitul zůstává v DOM a jen se sbalí. Dřív se odmountoval,
+                  takže zmizel skokem uprostřed přechodu hlavičky. */}
+              <span
+                aria-hidden={isScrolled}
+                className={`block overflow-hidden -mt-1 text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold transition-[max-height,opacity] duration-300 ease-out ${
+                  isScrolled ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100'
+                }`}
+              >
+                Moda Italiana
+              </span>
             </Link>
           </div>
 
