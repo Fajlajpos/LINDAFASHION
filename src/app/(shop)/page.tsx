@@ -25,22 +25,31 @@ export default function HomePage() {
           jen zdrželo. */}
       <CategoryBar />
 
-      <div className="space-y-16 pt-16 sm:space-y-24 sm:pt-24">
+      {/* Dvě velikosti mezer, ne jedna.
+          Předtím byl mezi všemi sekcemi stejný odstup, takže stránka neřekla
+          nic o tom, co k čemu patří. Velká mezera (24 / 32) odděluje bloky
+          různé povahy – nabídku, akční bannery, servis; malá (10 / 14) drží
+          k sobě jistoty a newsletter, které tvoří jeden servisní pás. */}
+      <div className="pt-16 sm:pt-24">
         <Reveal>
           <BestSellers />
         </Reveal>
 
-        <Reveal>
-          <PromoBanners />
-        </Reveal>
+        <div className="mt-24 sm:mt-32">
+          <Reveal>
+            <PromoBanners />
+          </Reveal>
+        </div>
 
-        <Reveal>
-          <TrustBar />
-        </Reveal>
+        <div className="mt-24 space-y-10 sm:mt-32 sm:space-y-14">
+          <Reveal>
+            <TrustBar />
+          </Reveal>
 
-        <Reveal>
-          <Newsletter />
-        </Reveal>
+          <Reveal>
+            <Newsletter />
+          </Reveal>
+        </div>
       </div>
     </div>
   );

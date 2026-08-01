@@ -6,7 +6,7 @@ import { PROMO_BANNERY } from '@/lib/home-data';
 import { MediaFrame } from './MediaFrame';
 
 /**
- * Dvojice promo bannerů pod dlaždicemi kategorií.
+ * Dvojice promo bannerů.
  *
  * Layout je vodorovně rozdělený: text vlevo v normálním toku, obrazová plocha
  * vpravo absolutně. Místo pro ni si text rezervuje procentuálním pravým
