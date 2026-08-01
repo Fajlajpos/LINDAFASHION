@@ -7,6 +7,10 @@ import { Package, User, MapPin, Heart, AlertTriangle, Truck, Ban, CheckCircle, C
 export default function MujUcetPage() {
   const [activeTab, setActiveTab] = useState<'objednavky' | 'adresy' | 'profil'>('objednavky');
 
+  // Potvrzení anonymizace hlásil `alert()`. Systémové okno vytrhne z kontextu
+  // a po zavření po sobě nenechá stopu – potvrzení proto zůstává na stránce.
+  const [anonymizaceHotova, setAnonymizaceHotova] = useState(false);
+
   // Sample order history
   const [orders, setOrders] = useState([
     {
@@ -39,114 +43,113 @@ export default function MujUcetPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
-      <div className="border-b border-[#E4D9C8] pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 border-b border-linda-sand pb-6 sm:flex-row sm:items-center">
         <div>
-          <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold block">
+          <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
             Můj zákaznický profil
           </span>
-          <h1 className="font-serif text-4xl text-[#2B2019]">Vítejte, Marie Nováková</h1>
+          <h1 className="font-serif text-4xl text-linda-espresso">Vítejte, Marie Nováková</h1>
         </div>
 
-        <Link href="/api/auth/signout" className="text-xs text-[#7A4B32] hover:underline font-semibold">
+        <Link
+          href="/api/auth/signout"
+          className="inline-flex min-h-touch shrink-0 cursor-pointer items-center rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+        >
           Odhlásit se
         </Link>
       </div>
 
-      {/* Tabs navigation */}
-      <div className="flex border-b border-[#E4D9C8]/60 space-x-6 text-sm font-medium">
-        <button
-          onClick={() => setActiveTab('objednavky')}
-          className={`pb-3 flex items-center gap-2 transition-colors border-b-2 ${
-            activeTab === 'objednavky'
-              ? 'border-[#7A4B32] text-[#7A4B32]'
-              : 'border-transparent text-[#2B2019]/60 hover:text-[#2B2019]'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          Moje objednávky ({orders.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('adresy')}
-          className={`pb-3 flex items-center gap-2 transition-colors border-b-2 ${
-            activeTab === 'adresy'
-              ? 'border-[#7A4B32] text-[#7A4B32]'
-              : 'border-transparent text-[#2B2019]/60 hover:text-[#2B2019]'
-          }`}
-        >
-          <MapPin className="w-4 h-4" />
-          Uložené adresy
-        </button>
-
-        <button
-          onClick={() => setActiveTab('profil')}
-          className={`pb-3 flex items-center gap-2 transition-colors border-b-2 ${
-            activeTab === 'profil'
-              ? 'border-[#7A4B32] text-[#7A4B32]'
-              : 'border-transparent text-[#2B2019]/60 hover:text-[#2B2019]'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          Osobní údaje &amp; GDPR
-        </button>
+      {/* Tabs navigation – segmentované ovládání ve žlábku: aktivní panel
+          je zamáčknutý dovnitř, ostatní leží v rovině. */}
+      <div
+        role="tablist"
+        aria-label="Sekce zákaznického účtu"
+        className="flex flex-wrap gap-2 rounded-2xl bg-linda-sandLight p-2 text-sm font-medium shadow-neuInsetSm"
+      >
+        {([
+          { id: 'objednavky', Ikona: Package, label: `Moje objednávky (${orders.length})` },
+          { id: 'adresy', Ikona: MapPin, label: 'Uložené adresy' },
+          { id: 'profil', Ikona: User, label: 'Osobní údaje & GDPR' },
+        ] as const).map(({ id, Ikona, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-xs transition-all duration-200 sm:text-sm ${
+              activeTab === id
+                ? 'bg-linda-cream font-semibold text-linda-cognac shadow-neu'
+                : 'text-linda-espresso/75 hover:text-linda-espresso hover:shadow-neuSm'
+            }`}
+          >
+            <Ikona className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Orders Tab */}
       {activeTab === 'objednavky' && (
         <div className="space-y-6">
           {orders.map((o) => (
-            <div key={o.id} className="bg-white rounded-2xl border border-[#E4D9C8]/80 p-6 shadow-card space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4D9C8]/40 pb-4">
+            <div key={o.id} className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+              <div className="flex flex-col justify-between gap-2 border-b border-linda-sand/40 pb-4 sm:flex-row sm:items-center">
                 <div>
-                  <span className="font-serif text-xl text-[#2B2019] font-medium">
+                  <span className="font-serif text-xl font-medium text-linda-espresso">
                     Objednávka #{o.cisloObjednavky}
                   </span>
-                  <span className="text-xs text-[#2B2019]/60 block">Vytvořeno: {o.datum}</span>
+                  <span className="block text-xs text-linda-espresso/70">Vytvořeno: {o.datum}</span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {/* Status Badges */}
+                {/* Stavové odznaky jsou prohlubně – leží v kartě jako štítek
+                    vyražený do materiálu. Ikona doprovází barvu, takže stav
+                    nezávisí jen na odstínu. */}
+                <div className="flex flex-wrap items-center gap-3">
                   {o.stav === 'NOVA' && (
-                    <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
+                    <span className="flex items-center gap-1 rounded-full bg-linda-sandLight px-3 py-1 text-xs font-semibold text-linda-espresso shadow-neuInsetSm">
+                      <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                       Nová (Zpracovává se)
                     </span>
                   )}
                   {o.stav === 'DORUCENA' && (
-                    <span className="px-3 py-1 bg-[#F0F2EC] text-[#6B7255] rounded-full text-xs font-semibold flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" />
+                    <span className="flex items-center gap-1 rounded-full bg-linda-sageLight px-3 py-1 text-xs font-semibold text-linda-sage shadow-neuInsetSm">
+                      <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
                       Doručeno
                     </span>
                   )}
                   {o.stav === 'ZRUSENA' && (
-                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                      <Ban className="w-3.5 h-3.5" />
+                    <span className="flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 shadow-neuInsetSm">
+                      <Ban className="h-3.5 w-3.5" aria-hidden="true" />
                       Zrušeno
                     </span>
                   )}
 
-                  <span className="font-serif text-lg text-[#7A4B32] font-semibold">
+                  <span className="font-serif text-lg font-semibold text-linda-cognac">
                     {o.celkovaCena.toLocaleString('cs-CZ')} Kč
                   </span>
                 </div>
               </div>
 
-              <div className="text-xs text-[#2B2019]/80 space-y-1">
+              <div className="space-y-1 text-xs text-linda-espresso/80">
                 <p><strong>Položky:</strong> {o.polozky}</p>
                 {o.cisloZasilky && (
-                  <p className="flex items-center gap-1.5 text-[#6B7255] font-medium pt-1">
-                    <Truck className="w-4 h-4" />
+                  <p className="flex items-center gap-1.5 pt-1 font-medium text-linda-sage">
+                    <Truck className="h-4 w-4" aria-hidden="true" />
                     Sledování Zásilkovny: <u>{o.cisloZasilky}</u>
                   </p>
                 )}
               </div>
 
-              {/* Customer Cancel Button for NEW status ONLY */}
+              {/* Customer Cancel Button for NEW status ONLY.
+                  Storno zůstává v červené – je to jediná nevratná akce na
+                  stránce a značková koňaková by ji schovala mezi běžná CTA. */}
               {o.stav === 'NOVA' && (
-                <div className="pt-3 border-t border-[#E4D9C8]/40 flex justify-end">
+                <div className="flex justify-end border-t border-linda-sand/40 pt-3">
                   <button
+                    type="button"
                     onClick={() => handleCancelOrder(o.id)}
-                    className="px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 text-xs font-semibold rounded-full transition-colors"
+                    className="min-h-touch cursor-pointer rounded-full bg-linda-cream px-4 text-xs font-semibold text-red-700 shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
                   >
                     Stornovat objednávku
                   </button>
@@ -160,12 +163,12 @@ export default function MujUcetPage() {
       {/* Addresses Tab */}
       {activeTab === 'adresy' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-3">
-            <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold">
+          <div className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu">
+            <span className="text-xs font-semibold uppercase tracking-widest text-linda-cognac">
               Výchozí doručovací adresa
             </span>
-            <h4 className="font-serif text-lg text-[#2B2019]">Marie Nováková</h4>
-            <p className="text-xs text-[#2B2019]/70 leading-relaxed">
+            <h2 className="font-serif text-lg text-linda-espresso">Marie Nováková</h2>
+            <p className="text-xs leading-relaxed text-linda-espresso/75">
               Vodičkova 45<br />
               110 00 Praha 1<br />
               Česká republika<br />
@@ -177,29 +180,36 @@ export default function MujUcetPage() {
 
       {/* Profile & GDPR Tab */}
       {activeTab === 'profil' && (
-        <div className="bg-white p-8 rounded-2xl border border-[#E4D9C8]/80 shadow-card max-w-xl space-y-6">
-          <h3 className="font-serif text-2xl text-[#2B2019]">Osobní údaje &amp; GDPR Práva</h3>
+        <div className="max-w-xl space-y-6 rounded-2xl bg-linda-cream p-8 shadow-neu">
+          <h2 className="font-serif text-2xl text-linda-espresso">Osobní údaje &amp; GDPR Práva</h2>
 
-          <div className="space-y-3 text-xs text-[#2B2019]/80">
+          <div className="space-y-3 text-xs text-linda-espresso/80">
             <p><strong>Jméno:</strong> Marie Nováková</p>
             <p><strong>E-mail:</strong> zakaznice@example.cz</p>
             <p><strong>Souhlas s newsletterem:</strong> Aktivní</p>
           </div>
 
-          <div className="p-4 bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl text-xs space-y-2">
-            <h4 className="font-semibold text-[#2B2019] flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <div className="space-y-2 rounded-xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+            <h3 className="flex items-center gap-1.5 font-semibold text-linda-espresso">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
               Smazání účtu a právo na výmaz (GDPR)
-            </h4>
-            <p className="text-[#2B2019]/70 leading-relaxed">
+            </h3>
+            <p className="leading-relaxed text-linda-espresso/75">
               Při smazání účtu anonymizujeme vaše osobní údaje. Zákonná účetní archivační povinnost nám ukládá uchovat daňové doklady objednávek po dobu stanovenou zákonem bez vazby na váš osobní profil.
             </p>
-            <button
-              onClick={() => alert('Požadavek na anonymizaci údajů byl zaznamenán.')}
-              className="mt-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-full hover:bg-red-700"
-            >
-              Anonymizovat a smazat můj účet
-            </button>
+            {anonymizaceHotova ? (
+              <p role="status" className="mt-2 font-semibold text-linda-sage">
+                Požadavek na anonymizaci údajů byl zaznamenán. Ozveme se e-mailem.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAnonymizaceHotova(true)}
+                className="mt-2 min-h-touch cursor-pointer rounded-full bg-red-700 px-4 font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-red-800 active:shadow-neuSm"
+              >
+                Anonymizovat a smazat můj účet
+              </button>
+            )}
           </div>
         </div>
       )}

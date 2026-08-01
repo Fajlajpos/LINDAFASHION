@@ -30,6 +30,11 @@ export default function KosikPage() {
   const [appliedGiftCard, setAppliedGiftCard] = useState<number | null>(null);
   const [codeSuccessMessage, setCodeSuccessMessage] = useState<string | null>(null);
 
+  // Chyby kódů drží stav po jednotlivých polích. Dřív je hlásil `alert()` –
+  // systémové okno vytrhne z kontextu a nezůstane u pole, kterého se týká.
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [giftError, setGiftError] = useState<string | null>(null);
+
   const subtotal = items.reduce((acc, item) => acc + item.cena * item.mnozstvi, 0);
 
   // 1. Sleva z kódu v %
@@ -48,9 +53,10 @@ export default function KosikPage() {
     e.preventDefault();
     if (discountCode.toUpperCase() === 'VITAJTE10') {
       setAppliedDiscount(10);
+      setDiscountError(null);
       setCodeSuccessMessage('Slevový kód VITAJTE10 (10 %) byl uplatněn.');
     } else {
-      alert('Neplatný slevový kód. Vyzkoušejte např. VITAJTE10');
+      setDiscountError('Neplatný slevový kód. Vyzkoušejte např. VITAJTE10.');
     }
   };
 
@@ -58,16 +64,17 @@ export default function KosikPage() {
     e.preventDefault();
     if (giftCode.toUpperCase().includes('GIFT')) {
       setAppliedGiftCard(1000);
+      setGiftError(null);
       setCodeSuccessMessage('Dárkový poukaz na 1 000 Kč byl uplatněn.');
     } else {
-      alert('Neplatný dárkový poukaz. Vyzkoušejte např. GIFT-LINDA-1000');
+      setGiftError('Neplatný dárkový poukaz. Vyzkoušejte např. GIFT-LINDA-1000.');
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
-      <div className="border-b border-[#E4D9C8] pb-6">
-        <h1 className="font-serif text-4xl text-[#2B2019]">Nákupní košík</h1>
+      <div className="border-b border-linda-sand pb-6">
+        <h1 className="font-serif text-4xl text-linda-espresso">Nákupní košík</h1>
       </div>
 
       {items.length > 0 ? (
@@ -75,65 +82,92 @@ export default function KosikPage() {
           {/* Cart items list */}
           <div className="lg:col-span-8 space-y-6">
             {/* Free shipping progress bar */}
-            <div className="p-4 bg-[#FAF8F4] border border-[#E4D9C8] rounded-2xl space-y-2">
-              <div className="flex justify-between text-xs font-medium text-[#2B2019]">
+            <div className="space-y-2 rounded-2xl bg-linda-cream p-4 shadow-neu">
+              <div className="flex justify-between gap-3 text-xs font-medium text-linda-espresso">
                 {remainingForFreeShipping > 0 ? (
                   <span>
-                    Nakupte ještě za <strong className="text-[#7A4B32]">{remainingForFreeShipping.toLocaleString('cs-CZ')} Kč</strong> a máte dopravu zdarma!
+                    Nakupte ještě za <strong className="text-linda-cognac">{remainingForFreeShipping.toLocaleString('cs-CZ')} Kč</strong> a máte dopravu zdarma!
                   </span>
                 ) : (
-                  <span className="text-[#6B7255] font-semibold flex items-center gap-1">
-                    <Check className="w-4 h-4 text-[#6B7255]" />
+                  <span className="flex items-center gap-1 font-semibold text-linda-sage">
+                    <Check className="h-4 w-4" aria-hidden="true" />
                     Máte nárok na DOPRAVU ZDARMA!
                   </span>
                 )}
-                <span>{progressPercent}%</span>
+                <span className="shrink-0 tabular-nums">{progressPercent}%</span>
               </div>
-              <div className="w-full bg-[#E4D9C8]/40 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#7A4B32] h-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+
+              {/* Ukazatel je vyfrézovaný žlábek, výplň v něm leží – stejný
+                  jazyk jako vstupní pole. */}
+              <div
+                role="progressbar"
+                aria-valuenow={progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Postup k dopravě zdarma"
+                className="h-2.5 w-full overflow-hidden rounded-full bg-linda-sandLight shadow-neuInsetSm"
+              >
+                <div
+                  className="h-full rounded-full bg-linda-cognac transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
             </div>
 
             {/* Table of items */}
-            <div className="bg-white rounded-2xl border border-[#E4D9C8]/60 divide-y divide-[#E4D9C8]/40 shadow-card">
+            <div className="divide-y divide-linda-sand/40 rounded-2xl bg-linda-cream shadow-neu">
               {items.map((item) => (
-                <div key={item.id} className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div key={item.id} className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
                   <div className="space-y-1">
-                    <Link href={`/produkt/${item.slug}`} className="font-serif text-xl text-[#2B2019] hover:text-[#7A4B32]">
+                    <Link
+                      href={`/produkt/${item.slug}`}
+                      className="font-serif text-xl text-linda-espresso transition-colors hover:text-linda-cognac"
+                    >
                       {item.nazev}
                     </Link>
-                    <div className="text-xs text-[#2B2019]/60">Velikost: {item.velikost}</div>
-                    <div className="text-sm font-semibold text-[#7A4B32]">{item.cena.toLocaleString('cs-CZ')} Kč</div>
+                    <div className="text-xs text-linda-espresso/70">Velikost: {item.velikost}</div>
+                    <div className="text-sm font-semibold text-linda-cognac">{item.cena.toLocaleString('cs-CZ')} Kč</div>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-[#E4D9C8] rounded-lg">
+                    {/* Počítadlo je žlábek, tlačítka v něm vystupují.
+                        Původně měla přes `py-1` jen ~26 px – teď 44×44. */}
+                    <div className="flex items-center gap-1 rounded-xl bg-linda-sandLight p-1 shadow-neuInsetSm">
                       <button
+                        type="button"
                         onClick={() =>
                           setItems(
                             items.map((i) => (i.id === item.id ? { ...i, mnozstvi: Math.max(1, i.mnozstvi - 1) } : i))
                           )
                         }
-                        className="px-3 py-1 text-sm font-bold text-[#2B2019]"
+                        aria-label={`Ubrat kus – ${item.nazev}`}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
                       >
-                        -
+                        &minus;
                       </button>
-                      <span className="px-3 text-xs font-semibold">{item.mnozstvi}</span>
+                      <span aria-live="polite" className="w-8 text-center text-xs font-semibold tabular-nums text-linda-espresso">
+                        {item.mnozstvi}
+                      </span>
                       <button
+                        type="button"
                         onClick={() =>
                           setItems(items.map((i) => (i.id === item.id ? { ...i, mnozstvi: i.mnozstvi + 1 } : i)))
                         }
-                        className="px-3 py-1 text-sm font-bold text-[#2B2019]"
+                        aria-label={`Přidat kus – ${item.nazev}`}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
                       >
                         +
                       </button>
                     </div>
 
+                    {/* `text-gray-400` na bílé dávalo 2,8:1 – espresso/70 je 6:1. */}
                     <button
+                      type="button"
                       onClick={() => setItems(items.filter((i) => i.id !== item.id))}
-                      className="p-2 text-gray-400 hover:text-red-600"
+                      aria-label={`Odebrat z košíku – ${item.nazev}`}
+                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -141,51 +175,82 @@ export default function KosikPage() {
             </div>
 
             {/* Promo code inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Discount Code */}
-              <form onSubmit={applyDiscount} className="p-4 bg-white border border-[#E4D9C8]/60 rounded-2xl space-y-2">
-                <label className="text-xs font-semibold text-[#2B2019] flex items-center gap-1.5 uppercase tracking-wider">
-                  <Tag className="w-3.5 h-3.5 text-[#7A4B32]" />
+              <form onSubmit={applyDiscount} className="space-y-2 rounded-2xl bg-linda-cream p-4 shadow-neu">
+                <label
+                  htmlFor="slevovy-kod"
+                  className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-linda-espresso"
+                >
+                  <Tag className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
                   Slevový kód
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="slevovy-kod"
                     type="text"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
                     placeholder="Např. VITAJTE10"
-                    className="flex-1 bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7A4B32]"
+                    aria-invalid={Boolean(discountError)}
+                    aria-describedby={discountError ? 'slevovy-kod-chyba' : undefined}
+                    className="min-h-touch flex-1 rounded-xl bg-linda-sandLight px-3 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
                   />
-                  <button type="submit" className="px-4 py-2 bg-[#2B2019] text-white text-xs font-semibold rounded-xl hover:bg-[#7A4B32]">
+                  <button
+                    type="submit"
+                    className="min-h-touch shrink-0 cursor-pointer rounded-xl bg-linda-espresso px-4 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm"
+                  >
                     Použít
                   </button>
                 </div>
+                {discountError && (
+                  <p id="slevovy-kod-chyba" role="alert" className="text-xs font-medium text-linda-cognac">
+                    {discountError}
+                  </p>
+                )}
               </form>
 
               {/* Gift Card */}
-              <form onSubmit={applyGiftCard} className="p-4 bg-white border border-[#E4D9C8]/60 rounded-2xl space-y-2">
-                <label className="text-xs font-semibold text-[#2B2019] flex items-center gap-1.5 uppercase tracking-wider">
-                  <Gift className="w-3.5 h-3.5 text-[#7A4B32]" />
+              <form onSubmit={applyGiftCard} className="space-y-2 rounded-2xl bg-linda-cream p-4 shadow-neu">
+                <label
+                  htmlFor="darkovy-poukaz"
+                  className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-linda-espresso"
+                >
+                  <Gift className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
                   Dárkový poukaz
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="darkovy-poukaz"
                     type="text"
                     value={giftCode}
                     onChange={(e) => setGiftCode(e.target.value)}
                     placeholder="Např. GIFT-LINDA-1000"
-                    className="flex-1 bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7A4B32]"
+                    aria-invalid={Boolean(giftError)}
+                    aria-describedby={giftError ? 'darkovy-poukaz-chyba' : undefined}
+                    className="min-h-touch flex-1 rounded-xl bg-linda-sandLight px-3 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
                   />
-                  <button type="submit" className="px-4 py-2 bg-[#7A4B32] text-white text-xs font-semibold rounded-xl hover:bg-[#633B26]">
+                  <button
+                    type="submit"
+                    className="min-h-touch shrink-0 cursor-pointer rounded-xl bg-linda-cognac px-4 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+                  >
                     Použít
                   </button>
                 </div>
+                {giftError && (
+                  <p id="darkovy-poukaz-chyba" role="alert" className="text-xs font-medium text-linda-cognac">
+                    {giftError}
+                  </p>
+                )}
               </form>
             </div>
 
             {codeSuccessMessage && (
-              <div className="p-3 bg-[#6B7255]/20 border border-[#6B7255] text-[#2B2019] text-xs rounded-xl flex items-center gap-2">
-                <Check className="w-4 h-4 text-[#6B7255]" />
+              <div
+                role="status"
+                className="flex items-center gap-2 rounded-xl bg-linda-sageLight p-3 text-xs text-linda-espresso shadow-neuInsetSm"
+              >
+                <Check className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
                 {codeSuccessMessage}
               </div>
             )}
@@ -193,26 +258,26 @@ export default function KosikPage() {
 
           {/* Cart summary box */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-6">
-              <h3 className="font-serif text-2xl text-[#2B2019] border-b border-[#E4D9C8]/60 pb-3">
+            <div className="space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neuLg">
+              <h2 className="border-b border-linda-sand/60 pb-3 font-serif text-2xl text-linda-espresso">
                 Shrnutí objednávky
-              </h3>
+              </h2>
 
-              <div className="space-y-3 text-xs text-[#2B2019]/80">
+              <div className="space-y-3 text-xs text-linda-espresso/80">
                 <div className="flex justify-between">
                   <span>Mezisoučet:</span>
                   <span className="font-medium">{subtotal.toLocaleString('cs-CZ')} Kč</span>
                 </div>
 
                 {appliedDiscount && (
-                  <div className="flex justify-between text-[#7A4B32] font-medium">
+                  <div className="flex justify-between font-medium text-linda-cognac">
                     <span>Sleva ({appliedDiscount} %):</span>
                     <span>-{discountAmount.toLocaleString('cs-CZ')} Kč</span>
                   </div>
                 )}
 
                 {appliedGiftCard && (
-                  <div className="flex justify-between text-[#6B7255] font-medium">
+                  <div className="flex justify-between font-medium text-linda-sage">
                     <span>Dárkový poukaz:</span>
                     <span>-{giftCardAmount.toLocaleString('cs-CZ')} Kč</span>
                   </div>
@@ -223,28 +288,35 @@ export default function KosikPage() {
                   <span>{remainingForFreeShipping === 0 ? 'ZDARMA' : 'Vypočítá se v dalším kroku'}</span>
                 </div>
 
-                <div className="pt-4 border-t border-[#E4D9C8] flex justify-between items-baseline text-base font-semibold text-[#2B2019]">
+                {/* Součet sedí v prohlubni – nejdůležitější číslo stránky má
+                    vlastní plochu, ne jen tučnější řez. */}
+                <div className="mt-4 flex items-baseline justify-between rounded-xl bg-linda-sandLight px-4 py-3 text-base font-semibold text-linda-espresso shadow-neuInsetSm">
                   <span>Celkem k úhradě:</span>
-                  <span className="text-2xl font-serif text-[#7A4B32]">{finalPrice.toLocaleString('cs-CZ')} Kč</span>
+                  <span className="font-serif text-2xl text-linda-cognac">{finalPrice.toLocaleString('cs-CZ')} Kč</span>
                 </div>
               </div>
 
               <Link
                 href="/pokladna"
-                className="w-full py-4 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-all shadow-md flex items-center justify-center gap-2"
+                className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
               >
                 Pokračovat k pokladně
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
           </div>
         </div>
       ) : (
-        <div className="text-center py-16 bg-white rounded-2xl border border-[#E4D9C8] p-8 space-y-4 max-w-md mx-auto">
-          <ShoppingBag className="w-12 h-12 text-[#7A4B32] mx-auto opacity-40" />
-          <h3 className="font-serif text-2xl text-[#2B2019]">Váš košík je prázdný</h3>
-          <p className="text-xs text-[#2B2019]/60">Prohlédněte si naši novou kolekci italského oblečení.</p>
-          <Link href="/produkty" className="inline-block px-6 py-3 bg-[#7A4B32] text-white text-xs font-semibold rounded-full">
+        <div className="mx-auto max-w-md space-y-4 rounded-2xl bg-linda-cream p-8 py-16 text-center shadow-neu">
+          <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-linda-sandLight shadow-neuInset">
+            <ShoppingBag className="h-9 w-9 text-linda-cognac" aria-hidden="true" />
+          </span>
+          <h2 className="font-serif text-2xl text-linda-espresso">Váš košík je prázdný</h2>
+          <p className="text-xs text-linda-espresso/70">Prohlédněte si naši novou kolekci italského oblečení.</p>
+          <Link
+            href="/produkty"
+            className="inline-flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+          >
             Prohlédnout kolekce
           </Link>
         </div>

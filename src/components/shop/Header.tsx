@@ -80,8 +80,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-40 bg-white border-b border-linda-sand transition-all duration-300 ${
-        isScrolled ? 'shadow-md py-1' : 'shadow-sm py-0'
+      /* Krémová jako stránka a bez spodní linky – hlavičku od obsahu odděluje
+         měkký reliéf, který se skrolem prohloubí (lišta se „zvedne“). */
+      className={`sticky top-0 z-40 bg-linda-cream transition-all duration-300 ${
+        isScrolled ? 'shadow-neuBarRaised py-1' : 'shadow-neuBar py-0'
       }`}
     >
       {/* Vacation mode banner */}
@@ -242,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Expandable Search Input */}
         {searchOpen && (
-          <div id="vyhledavani" className="py-3 border-t border-linda-sand/60 animate-fadeIn">
+          <div id="vyhledavani" className="animate-fadeIn py-3">
             <form action="/produkty" method="GET" role="search" className="relative max-w-md mx-auto">
               <label htmlFor="hledat" className="sr-only">
                 Hledat v nabídce
@@ -255,7 +257,8 @@ export const Header: React.FC<HeaderProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Hledat šaty, halenky, materiály..."
-                className="w-full bg-linda-cream border border-linda-sand rounded-full py-2.5 pl-4 pr-12 text-sm text-linda-espresso placeholder:text-linda-espresso/50 focus:border-linda-cognac"
+                /* Pole je prohlubeň v liště – rámeček by reliéf jen zdvojil. */
+                className="w-full rounded-full bg-linda-sandLight py-2.5 pl-4 pr-12 text-sm text-linda-espresso shadow-neuInsetSm placeholder:text-linda-espresso/60"
               />
               <button
                 type="submit"
@@ -274,15 +277,15 @@ export const Header: React.FC<HeaderProps> = ({
         <nav
           id="mobilni-menu"
           aria-label="Mobilní navigace"
-          className="lg:hidden bg-white border-b border-linda-sand px-6 pt-2 pb-6 text-xs font-medium uppercase tracking-wider text-linda-espresso text-center animate-fadeIn"
+          className="animate-fadeIn bg-linda-cream px-6 pb-6 pt-2 text-center text-xs font-medium uppercase tracking-wider text-linda-espresso shadow-neuBarRaised lg:hidden"
         >
           {NAV_LINKS.map(({ href, label, accent }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center justify-center min-h-touch border-b border-linda-sand/40 ${
-                accent ? 'text-linda-cognac font-semibold' : ''
+              className={`flex min-h-touch items-center justify-center border-b border-linda-sand/40 ${
+                accent ? 'font-semibold text-linda-cognac' : ''
               }`}
             >
               {label}

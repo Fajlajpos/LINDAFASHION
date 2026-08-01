@@ -33,14 +33,14 @@ export default function AdminReklamacePage() {
 
   return (
     <div className="space-y-8 max-w-5xl">
-      <div className="border-b border-[#E4D9C8] pb-6">
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#2B2019]">Reklamace a Vrácení zboží</h1>
-        <p className="text-xs text-[#2B2019]/60 mt-1">Správa vrátky do 14 dnů a záručních reklamací s automatickým naskladněním</p>
+      <div className="border-b border-linda-sand pb-6">
+        <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Reklamace a Vrácení zboží</h1>
+        <p className="text-xs text-linda-espresso/60 mt-1">Správa vrátky do 14 dnů a záručních reklamací s automatickým naskladněním</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E4D9C8]/80 shadow-card overflow-hidden text-xs">
+      <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden text-xs">
         <table className="w-full text-left">
-          <thead className="bg-[#FAF8F4] border-b border-[#E4D9C8]/60 text-[#2B2019]">
+          <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
             <tr>
               <th className="p-4 font-semibold">Objednávka</th>
               <th className="p-4 font-semibold">Zákaznice</th>
@@ -50,22 +50,22 @@ export default function AdminReklamacePage() {
               <th className="p-4 font-semibold text-right">Akce</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E4D9C8]/40">
+          <tbody className="divide-y divide-linda-sand/40">
             {reklamaceList.map((r) => (
-              <tr key={r.id} className="hover:bg-[#FAF8F4]/50">
-                <td className="p-4 font-mono font-bold text-[#7A4B32]">#{r.cisloObjednavky}</td>
-                <td className="p-4 font-medium text-[#2B2019]">{r.zakaznice}</td>
+              <tr key={r.id} className="hover:bg-linda-cream/50">
+                <td className="p-4 font-mono font-bold text-linda-cognac">#{r.cisloObjednavky}</td>
+                <td className="p-4 font-medium text-linda-espresso">{r.zakaznice}</td>
                 <td className="p-4">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
-                    r.typ === 'VRACENI' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                    r.typ === 'VRACENI' ? 'bg-linda-sageLight text-linda-sage shadow-neuInsetSm' : 'bg-linda-sandLight text-linda-espresso shadow-neuInsetSm'
                   }`}>
                     {r.typ === 'VRACENI' ? 'Vrácení (14 dnů)' : 'Reklamace vady'}
                   </span>
                 </td>
-                <td className="p-4 text-[#2B2019]/70">{r.duvod}</td>
+                <td className="p-4 text-linda-espresso/70">{r.duvod}</td>
                 <td className="p-4 font-semibold">
-                  {r.stav === 'PRIJATA' && <span className="text-amber-600 font-semibold">Přijata &bull; Čeká na vyřízení</span>}
-                  {r.stav === 'VYRIZENA_UZNANA' && <span className="text-[#6B7255] font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Uznána (Naskladněno)</span>}
+                  {r.stav === 'PRIJATA' && <span className="text-linda-cognac font-semibold">Přijata &bull; Čeká na vyřízení</span>}
+                  {r.stav === 'VYRIZENA_UZNANA' && <span className="text-linda-sage font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Uznána (Naskladněno)</span>}
                   {r.stav === 'VYRIZENA_ZAMITNUTA' && <span className="text-red-600 font-semibold">Zamítnuta</span>}
                 </td>
                 <td className="p-4 text-right">
@@ -73,7 +73,7 @@ export default function AdminReklamacePage() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => handleResolveReklamace(r.id, 'VYRIZENA_UZNANA')}
-                        className="px-3 py-1 bg-[#6B7255] text-white text-[10px] font-semibold rounded-full hover:bg-[#585e45]"
+                        className="px-3 py-1 bg-linda-sage text-white text-[10px] font-semibold rounded-full hover:bg-linda-sageHover"
                       >
                         Uznat &amp; Naskladnit
                       </button>

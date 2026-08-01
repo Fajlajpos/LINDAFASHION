@@ -60,36 +60,36 @@ export default function OblibenePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-10">
       {/* Header */}
-      <div className="border-b border-[#E4D9C8] pb-6 space-y-2">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#405023]">
-          <Heart className="w-4 h-4 fill-[#405023]" />
+      <div className="space-y-2 border-b border-linda-sand pb-6">
+        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-linda-sage">
+          <Heart className="h-4 w-4 fill-linda-sage" aria-hidden="true" />
           Váš osobní výběr
         </div>
-        <h1 className="font-serif text-4xl sm:text-5xl text-[#2B2019]">Oblíbené kousky</h1>
-        <p className="text-sm text-[#2B2019]/60 font-light">
+        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Oblíbené kousky</h1>
+        <p className="text-sm font-light text-linda-espresso/70">
           Uložené modely, které vás zaujaly. Můžete je kdykoliv přidat do košíku.
         </p>
       </div>
 
       {/* Content */}
       {favoriteProducts.length === 0 ? (
-        <div className="bg-[#FAF8F4] border border-[#E4D9C8] rounded-3xl p-12 text-center space-y-6 max-w-xl mx-auto shadow-card">
-          <div className="w-16 h-16 bg-[#F1F4EB] text-[#405023] rounded-full flex items-center justify-center mx-auto border border-[#405023]/20">
-            <Heart className="w-8 h-8" />
+        <div className="mx-auto max-w-xl space-y-6 rounded-3xl bg-linda-cream p-12 text-center shadow-neu">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-linda-sageLight text-linda-sage shadow-neuInset">
+            <Heart className="h-8 w-8" aria-hidden="true" />
           </div>
           <div className="space-y-2">
-            <h3 className="font-serif text-2xl text-[#2B2019]">Zatím nemáte žádné oblíbené kousky</h3>
-            <p className="text-sm text-[#2B2019]/70 font-light leading-relaxed">
+            <h2 className="font-serif text-2xl text-linda-espresso">Zatím nemáte žádné oblíbené kousky</h2>
+            <p className="text-sm font-light leading-relaxed text-linda-espresso/75">
               Klikněte na ikonu srdíčka u kteréhokoliv modelu v katalogu a uložte si své favoritky na později.
             </p>
           </div>
           <div>
             <Link
               href="/produkty"
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#7A4B32] text-white text-xs uppercase tracking-wider font-semibold rounded-full hover:bg-[#633B26] transition-colors"
+              className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
             >
               Prohlédnout kolekci
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -98,34 +98,39 @@ export default function OblibenePage() {
           {favoriteProducts.map((product) => (
             <div
               key={product.id}
-              className="bg-[#FAF8F4] border border-[#E4D9C8] rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all flex flex-col justify-between space-y-6 relative"
+              className="relative flex flex-col justify-between space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neu transition-all duration-300 hover:shadow-neuLg"
             >
+              {/* `title` odečítač obrazovky spolehlivě nečte – popis akce
+                  proto nese `aria-label` se jménem konkrétního modelu. */}
               <button
+                type="button"
                 onClick={() => toggleFavorite(product.id)}
-                className="absolute top-4 right-4 p-2 text-[#7A4B32] hover:text-red-600 transition-colors"
-                title="Odebrat z oblíbených"
+                aria-label={`Odebrat z oblíbených – ${product.nazev}`}
+                className="absolute right-4 top-4 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-cognac shadow-neuSm transition-all duration-200 hover:text-red-700 active:shadow-neuInsetSm"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>
 
-              <div className="space-y-2 pr-8">
-                <span className="text-[10px] uppercase tracking-widest text-[#7A4B32] font-semibold">
+              <div className="space-y-2 pr-12">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-linda-cognac">
                   {product.znacka}
                 </span>
-                <h3 className="font-serif text-xl text-[#2B2019]">{product.nazev}</h3>
+                <h2 className="font-serif text-xl text-linda-espresso">{product.nazev}</h2>
                 <div className="flex items-center gap-2 pt-1">
-                  <span className="text-base font-semibold text-[#7A4B32]">
+                  <span className="text-base font-semibold text-linda-cognac">
                     {(product.cenaPoSleve || product.cena).toLocaleString('cs-CZ')} Kč
                   </span>
                   {product.cenaPoSleve && (
-                    <span className="text-xs text-[#2B2019]/50 line-through">
+                    /* /50 dávalo 3,4:1 – přeškrtnutá cena je pořád text. */
+                    <span className="text-xs text-linda-espresso/75 line-through">
+                      <span className="sr-only">Původní cena </span>
                       {product.cena.toLocaleString('cs-CZ')} Kč
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-4 border-t border-[#E4D9C8]/60">
+              <div className="flex items-center gap-3 border-t border-linda-sand/60 pt-4">
                 <button
                   onClick={() => {
                     addToCart({
@@ -140,16 +145,16 @@ export default function OblibenePage() {
                       skladem: product.skladem,
                     });
                   }}
-                  className="flex-1 py-2.5 bg-[#405023] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#32401C] transition-colors flex items-center justify-center gap-2"
+                  className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-sage text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-sageHover active:shadow-neuSm"
                 >
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="h-4 w-4" aria-hidden="true" />
                   Do košíku
                 </button>
                 <Link
                   href={`/produkt/${product.slug}`}
-                  className="px-4 py-2.5 border border-[#2B2019]/30 text-[#2B2019] text-xs font-medium rounded-full hover:border-[#7A4B32] hover:text-[#7A4B32] transition-colors"
+                  className="flex min-h-touch shrink-0 cursor-pointer items-center rounded-full bg-linda-cream px-4 text-xs font-medium text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm"
                 >
-                  Detail
+                  Detail<span className="sr-only"> – {product.nazev}</span>
                 </Link>
               </div>
             </div>

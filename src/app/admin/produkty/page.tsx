@@ -44,24 +44,24 @@ export default function AdminProduktyPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E4D9C8] pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-linda-sand pb-6">
         <div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-[#2B2019]">Správa produktů</h1>
-          <p className="text-xs text-[#2B2019]/60 mt-1">Přehled nabízeného zboží, variant a mír</p>
+          <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Správa produktů</h1>
+          <p className="text-xs text-linda-espresso/60 mt-1">Přehled nabízeného zboží, variant a mír</p>
         </div>
 
         <Link
           href="/admin/produkty/novy"
-          className="px-5 py-2.5 bg-[#7A4B32] text-white text-xs font-semibold rounded-full hover:bg-[#633B26] transition-colors flex items-center gap-1.5 shadow-sm"
+          className="px-5 min-h-touch bg-linda-cognac text-white text-xs font-semibold rounded-full hover:bg-linda-cognacHover flex items-center gap-1.5 shadow-neuDark transition-all duration-200 active:shadow-neuSm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Přidat nový produkt
         </Link>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E4D9C8]/80 shadow-card overflow-hidden">
+      <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#FAF8F4] border-b border-[#E4D9C8]/60 text-[#2B2019]">
+          <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
             <tr>
               <th className="p-4 font-semibold">Název produktu</th>
               <th className="p-4 font-semibold">Kategorie</th>
@@ -71,29 +71,29 @@ export default function AdminProduktyPage() {
               <th className="p-4 font-semibold text-right">Akce</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E4D9C8]/40">
+          <tbody className="divide-y divide-linda-sand/40">
             {products.map((p) => (
-              <tr key={p.id} className="hover:bg-[#FAF8F4]/50 transition-colors">
-                <td className="p-4 font-medium text-[#2B2019] flex items-center gap-2">
+              <tr key={p.id} className="hover:bg-linda-cream/50 transition-colors">
+                <td className="p-4 font-medium text-linda-espresso flex items-center gap-2">
                   {p.jeDarkovyPoukaz ? (
-                    <span className="p-1 bg-[#2B2019] text-[#E4D9C8] rounded">
+                    <span className="p-1 bg-linda-espresso text-linda-sand rounded">
                       <Gift className="w-3.5 h-3.5" />
                     </span>
                   ) : (
-                    <span className="p-1 bg-[#7A4B32]/10 text-[#7A4B32] rounded">
+                    <span className="p-1 bg-linda-cognac/10 text-linda-cognac rounded">
                       <Sparkles className="w-3.5 h-3.5" />
                     </span>
                   )}
                   <span>{p.nazev}</span>
                 </td>
-                <td className="p-4 text-[#2B2019]/70">{p.kategorie}</td>
-                <td className="p-4 font-semibold text-[#7A4B32]">{p.cena.toLocaleString('cs-CZ')} Kč</td>
+                <td className="p-4 text-linda-espresso/70">{p.kategorie}</td>
+                <td className="p-4 font-semibold text-linda-cognac">{p.cena.toLocaleString('cs-CZ')} Kč</td>
                 <td className="p-4 font-medium">{p.skladCelkem} ks</td>
                 <td className="p-4">
                   <button
                     onClick={() => toggleActive(p.id)}
                     className={`px-3 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 ${
-                      p.aktivni ? 'bg-[#F0F2EC] text-[#6B7255]' : 'bg-gray-100 text-gray-500'
+                      p.aktivni ? 'bg-linda-sageLight text-linda-sage' : 'bg-linda-sandLight text-linda-espresso/80 shadow-neuInsetSm'
                     }`}
                   >
                     {p.aktivni ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -103,7 +103,7 @@ export default function AdminProduktyPage() {
                 <td className="p-4 text-right space-x-2">
                   <Link
                     href={`/admin/produkty/novy?edit=${p.id}`}
-                    className="p-1.5 text-gray-600 hover:text-[#7A4B32] inline-block"
+                    className="inline-flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
                   >
                     <Edit className="w-4 h-4" />
                   </Link>
@@ -112,14 +112,14 @@ export default function AdminProduktyPage() {
                   {!p.hasOrders ? (
                     <button
                       onClick={() => setProducts(products.filter((item) => item.id !== p.id))}
-                      className="p-1.5 text-gray-400 hover:text-red-600"
+                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-700 active:shadow-neuInsetSm"
                       title="Smazat produkt"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   ) : (
                     <span
-                      className="p-1.5 text-gray-300 cursor-not-allowed inline-block"
+                      className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full bg-linda-sandLight text-linda-espresso/50 shadow-neuInsetSm cursor-not-allowed"
                       title="Produkt se objevuje v objednávce (smazání je zablokováno kvůli historii)"
                     >
                       <AlertCircle className="w-4 h-4" />

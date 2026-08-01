@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { AlertCircle, User, Mail, Lock, ArrowRight } from 'lucide-react';
+import { AuthField } from '@/components/ui/AuthField';
 
 export default function RegistracePage() {
   const router = useRouter();
@@ -15,103 +16,118 @@ export default function RegistracePage() {
     souhlasNewsletter: false, // Samostatný dobrovolný souhlas pro GDPR
   });
 
+  // Chybu chybějícího souhlasu hlásil `alert()` – systémové okno vytrhne
+  // z kontextu a nezůstane u zaškrtávátka, kterého se týká.
+  const [souhlasError, setSouhlasError] = useState<string | null>(null);
+
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.souhlasOP) {
-      alert('Pro registraci je nutné souhlasit s Obchodními podmínkami.');
+      setSouhlasError('Pro registraci je nutné souhlasit s Obchodními podmínkami.');
       return;
     }
-    alert('Registrace proběhla úspěšně! Můžete se přihlásit.');
-    router.push('/prihlaseni');
+    setSouhlasError(null);
+    // Úspěch dřív hlásil `alert()` těsně před přesměrováním – okno tedy
+    // zmizelo zároveň se stránkou. Potvrzení proto předáváme přihlášení,
+    // které ho vypíše nad formulářem.
+    router.push('/prihlaseni?registrace=ok');
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-[#FAF8F4]">
-      <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl border border-[#E4D9C8] shadow-elevated space-y-6">
-        <div className="text-center space-y-2">
-          <span className="font-serif text-2xl tracking-[0.15em] text-[#2B2019] uppercase font-medium block">
+    <div className="flex min-h-[80vh] items-center justify-center bg-linda-cream px-4 py-12">
+      <div className="w-full max-w-md space-y-6 rounded-3xl bg-linda-cream p-8 shadow-neuLg sm:p-10">
+        <div className="space-y-2 text-center">
+          <span className="block font-serif text-2xl font-medium uppercase tracking-[0.15em] text-linda-espresso">
             LINDA FASHION
           </span>
-          <h1 className="font-serif text-3xl text-[#2B2019]">Nová registrace</h1>
-          <p className="text-xs text-[#2B2019]/60">Vytvořte si osobní profil pro pohodlnější nákupy a ukládání oblíbených</p>
+          <h1 className="font-serif text-3xl text-linda-espresso">Nová registrace</h1>
+          <p className="text-xs text-linda-espresso/70">
+            Vytvořte si osobní profil pro pohodlnější nákupy a ukládání oblíbených
+          </p>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#2B2019] mb-1">Jméno a příjmení</label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                value={formData.jmeno}
-                onChange={(e) => setFormData({ ...formData, jmeno: e.target.value })}
-                placeholder="Marie Nováková"
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#2B2019] focus:outline-none focus:border-[#7A4B32]"
-              />
-              <User className="w-4 h-4 text-[#7A4B32] absolute left-3 top-3" />
-            </div>
-          </div>
+          <AuthField
+            id="registrace-jmeno"
+            label="Jméno a příjmení"
+            Ikona={User}
+            required
+            autoComplete="name"
+            placeholder="Marie Nováková"
+            value={formData.jmeno}
+            onChange={(v) => setFormData({ ...formData, jmeno: v })}
+          />
 
-          <div>
-            <label className="block text-xs font-semibold text-[#2B2019] mb-1">E-mailová adresa</label>
-            <div className="relative">
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="vas.email@example.cz"
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#2B2019] focus:outline-none focus:border-[#7A4B32]"
-              />
-              <Mail className="w-4 h-4 text-[#7A4B32] absolute left-3 top-3" />
-            </div>
-          </div>
+          <AuthField
+            id="registrace-email"
+            label="E-mailová adresa"
+            Ikona={Mail}
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="vas.email@example.cz"
+            value={formData.email}
+            onChange={(v) => setFormData({ ...formData, email: v })}
+          />
 
-          <div>
-            <label className="block text-xs font-semibold text-[#2B2019] mb-1">Heslo</label>
-            <div className="relative">
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Alespoň 8 znaků"
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#2B2019] focus:outline-none focus:border-[#7A4B32]"
-              />
-              <Lock className="w-4 h-4 text-[#7A4B32] absolute left-3 top-3" />
-            </div>
-          </div>
+          <AuthField
+            id="registrace-heslo"
+            label="Heslo"
+            Ikona={Lock}
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="Alespoň 8 znaků"
+            value={formData.password}
+            onChange={(v) => setFormData({ ...formData, password: v })}
+          />
 
           {/* Consents */}
-          <div className="space-y-3 pt-2 text-xs">
+          <div className="space-y-3 rounded-xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
             {/* Mandatory OP */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
+            <label className="flex cursor-pointer items-start gap-2.5">
               <input
                 type="checkbox"
                 required
                 checked={formData.souhlasOP}
-                onChange={(e) => setFormData({ ...formData, souhlasOP: e.target.checked })}
-                className="w-4 h-4 accent-[#7A4B32] mt-0.5"
+                onChange={(e) => {
+                  setFormData({ ...formData, souhlasOP: e.target.checked });
+                  if (e.target.checked) setSouhlasError(null);
+                }}
+                aria-invalid={Boolean(souhlasError)}
+                aria-describedby={souhlasError ? 'registrace-souhlas-chyba' : undefined}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
               />
-              <span className="text-[#2B2019]/80">
+              <span className="text-linda-espresso/85">
                 Souhlasím s{' '}
-                <Link href="/obchodni-podminky" target="_blank" className="underline text-[#7A4B32] font-semibold">
+                <Link href="/obchodni-podminky" target="_blank" className="font-semibold text-linda-cognac underline">
                   Obchodními podmínkami
                 </Link>{' '}
                 a ochranou osobních údajů. *
               </span>
             </label>
 
+            {souhlasError && (
+              <p
+                id="registrace-souhlas-chyba"
+                role="alert"
+                className="flex items-center gap-1.5 font-medium text-linda-cognac"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {souhlasError}
+              </p>
+            )}
+
             {/* Voluntary Newsletter Consent (Separate as required by GDPR Section 5) */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
+            <label className="flex cursor-pointer items-start gap-2.5 border-t border-linda-sand/60 pt-3">
               <input
                 type="checkbox"
                 checked={formData.souhlasNewsletter}
                 onChange={(e) => setFormData({ ...formData, souhlasNewsletter: e.target.checked })}
-                className="w-4 h-4 accent-[#7A4B32] mt-0.5"
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
               />
-              <span className="text-[#2B2019]/70">
+              <span className="text-linda-espresso/75">
                 Chci odebírat inspirativní novinky z nových italských kolekcí (dobrovolný souhlas).
               </span>
             </label>
@@ -119,16 +135,16 @@ export default function RegistracePage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-all shadow-md flex items-center justify-center gap-2"
+            className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-3.5 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
           >
             Vytvořit účet
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </form>
 
-        <div className="text-center pt-4 border-t border-[#E4D9C8]/60 text-xs text-[#2B2019]/70">
+        <div className="border-t border-linda-sand/60 pt-4 text-center text-xs text-linda-espresso/75">
           Již máte účet?{' '}
-          <Link href="/prihlaseni" className="text-[#7A4B32] font-semibold underline underline-offset-2">
+          <Link href="/prihlaseni" className="font-semibold text-linda-cognac underline underline-offset-2">
             Přihlaste se
           </Link>
         </div>

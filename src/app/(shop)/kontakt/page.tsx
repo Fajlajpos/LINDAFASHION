@@ -14,12 +14,12 @@ export default function KontaktPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-      <div className="text-center space-y-3 max-w-2xl mx-auto border-b border-[#E4D9C8] pb-8">
-        <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold block">
+      <div className="mx-auto max-w-2xl space-y-3 border-b border-linda-sand pb-8 text-center">
+        <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
           Rádi vám poradíme
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl text-[#2B2019]">Kontakt &amp; Showroom</h1>
-        <p className="text-sm text-[#2B2019]/70 font-light">
+        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Kontakt &amp; Showroom</h1>
+        <p className="text-sm font-light text-linda-espresso/75">
           Máte dotaz k velikostem, stihu nebo doručení? Napište nám nebo zavolejte, jsme tu pro vás.
         </p>
       </div>
@@ -27,56 +27,85 @@ export default function KontaktPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Contact Info & GEO LocalBusiness section */}
         <div className="lg:col-span-5 space-y-8">
-          <div className="bg-white p-8 rounded-3xl border border-[#E4D9C8]/80 shadow-card space-y-6">
-            <h3 className="font-serif text-2xl text-[#2B2019]">Kontaktní údaje</h3>
+          <div className="space-y-6 rounded-3xl bg-linda-cream p-8 shadow-neu">
+            <h2 className="font-serif text-2xl text-linda-espresso">Kontaktní údaje</h2>
 
-            <div className="space-y-4 text-xs text-[#2B2019]">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#7A4B32] flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-semibold">Adresa Butiku &amp; Sídlo:</strong>
-                  <span className="text-[#2B2019]/70">LINDA FASHION s.r.o.<br />Pařížská 12, 110 00 Praha 1</span>
+            {/* Každá ikona sedí na vystouplém terči – reliéf ji odliší, aniž
+                bychom sáhli po další barvě. */}
+            <div className="space-y-4 text-xs text-linda-espresso">
+              {[
+                {
+                  Ikona: MapPin,
+                  nadpis: 'Adresa Butiku & Sídlo:',
+                  obsah: (
+                    <span className="text-linda-espresso/75">
+                      LINDA FASHION s.r.o.
+                      <br />
+                      Pařížská 12, 110 00 Praha 1
+                    </span>
+                  ),
+                },
+                {
+                  Ikona: Phone,
+                  nadpis: 'Zákaznická linka:',
+                  obsah: (
+                    <a
+                      href="tel:+420777888999"
+                      className="font-medium text-linda-cognac transition-colors hover:text-linda-cognacHover hover:underline"
+                    >
+                      +420 777 888 999
+                    </a>
+                  ),
+                },
+                {
+                  Ikona: Mail,
+                  nadpis: 'E-mail:',
+                  obsah: (
+                    <a
+                      href="mailto:info@lindafashion.cz"
+                      className="font-medium text-linda-cognac transition-colors hover:text-linda-cognacHover hover:underline"
+                    >
+                      info@lindafashion.cz
+                    </a>
+                  ),
+                },
+                {
+                  Ikona: Clock,
+                  nadpis: 'Otevírací doba Showroomu:',
+                  obsah: (
+                    <span className="text-linda-espresso/75">
+                      Po – Pá: 10:00 – 18:00
+                      <br />
+                      So: 10:00 – 14:00
+                    </span>
+                  ),
+                },
+              ].map(({ Ikona, nadpis, obsah }) => (
+                <div key={nadpis} className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linda-cream shadow-neuSm">
+                    <Ikona className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+                  </span>
+                  <div className="pt-1">
+                    <strong className="block font-semibold">{nadpis}</strong>
+                    {obsah}
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-[#7A4B32] flex-shrink-0" />
-                <div>
-                  <strong className="block font-semibold">Zákaznická linka:</strong>
-                  <a href="tel:+420777888999" className="text-[#7A4B32] hover:underline font-medium">+420 777 888 999</a>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-[#7A4B32] flex-shrink-0" />
-                <div>
-                  <strong className="block font-semibold">E-mail:</strong>
-                  <a href="mailto:info@lindafashion.cz" className="text-[#7A4B32] hover:underline font-medium">info@lindafashion.cz</a>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-[#7A4B32] flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-semibold">Otevírací doba Showroomu:</strong>
-                  <span className="text-[#2B2019]/70">Po – Pá: 10:00 – 18:00<br />So: 10:00 – 14:00</span>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Instant WhatsApp / Messenger quick bubble recommendation */}
-            <div className="pt-4 border-t border-[#E4D9C8]/40">
+            <div className="border-t border-linda-sand/40 pt-4">
               <a
                 href="https://wa.me/420777888999"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-3 bg-[#6B7255]/10 border border-[#6B7255]/30 rounded-2xl flex items-center justify-between text-xs text-[#2B2019] hover:bg-[#6B7255]/20 transition-colors"
+                className="flex min-h-touch cursor-pointer items-center justify-between gap-3 rounded-2xl bg-linda-sageLight p-3 text-xs text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
               >
-                <div className="flex items-center gap-2 font-medium">
-                  <MessageCircle className="w-4 h-4 text-[#6B7255]" />
-                  <span>Rychlý dotaz na WhatsApp</span>
-                </div>
-                <span className="text-[10px] text-[#6B7255] font-bold uppercase">Online</span>
+                <span className="flex items-center gap-2 font-medium">
+                  <MessageCircle className="h-4 w-4 text-linda-sage" aria-hidden="true" />
+                  Rychlý dotaz na WhatsApp
+                </span>
+                <span className="text-[10px] font-bold uppercase text-linda-sage">Online</span>
               </a>
             </div>
           </div>
@@ -84,64 +113,80 @@ export default function KontaktPage() {
 
         {/* Contact Form */}
         <div className="lg:col-span-7">
-          <div className="bg-white p-8 rounded-3xl border border-[#E4D9C8]/80 shadow-card space-y-6">
-            <h3 className="font-serif text-2xl text-[#2B2019]">Napište nám vzkaz</h3>
+          <div className="space-y-6 rounded-3xl bg-linda-cream p-8 shadow-neu">
+            <h2 className="font-serif text-2xl text-linda-espresso">Napište nám vzkaz</h2>
 
             {submitted ? (
-              <div className="p-6 bg-[#F0F2EC] border border-[#6B7255] text-[#2B2019] rounded-2xl text-xs text-center space-y-2">
-                <h4 className="font-serif text-xl text-[#6B7255]">Děkujeme za vaši zprávu!</h4>
-                <p className="text-[#2B2019]/70">Odpovíme vám v nejkratším možném čase na váš e-mail.</p>
+              <div
+                role="status"
+                className="space-y-2 rounded-2xl bg-linda-sageLight p-6 text-center text-xs text-linda-espresso shadow-neuInset"
+              >
+                <p className="font-serif text-xl text-linda-sage">Děkujeme za vaši zprávu!</p>
+                <p className="text-linda-espresso/75">Odpovíme vám v nejkratším možném čase na váš e-mail.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {/* Popisky jsou svázané přes `htmlFor`/`id` – dřív stály
+                      vedle polí bez vazby, takže je odečítač nepřečetl. */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#2B2019] mb-1">Vaše jméno *</label>
+                    <label htmlFor="kontakt-jmeno" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                      Vaše jméno *
+                    </label>
                     <input
+                      id="kontakt-jmeno"
                       type="text"
                       required
+                      autoComplete="name"
                       value={form.jmeno}
                       onChange={(e) => setForm({ ...form, jmeno: e.target.value })}
                       placeholder="Marie Nováková"
-                      className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#7A4B32]"
+                      className="min-h-touch w-full rounded-xl bg-linda-sandLight px-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#2B2019] mb-1">Váš e-mail *</label>
+                    <label htmlFor="kontakt-email" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                      Váš e-mail *
+                    </label>
                     <input
+                      id="kontakt-email"
                       type="email"
                       required
+                      autoComplete="email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       placeholder="vas.email@example.cz"
-                      className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#7A4B32]"
+                      className="min-h-touch w-full rounded-xl bg-linda-sandLight px-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#2B2019] mb-1">Zpráva *</label>
+                  <label htmlFor="kontakt-zprava" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                    Zpráva *
+                  </label>
                   <textarea
+                    id="kontakt-zprava"
                     required
                     rows={5}
                     value={form.zprava}
                     onChange={(e) => setForm({ ...form, zprava: e.target.value })}
                     placeholder="S čím vám můžeme pomoci?"
-                    className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#7A4B32]"
+                    className="w-full rounded-xl bg-linda-sandLight px-4 py-2.5 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
                   />
                 </div>
 
-                <div className="p-3 bg-[#FAF8F4] border border-[#E4D9C8]/60 rounded-xl text-[10px] text-[#2B2019]/60 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#6B7255]" />
-                  <span>Formulář je chráněn spolehlivou ochranou Cloudflare Turnstile</span>
-                </div>
+                <p className="flex items-center gap-2 rounded-xl bg-linda-sandLight p-3 text-[10px] text-linda-espresso/75 shadow-neuInsetSm">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
+                  Formulář je chráněn spolehlivou ochranou Cloudflare Turnstile
+                </p>
 
                 <button
                   type="submit"
-                  className="px-8 py-3.5 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-colors flex items-center gap-2"
+                  className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="h-4 w-4" aria-hidden="true" />
                   Odeslat zprávu
                 </button>
               </form>

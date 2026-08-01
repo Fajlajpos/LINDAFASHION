@@ -139,7 +139,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
             {stav === 'hotovo' ? (
               <p
                 role="status"
-                className="mt-2 rounded-xl border border-linda-cognac/60 bg-linda-cognac/25 px-3 py-2 text-xs text-linda-cream"
+                className="mt-2 rounded-xl bg-linda-cognac/30 px-3 py-2 text-xs text-linda-cream shadow-neuOnDarkInset"
               >
                 Děkujeme, přihlášku jsme přijali.
               </p>
@@ -156,13 +156,16 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
                     aria-labelledby="newsletter-paticka-nadpis"
                     aria-describedby="newsletter-paticka-info"
                     placeholder="vas@email.cz"
-                    className="min-h-touch w-full min-w-0 flex-1 rounded-full border border-linda-sand/25 bg-linda-cream/10 px-4 text-xs text-linda-cream transition-colors placeholder:text-linda-cream/45 focus:border-linda-sand"
+                    /* Prohlubeň i na tmavém: čokoládu vytvaruje černý stín,
+                       přísvit je jen 5% bílé – víc by na hnědé bylo mléko.
+                       Placeholder zvednut z /45 na /60 kvůli kontrastu. */
+                    className="min-h-touch w-full min-w-0 flex-1 rounded-full bg-black/15 px-4 text-xs text-linda-cream shadow-neuOnDarkInset transition-shadow placeholder:text-linda-cream/60"
                   />
                   <button
                     type="submit"
                     disabled={stav === 'odesilam'}
                     aria-label="Přihlásit se k odběru novinek"
-                    className="flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cognac text-white transition-colors duration-200 hover:bg-linda-cognacHover disabled:opacity-60"
+                    className="flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cognac text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-none disabled:opacity-60"
                   >
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </button>
@@ -192,7 +195,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${label} – LINDA FASHION`}
-                className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full border border-linda-sand/25 text-linda-sand transition-colors duration-200 hover:border-linda-cognac hover:bg-linda-cognac hover:text-white"
+                className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white/[0.04] text-linda-sand shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognac hover:text-white active:shadow-neuOnDarkInset"
               >
                 <Ikona className="h-4 w-4" aria-hidden="true" />
               </a>
@@ -206,7 +209,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
             {['GoPay', 'QR platba', 'Zásilkovna', 'PPL'].map((sluzba) => (
               <li
                 key={sluzba}
-                className="rounded border border-linda-sand/20 bg-linda-cream/5 px-2 py-1"
+                className="rounded-md bg-white/[0.04] px-2 py-1 shadow-neuOnDark"
               >
                 {sluzba}
               </li>

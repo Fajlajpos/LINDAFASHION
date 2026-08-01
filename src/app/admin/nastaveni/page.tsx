@@ -41,31 +41,31 @@ export default function AdminNastaveniPage() {
 
   return (
     <div className="max-w-4xl space-y-8 pb-12">
-      <div className="border-b border-[#E4D9C8] pb-6">
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#2B2019]">Nastavení obchodu</h1>
-        <p className="text-xs text-[#2B2019]/60 mt-1">Konfigurace dovolené, firemních údajů, cen dopravy a sociálních sítí</p>
+      <div className="border-b border-linda-sand pb-6">
+        <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Nastavení obchodu</h1>
+        <p className="text-xs text-linda-espresso/60 mt-1">Konfigurace dovolené, firemních údajů, cen dopravy a sociálních sítí</p>
       </div>
 
       {saved && (
-        <div className="p-4 bg-[#F0F2EC] border border-[#6B7255] text-[#2B2019] rounded-2xl text-xs flex items-center gap-2">
-          <Check className="w-5 h-5 text-[#6B7255]" />
+        <div className="p-4 bg-linda-sageLight border border-linda-sage text-linda-espresso rounded-2xl text-xs flex items-center gap-2">
+          <Check className="w-5 h-5 text-linda-sage" />
           <span>Nastavení bylo úspěšně uloženo!</span>
         </div>
       )}
 
       <form onSubmit={handleSave} className="space-y-8">
         {/* Režim dovolené (Sekce 6.7) */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-4">
-          <div className="flex items-center justify-between border-b border-[#E4D9C8]/40 pb-3">
-            <h3 className="font-serif text-xl text-[#2B2019] flex items-center gap-2">
-              <Palmtree className="w-5 h-5 text-[#7A4B32]" />
+        <div className="bg-linda-cream p-6 rounded-2xl shadow-neu space-y-4">
+          <div className="flex items-center justify-between border-b border-linda-sand/40 pb-3">
+            <h3 className="font-serif text-xl text-linda-espresso flex items-center gap-2">
+              <Palmtree className="w-5 h-5 text-linda-cognac" />
               Režim dovolené ("Jsem pryč")
             </h3>
             <input
               type="checkbox"
               checked={settings.rezimDovolene}
               onChange={(e) => setSettings({ ...settings, rezimDovolene: e.target.checked })}
-              className="w-5 h-5 accent-[#7A4B32] cursor-pointer"
+              className="w-5 h-5 accent-linda-cognac cursor-pointer"
             />
           </div>
 
@@ -73,12 +73,12 @@ export default function AdminNastaveniPage() {
             <div className="space-y-4 text-xs pt-2 animate-fadeIn">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold text-[#2B2019] mb-1">Datum návratu *</label>
+                  <label className="block font-semibold text-linda-espresso mb-1">Datum návratu *</label>
                   <input
                     type="date"
                     value={settings.datumNavratu}
                     onChange={(e) => setSettings({ ...settings, datumNavratu: e.target.value })}
-                    className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                    className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
                   />
                 </div>
 
@@ -88,23 +88,23 @@ export default function AdminNastaveniPage() {
                     id="blockOrder"
                     checked={settings.zablokovatObjednavky}
                     onChange={(e) => setSettings({ ...settings, zablokovatObjednavky: e.target.checked })}
-                    className="w-4 h-4 accent-[#7A4B32]"
+                    className="w-4 h-4 accent-linda-cognac"
                   />
-                  <label htmlFor="blockOrder" className="font-semibold text-[#2B2019]">
+                  <label htmlFor="blockOrder" className="font-semibold text-linda-espresso">
                     Úplně zablokovat tlačítka pro vytváření objednávek
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-[#2B2019] mb-1">
+                <label className="block font-semibold text-linda-espresso mb-1">
                   Text oznámení pro zákazníky na webu (proměnná &#123;datum&#125; se automaticky nahradí):
                 </label>
                 <textarea
                   rows={2}
                   value={settings.zpravaProZakazniky}
                   onChange={(e) => setSettings({ ...settings, zpravaProZakazniky: e.target.value })}
-                  className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                  className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
                 />
               </div>
             </div>
@@ -112,100 +112,100 @@ export default function AdminNastaveniPage() {
         </div>
 
         {/* Firemní & Kontaktní údaje (Sekce 6.8 & 7) */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-4">
-          <h3 className="font-serif text-xl text-[#2B2019] flex items-center gap-2">
-            <Building className="w-5 h-5 text-[#7A4B32]" />
+        <div className="bg-linda-cream p-6 rounded-2xl shadow-neu space-y-4">
+          <h3 className="font-serif text-xl text-linda-espresso flex items-center gap-2">
+            <Building className="w-5 h-5 text-linda-cognac" />
             Firemní a kontaktní údaje
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">Název firmy / podnikatele</label>
+              <label className="block font-semibold text-linda-espresso mb-1">Název firmy / podnikatele</label>
               <input
                 type="text"
                 value={settings.nazevFirmy}
                 onChange={(e) => setSettings({ ...settings, nazevFirmy: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">Sídlo / Adresa</label>
+              <label className="block font-semibold text-linda-espresso mb-1">Sídlo / Adresa</label>
               <input
                 type="text"
                 value={settings.adresaFirmy}
                 onChange={(e) => setSettings({ ...settings, adresaFirmy: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">IČO</label>
+              <label className="block font-semibold text-linda-espresso mb-1">IČO</label>
               <input
                 type="text"
                 value={settings.icoFirmy}
                 onChange={(e) => setSettings({ ...settings, icoFirmy: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">DIČ</label>
+              <label className="block font-semibold text-linda-espresso mb-1">DIČ</label>
               <input
                 type="text"
                 value={settings.dicFirmy}
                 onChange={(e) => setSettings({ ...settings, dicFirmy: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
           </div>
         </div>
 
         {/* Ceny dopravy & Práh dopravy zdarma */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-4">
-          <h3 className="font-serif text-xl text-[#2B2019] flex items-center gap-2">
-            <Truck className="w-5 h-5 text-[#7A4B32]" />
+        <div className="bg-linda-cream p-6 rounded-2xl shadow-neu space-y-4">
+          <h3 className="font-serif text-xl text-linda-espresso flex items-center gap-2">
+            <Truck className="w-5 h-5 text-linda-cognac" />
             Ceny dopravy &amp; Práh zdarma
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">Zásilkovna (Kč)</label>
+              <label className="block font-semibold text-linda-espresso mb-1">Zásilkovna (Kč)</label>
               <input
                 type="number"
                 value={settings.cenaDopravyZasilkovna}
                 onChange={(e) => setSettings({ ...settings, cenaDopravyZasilkovna: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">PPL (Kč)</label>
+              <label className="block font-semibold text-linda-espresso mb-1">PPL (Kč)</label>
               <input
                 type="number"
                 value={settings.cenaDopravyPPL}
                 onChange={(e) => setSettings({ ...settings, cenaDopravyPPL: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">Česká pošta (Kč)</label>
+              <label className="block font-semibold text-linda-espresso mb-1">Česká pošta (Kč)</label>
               <input
                 type="number"
                 value={settings.cenaDopravyCeskaPosta}
                 onChange={(e) => setSettings({ ...settings, cenaDopravyCeskaPosta: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-[#2B2019] mb-1">Práh dopravy zdarma (Kč)</label>
+              <label className="block font-semibold text-linda-espresso mb-1">Práh dopravy zdarma (Kč)</label>
               <input
                 type="number"
                 value={settings.prahDopravaZdarma}
                 onChange={(e) => setSettings({ ...settings, prahDopravaZdarma: e.target.value })}
-                className="w-full bg-[#FAF8F4] border border-[#E4D9C8] rounded-xl px-4 py-2.5 font-bold text-[#7A4B32]"
+                className="w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5 font-bold text-linda-cognac"
               />
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function AdminNastaveniPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="px-8 py-3.5 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] shadow-md"
+            className="px-8 min-h-touch bg-linda-cognac text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-linda-cognacHover shadow-neuDark transition-all duration-200 active:shadow-neuSm cursor-pointer"
           >
             Uložit kompletní nastavení
           </button>

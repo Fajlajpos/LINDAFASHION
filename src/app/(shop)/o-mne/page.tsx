@@ -6,35 +6,36 @@ export default function OMnePage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
       {/* Header section */}
-      <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold block">
+      <div className="mx-auto max-w-3xl space-y-4 text-center">
+        <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
           Příběh značky LINDA FASHION
         </span>
-        <h1 className="font-serif text-4xl sm:text-6xl text-[#2B2019] leading-tight">
+        <h1 className="font-serif text-4xl leading-tight text-linda-espresso sm:text-6xl">
           &bdquo;Miluji módu, která má duši, příběh a poctivé remeslo.&ldquo;
         </h1>
-        <p className="text-base text-[#2B2019]/70 font-light italic font-serif">
+        <p className="font-serif text-base font-light italic text-linda-espresso/75">
           Vítejte v mém osobním světě italské elegance.
         </p>
       </div>
 
-      {/* Main image placeholder (no AI images used, pure graphical styled placeholder) */}
-      <div className="relative aspect-[16/9] bg-gradient-to-br from-[#FAF8F4] via-[#F3EFE9] to-[#E4D9C8]/40 rounded-3xl border border-[#E4D9C8] overflow-hidden shadow-elevated flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="w-20 h-20 rounded-full bg-[#FAF8F4] border border-[#7A4B32]/30 flex items-center justify-center shadow-sm">
-          <Heart className="w-10 h-10 text-[#7A4B32] fill-[#7A4B32]/20 stroke-[1.5]" />
+      {/* Main image placeholder (no AI images used, pure graphical styled placeholder).
+          Rám je prohlubeň – snímek do stránky patří vsazený, ne nalepený. */}
+      <div className="relative flex aspect-[16/9] flex-col items-center justify-center space-y-4 overflow-hidden rounded-3xl bg-linda-sandLight p-8 text-center shadow-neuInset">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linda-cream shadow-neu">
+          <Heart className="h-10 w-10 fill-linda-cognac/20 stroke-[1.5] text-linda-cognac" aria-hidden="true" />
         </div>
         <div className="space-y-1">
-          <h3 className="font-serif text-2xl text-[#2B2019]">Fotografie z italského showroomu a cesty majitelky</h3>
-          <p className="text-xs text-[#7A4B32] font-medium">
+          <p className="font-serif text-2xl text-linda-espresso">Fotografie z italského showroomu a cesty majitelky</p>
+          <p className="text-xs font-medium text-linda-cognac">
             (Skutečné fotografie majitelky Lindy doplníme ihned po dokončení nového focení)
           </p>
         </div>
       </div>
 
       {/* Narrative content in 1st person */}
-      <div className="prose prose-stone max-w-none space-y-8 text-sm text-[#2B2019]/80 font-light leading-relaxed">
+      <div className="prose prose-stone max-w-none space-y-8 text-sm font-light leading-relaxed text-linda-espresso/80">
         <div className="space-y-4">
-          <h2 className="font-serif text-3xl text-[#2B2019] font-normal border-b border-[#E4D9C8] pb-3">
+          <h2 className="border-b border-linda-sand pb-3 font-serif text-3xl font-normal text-linda-espresso">
             Jak to celé začalo
           </h2>
           <p>
@@ -46,25 +47,29 @@ export default function OMnePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
-          <div className="p-6 bg-white rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-3">
-            <Sparkles className="w-6 h-6 text-[#7A4B32]" />
-            <h3 className="font-serif text-xl text-[#2B2019]">Můj výběr materiálů</h3>
-            <p className="text-xs text-[#2B2019]/70 leading-relaxed">
+          <div className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-linda-cream shadow-neuSm">
+              <Sparkles className="h-6 w-6 text-linda-cognac" aria-hidden="true" />
+            </span>
+            <h3 className="font-serif text-xl text-linda-espresso">Můj výběr materiálů</h3>
+            <p className="text-xs leading-relaxed text-linda-espresso/75">
               Všechny modely osobně prozkoumám a vyzkouším. Vyhledávám 100% přírodní hedvábí, toskánský len, jemný kašmír a kvalitní merino vlnu.
             </p>
           </div>
 
-          <div className="p-6 bg-white rounded-2xl border border-[#E4D9C8]/80 shadow-card space-y-3">
-            <Heart className="w-6 h-6 text-[#7A4B32]" />
-            <h3 className="font-serif text-xl text-[#2B2019]">Osobní přístup</h3>
-            <p className="text-xs text-[#2B2019]/70 leading-relaxed">
+          <div className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-linda-cream shadow-neuSm">
+              <Heart className="h-6 w-6 text-linda-cognac" aria-hidden="true" />
+            </span>
+            <h3 className="font-serif text-xl text-linda-espresso">Osobní přístup</h3>
+            <p className="text-xs leading-relaxed text-linda-espresso/75">
               Pro mě nejste anonymní číslo v systému. Ráda vám poradím s výběrem mír i kombinací a každé balení připravuji s osobním vzkazem.
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <h2 className="font-serif text-3xl text-[#2B2019] font-normal border-b border-[#E4D9C8] pb-3">
+          <h2 className="border-b border-linda-sand pb-3 font-serif text-3xl font-normal text-linda-espresso">
             Vřelá atmosféra rodinného butiku
           </h2>
           <p>
@@ -74,18 +79,18 @@ export default function OMnePage() {
       </div>
 
       {/* CTA Bottom Banner */}
-      <div className="p-8 sm:p-12 bg-[#2B2019] text-[#FAF8F4] rounded-3xl text-center space-y-4">
-        <h3 className="font-serif text-3xl text-[#E4D9C8]">Prohlédněte si nejnovější italskou kolekci</h3>
-        <p className="text-xs text-[#FAF8F4]/70 max-w-md mx-auto">
+      <div className="space-y-4 rounded-3xl bg-linda-espresso p-8 text-center text-linda-cream shadow-neuLg sm:p-12">
+        <h2 className="font-serif text-3xl text-linda-sand">Prohlédněte si nejnovější italskou kolekci</h2>
+        <p className="mx-auto max-w-md text-xs text-linda-cream/75">
           Každý model naskladňujeme pouze v limitovaném počtu kusů pro zachování exkluzivity.
         </p>
         <div>
           <Link
             href="/produkty"
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-colors"
+            className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuOnDarkInset"
           >
             Objevit nové kousky
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       </div>

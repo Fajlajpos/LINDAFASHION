@@ -59,6 +59,19 @@ const config: Config = {
            je na nich neviditelný. Místo přísvitu proto vnitřní horní linka. */
         neuDark:
           '8px 8px 18px rgba(43, 32, 25, 0.22), -6px -6px 16px rgba(255, 255, 255, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.14)',
+
+        /* Reliéf *uvnitř* tmavého panelu (patička, admin postranní lišta).
+           Bílý přísvit tu musí být sotva znatelný – na čokoládové by z 90%
+           bílé byla mléčná šmouha, ne světlo. */
+        neuOnDark: '5px 5px 12px rgba(0, 0, 0, 0.28), -3px -3px 9px rgba(255, 255, 255, 0.05)',
+        neuOnDarkInset:
+          'inset 4px 4px 10px rgba(0, 0, 0, 0.32), inset -3px -3px 8px rgba(255, 255, 255, 0.05)',
+
+        /* Lišta přes celou šířku (hlavička). Boční složky stínu jsou mimo
+           obrazovku, takže z reliéfu zbyde jen měkký spodní okraj – přesně
+           to, co od sticky hlavičky chceme. */
+        neuBar: '0 6px 18px rgba(43, 32, 25, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        neuBarRaised: '0 10px 26px rgba(43, 32, 25, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
       },
       keyframes: {
         fadeIn: {

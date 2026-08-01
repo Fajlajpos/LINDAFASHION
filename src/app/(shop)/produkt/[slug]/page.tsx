@@ -64,32 +64,34 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
       {/* Breadcrumb nav */}
-      <nav className="text-xs text-[#2B2019]/60 flex items-center space-x-2">
-        <Link href="/" className="hover:text-[#7A4B32]">
+      <nav aria-label="Drobečková navigace" className="flex items-center space-x-2 text-xs text-linda-espresso/70">
+        <Link href="/" className="transition-colors hover:text-linda-cognac">
           Domů
         </Link>
-        <span>/</span>
-        <Link href="/produkty" className="hover:text-[#7A4B32]">
+        <span aria-hidden="true">/</span>
+        <Link href="/produkty" className="transition-colors hover:text-linda-cognac">
           Katalog
         </Link>
-        <span>/</span>
-        <span className="text-[#7A4B32] font-medium">{product.nazev}</span>
+        <span aria-hidden="true">/</span>
+        <span className="font-medium text-linda-cognac">{product.nazev}</span>
       </nav>
 
       {/* Main product view */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* Left column: Photo Gallery with graphical placeholder */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="relative aspect-[3/4] bg-gradient-to-b from-[#FAF8F4] to-[#F3EFE9] rounded-3xl border border-[#E4D9C8]/80 overflow-hidden flex flex-col items-center justify-center p-8 text-center shadow-card">
-            <div className="w-24 h-24 rounded-full bg-[#E4D9C8]/40 flex items-center justify-center mb-4">
+          {/* Fotka zatím chybí – místo ní značková výplň. Rám je prohlubeň:
+              snímek do stránky patří vsazený, ne nalepený navrch. */}
+          <div className="relative flex aspect-[3/4] flex-col items-center justify-center overflow-hidden rounded-3xl bg-linda-sandLight p-8 text-center shadow-neuInset">
+            <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-linda-cream shadow-neu">
               {product.jeDarkovyPoukaz ? (
-                <Gift className="w-12 h-12 text-[#7A4B32] stroke-[1.5]" />
+                <Gift className="h-12 w-12 stroke-[1.5] text-linda-cognac" aria-hidden="true" />
               ) : (
-                <Sparkles className="w-12 h-12 text-[#7A4B32] stroke-[1.5]" />
+                <Sparkles className="h-12 w-12 stroke-[1.5] text-linda-cognac" aria-hidden="true" />
               )}
             </div>
-            <span className="font-serif text-3xl text-[#2B2019]">LINDA FASHION</span>
-            <span className="text-xs uppercase tracking-widest text-[#7A4B32] mt-1 font-medium">
+            <span className="font-serif text-3xl text-linda-espresso">LINDA FASHION</span>
+            <span className="mt-1 text-xs font-medium uppercase tracking-widest text-linda-cognac">
               Moda Italiana &bull; Pečlivě Vybráno v Itálii
             </span>
           </div>
@@ -98,58 +100,64 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
         {/* Right column: Product Specs & Actions */}
         <div className="lg:col-span-5 space-y-8">
           <div>
-            <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold block mb-1">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
               {product.znacka}
             </span>
-            <h1 className="font-serif text-3xl sm:text-4xl text-[#2B2019] leading-tight">{product.nazev}</h1>
+            <h1 className="font-serif text-3xl leading-tight text-linda-espresso sm:text-4xl">{product.nazev}</h1>
             <div className="mt-4 flex items-baseline gap-3">
-              <span className="text-2xl font-semibold text-[#2B2019]">
+              <span className="text-2xl font-semibold text-linda-espresso">
                 {product.cena.toLocaleString('cs-CZ')} Kč
               </span>
-              <span className="text-xs text-[#6B7255] font-medium bg-[#F0F2EC] px-2.5 py-1 rounded-full">
+              <span className="rounded-full bg-linda-sageLight px-2.5 py-1 text-xs font-medium text-linda-sage shadow-neuInsetSm">
                 Skladem &bull; Ihned k odeslání
               </span>
             </div>
           </div>
 
-          <p className="text-sm text-[#2B2019]/80 font-light leading-relaxed">{product.popis}</p>
+          <p className="text-sm font-light leading-relaxed text-linda-espresso/80">{product.popis}</p>
 
           {/* Size / Variant Selector */}
-          <div className="space-y-3 pt-4 border-t border-[#E4D9C8]/60">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider font-semibold text-[#2B2019]">
+          <div className="space-y-3 border-t border-linda-sand/60 pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-linda-espresso">
                 {product.jeDarkovyPoukaz ? 'Zvolte hodnotu poukazu:' : 'Zvolte velikost:'}
               </span>
               {!product.jeDarkovyPoukaz && (
                 <button
+                  type="button"
                   onClick={() => setShowSizeGuide(true)}
-                  className="text-xs text-[#7A4B32] hover:underline flex items-center gap-1 font-medium"
+                  className="flex min-h-touch cursor-pointer items-center gap-1 rounded-full px-1 text-xs font-medium text-linda-cognac transition-colors hover:text-linda-cognacHover hover:underline"
                 >
-                  <Ruler className="w-3.5 h-3.5" />
+                  <Ruler className="h-3.5 w-3.5" aria-hidden="true" />
                   Tabulka mír a průvodce
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {/* Zvolená velikost je zamáčknutá do plochy, ostatní vystupují.
+                Vyprodaná je prohlubeň – šedá na šedé (dřív `bg-gray-100
+                text-gray-400`, ~2,8:1) šla pryč a stav nese i přeškrtnutí. */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {product.variants.map((v) => {
                 const isOutOfStock = v.skladem === 0;
                 const isSelected = v.id === selectedVariant;
                 return (
                   <button
                     key={v.id}
+                    type="button"
                     onClick={() => setSelectedVariant(v.id)}
-                    className={`py-3 px-2 rounded-xl text-xs font-medium border transition-all text-center ${
+                    aria-pressed={isSelected}
+                    className={`min-h-touch cursor-pointer rounded-xl px-2 py-3 text-center text-xs font-medium transition-all duration-200 ${
                       isSelected
-                        ? 'border-[#7A4B32] bg-[#7A4B32] text-white shadow-sm'
+                        ? 'bg-linda-cognac text-white shadow-neuOnDarkInset'
                         : isOutOfStock
-                        ? 'border-[#E4D9C8] bg-gray-100 text-gray-400 line-through'
-                        : 'border-[#E4D9C8] bg-white text-[#2B2019] hover:border-[#7A4B32]'
+                        ? 'bg-linda-sandLight text-linda-espresso/60 line-through shadow-neuInsetSm'
+                        : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:shadow-neu'
                     }`}
                   >
                     {v.velikost}
                     {v.skladem > 0 && v.skladem <= 2 && (
-                      <span className="block text-[9px] text-amber-600 font-normal">Poslední kousky!</span>
+                      <span className="block text-[9px] font-normal text-linda-cognac">Poslední kousky!</span>
                     )}
                   </button>
                 );
@@ -159,15 +167,17 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
 
           {/* Detailed Measurements Box (hidden for Gift Cards as required by Section 6.2!) */}
           {!product.jeDarkovyPoukaz && activeVariant.miry && (
-            <div className="p-4 bg-[#white] rounded-2xl border border-[#E4D9C8]/80 space-y-2 text-xs">
-              <h4 className="font-semibold text-[#2B2019] uppercase tracking-wider">
+            /* `bg-[#white]` byla neplatná třída – panel neměl žádné pozadí.
+               Teď je to prohlubeň s tabulkou, jako ostatní datové plochy. */
+            <div className="space-y-2 rounded-2xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+              <h2 className="font-semibold uppercase tracking-wider text-linda-espresso">
                 Přesné míry pro velikost {activeVariant.velikost}:
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-[#2B2019]/80">
+              </h2>
+              <div className="grid grid-cols-2 gap-2 text-linda-espresso/80">
                 {Object.entries(activeVariant.miry).map(([key, val]) => (
-                  <div key={key} className="flex justify-between border-b border-[#E4D9C8]/30 py-1">
+                  <div key={key} className="flex justify-between border-b border-linda-sand/40 py-1">
                     <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-                    <span className="font-medium text-[#7A4B32]">{String(val)}</span>
+                    <span className="font-medium text-linda-cognac">{String(val)}</span>
                   </div>
                 ))}
               </div>
@@ -176,87 +186,103 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
 
           {/* Material & Care */}
           {product.material && (
-            <div className="space-y-1 text-xs text-[#2B2019]/80">
-              <span className="font-semibold uppercase tracking-wider text-[#2B2019] block">Materiál &amp; Péče:</span>
+            <div className="space-y-1 text-xs text-linda-espresso/80">
+              <span className="block font-semibold uppercase tracking-wider text-linda-espresso">Materiál &amp; Péče:</span>
               <p>Materiál: {product.material}</p>
               {product.udrzba && <p>Péče: {product.udrzba}</p>}
             </div>
           )}
 
           {/* Action CTA Buttons */}
-          <div className="space-y-3 pt-4 border-t border-[#E4D9C8]/60">
+          <div className="space-y-3 border-t border-linda-sand/60 pt-4">
             {activeVariant.skladem > 0 ? (
               <button
+                type="button"
                 onClick={handleAddToCart}
-                className="w-full py-4 bg-[#7A4B32] text-white text-sm font-semibold rounded-full hover:bg-[#633B26] transition-all shadow-md flex items-center justify-center gap-2"
+                className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-4 text-sm font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
               >
                 {addedToCart ? (
                   <>
-                    <Check className="w-5 h-5" />
+                    <Check className="h-5 w-5" aria-hidden="true" />
                     Přidáno do košíku!
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-5 h-5" />
+                    <ShoppingBag className="h-5 w-5" aria-hidden="true" />
                     Přidat do košíku
                   </>
                 )}
               </button>
             ) : (
-              <div className="p-4 bg-[#FAF8F4] border border-[#7A4B32]/30 rounded-2xl text-center space-y-2">
-                <p className="text-xs text-[#7A4B32] font-semibold flex items-center justify-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+              <div className="space-y-3 rounded-2xl bg-linda-sandLight p-4 text-center shadow-neuInsetSm">
+                <p className="flex items-center justify-center gap-1 text-xs font-semibold text-linda-cognac">
+                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   Tato velikost je momentálně vyprodaná
                 </p>
-                <button className="px-4 py-2 bg-[#2B2019] text-white text-xs font-medium rounded-full hover:bg-[#7A4B32] transition-colors">
+                <button
+                  type="button"
+                  className="min-h-touch cursor-pointer rounded-full bg-linda-espresso px-4 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm"
+                >
                   Upozornit, až bude skladem
                 </button>
               </div>
             )}
 
+            {/* Uložený stav = zamáčknuté tlačítko; nese ho tvar i výplň
+                srdíčka, ne pouze barva. */}
             <button
+              type="button"
               onClick={() => setIsFavorite(!isFavorite)}
-              className="w-full py-3 border border-[#2B2019]/30 text-[#2B2019] text-xs font-semibold rounded-full hover:border-[#7A4B32] hover:text-[#7A4B32] transition-colors flex items-center justify-center gap-2"
+              aria-pressed={isFavorite}
+              className={`flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full py-3 text-xs font-semibold transition-all duration-200 ${
+                isFavorite
+                  ? 'bg-linda-sandLight text-linda-cognac shadow-neuInsetSm'
+                  : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:text-linda-cognac hover:shadow-neu'
+              }`}
             >
-              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-[#7A4B32] text-[#7A4B32]' : ''}`} />
+              <Heart
+                className={`h-4 w-4 ${isFavorite ? 'fill-linda-cognac text-linda-cognac' : ''}`}
+                aria-hidden="true"
+              />
               {isFavorite ? 'Uloženo v oblíbených' : 'Uložit mezi oblíbené'}
             </button>
           </div>
 
           {/* Guarantees */}
-          <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-[#2B2019]/70 pt-4 border-t border-[#E4D9C8]/40">
-            <div className="flex flex-col items-center">
-              <Truck className="w-5 h-5 text-[#7A4B32] mb-1" />
-              <span>Doručení do 2 dnů</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <RotateCcw className="w-5 h-5 text-[#7A4B32] mb-1" />
-              <span>14 dní na vyzkoušení</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <ShieldCheck className="w-5 h-5 text-[#7A4B32] mb-1" />
-              <span>Bezpečná platba</span>
-            </div>
-          </div>
+          <ul className="grid grid-cols-3 gap-2 border-t border-linda-sand/40 pt-4 text-center text-[10px] text-linda-espresso/75">
+            {[
+              { Ikona: Truck, text: 'Doručení do 2 dnů' },
+              { Ikona: RotateCcw, text: '14 dní na vyzkoušení' },
+              { Ikona: ShieldCheck, text: 'Bezpečná platba' },
+            ].map(({ Ikona, text }) => (
+              <li key={text} className="flex flex-col items-center gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-linda-cream shadow-neuSm">
+                  <Ikona className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
       {/* Size guide modal */}
       {showSizeGuide && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 relative border border-[#E4D9C8]">
-            <h3 className="font-serif text-2xl text-[#2B2019]">Průvodce velikostmi &amp; jak se měřit</h3>
-            <p className="text-xs text-[#2B2019]/80 leading-relaxed">
+          <div className="relative w-full max-w-md space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neuLg">
+            <h2 className="font-serif text-2xl text-linda-espresso">Průvodce velikostmi &amp; jak se měřit</h2>
+            <p className="text-xs leading-relaxed text-linda-espresso/80">
               Italské velikosti odpovídají evropskému číslování. Vždy se měřte krejčovským metrem přímo na těle bez přitažení:
             </p>
-            <ul className="text-xs space-y-1.5 list-disc pl-4 text-[#2B2019]/70">
+            <ul className="list-disc space-y-1.5 pl-4 text-xs text-linda-espresso/75">
               <li><strong>Hrudník:</strong> přes nejplnější místo prsou</li>
               <li><strong>Pas:</strong> v nejsužším místě nad pupíkem</li>
               <li><strong>Boky:</strong> přes nejširší část hýždí</li>
             </ul>
             <button
+              type="button"
               onClick={() => setShowSizeGuide(false)}
-              className="w-full py-2 bg-[#7A4B32] text-white text-xs font-semibold rounded-full"
+              className="min-h-touch w-full cursor-pointer rounded-full bg-linda-cognac text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
             >
               Rozumím
             </button>

@@ -6,10 +6,10 @@ import { ProductCard } from '@/components/shop/ProductCard';
 /**
  * Nejprodávanější kousky.
  *
- * Používá stejnou kartu jako katalog `/produkty` – jen v `soft` variantě, aby
- * seděla do reliéfu ostatních sekcí homepage; obsah karty je na obou místech
- * totožný. Mřížka je čtyřsloupcová – karta je vyšší než v původní předloze
- * a v šesti sloupcích by se obsah tísnil; šířka sloupce tak odpovídá katalogu.
+ * Používá stejnou kartu jako katalog `/produkty`, aby produkt vypadal na obou
+ * místech identicky. Mřížka je čtyřsloupcová – karta je vyšší než v původní
+ * předloze a v šesti sloupcích by se obsah tísnil; šířka sloupce tak odpovídá
+ * katalogu.
  *
  * Serverová komponenta vykreslující klientské karty. Handler pro oblíbené se
  * odsud nepředává (funkce nepřejde hranicí server → klient); až bude hotový
@@ -26,9 +26,7 @@ export const BestSellers: React.FC = () => (
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {NEJPRODAVANEJSI.map((produkt) => (
-          /* `soft` = krémový reliéf místo bílé karty s rámečkem; katalog
-             `/produkty` zůstává na výchozí variantě. */
-          <ProductCard key={produkt.id} {...produkt} variant="soft" />
+          <ProductCard key={produkt.id} {...produkt} />
         ))}
       </div>
     </div>

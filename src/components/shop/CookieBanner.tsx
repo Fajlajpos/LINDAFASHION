@@ -70,38 +70,43 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     <>
       {/* Banner na spodním okraji obrazovky při první návštěvě */}
       {showBanner && !showSettingsModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6 bg-[#2B2019] text-[#FAF8F4] border-t-2 border-[#7A4B32] shadow-elevated animate-slideUp">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3 max-w-3xl">
-              <ShieldCheck className="w-6 h-6 text-[#E4D9C8] flex-shrink-0 mt-1" />
+        <div className="animate-fadeInUp fixed bottom-0 left-0 right-0 z-50 bg-linda-espresso p-4 text-linda-cream shadow-neuBarRaised sm:p-6">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <div className="flex max-w-3xl items-start gap-3">
+              <ShieldCheck className="mt-1 h-6 w-6 flex-shrink-0 text-linda-sand" aria-hidden="true" />
               <div className="space-y-1">
-                <h4 className="font-serif text-lg text-[#E4D9C8]">Ochrana vašeho soukromí &amp; Cookies</h4>
-                <p className="text-xs text-[#FAF8F4]/80 leading-relaxed">
+                <h4 className="font-serif text-lg text-linda-sand">Ochrana vašeho soukromí &amp; Cookies</h4>
+                <p className="text-xs leading-relaxed text-linda-cream/80">
                   Tento e-shop používá soubory cookies pro zajištění správného fungování košíku a přihlášení (nezbytné), pro analýzu návštěvnosti a pro přizpůsobení nabídek italské módy (marketingové). Detaily najdete v našich{' '}
-                  <Link href="/cookies" className="underline underline-offset-2 text-[#E4D9C8]">
+                  <Link href="/cookies" className="text-linda-sand underline underline-offset-2">
                     zásadách používání cookies
                   </Link>.
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+            {/* Rámečky nahradil reliéf; `min-h-touch` doplňuje dřív chybějící
+                44px dotykový cíl (tlačítka měla přes `py-2` jen ~32 px). */}
+            <div className="flex w-full flex-wrap items-center justify-end gap-3 md:w-auto">
               <button
+                type="button"
                 onClick={() => setShowSettingsModal(true)}
-                className="px-4 py-2 text-xs font-medium border border-[#E4D9C8]/40 rounded-full hover:bg-[#FAF8F4]/10 transition-colors flex items-center gap-1.5"
+                className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.04] px-4 text-xs font-medium text-linda-cream shadow-neuOnDark transition-all duration-200 hover:bg-white/10 active:shadow-neuOnDarkInset"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="h-3.5 w-3.5" aria-hidden="true" />
                 Nastavení
               </button>
               <button
+                type="button"
                 onClick={handleRejectOptional}
-                className="px-4 py-2 text-xs font-medium border border-[#E4D9C8] rounded-full hover:bg-[#FAF8F4]/10 transition-colors"
+                className="min-h-touch cursor-pointer rounded-full bg-white/[0.04] px-4 text-xs font-medium text-linda-cream shadow-neuOnDark transition-all duration-200 hover:bg-white/10 active:shadow-neuOnDarkInset"
               >
                 Pouze nezbytné
               </button>
               <button
+                type="button"
                 onClick={handleAcceptAll}
-                className="px-5 py-2 text-xs font-semibold bg-[#7A4B32] text-white rounded-full hover:bg-[#633B26] transition-colors shadow-sm"
+                className="min-h-touch cursor-pointer rounded-full bg-linda-cognac px-5 text-xs font-semibold text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuOnDarkInset"
               >
                 Povolit vše
               </button>
@@ -113,69 +118,79 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
       {/* Modal s detailním nastavením kategorií */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#FAF8F4] text-[#2B2019] rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-elevated border border-[#E4D9C8] space-y-6 relative">
+          <div className="relative w-full max-w-lg space-y-6 rounded-2xl bg-linda-cream p-6 text-linda-espresso shadow-neuLg sm:p-8">
             <button
+              type="button"
               onClick={() => {
                 setShowSettingsModal(false);
                 if (onCloseExternal) onCloseExternal();
               }}
-              className="absolute top-4 right-4 p-2 text-[#2B2019]/60 hover:text-[#7A4B32]"
+              aria-label="Zavřít nastavení cookies"
+              className="absolute right-4 top-4 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
 
             <div>
-              <h3 className="font-serif text-2xl text-[#2B2019]">Nastavení souborů cookies</h3>
-              <p className="text-xs text-[#2B2019]/70 mt-1">
+              <h3 className="font-serif text-2xl text-linda-espresso">Nastavení souborů cookies</h3>
+              <p className="mt-1 text-xs text-linda-espresso/70">
                 Zde můžete udělit nebo odvolat souhlas s jednotlivými typy souborů cookies.
               </p>
             </div>
 
+            {/* Každá kategorie je vyfrézovaná prohlubeň v krémové ploše –
+                stejný jazyk jako vstupní pole na zbytku webu. */}
             <div className="space-y-4 text-xs">
-              {/* Technické / Nezbytné */}
-              <div className="p-4 bg-white rounded-xl border border-[#E4D9C8]/60 flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
                 <div>
-                  <h4 className="font-semibold text-sm text-[#2B2019]">Technické &amp; Nezbytné (Povinné)</h4>
-                  <p className="text-[#2B2019]/60 mt-0.5">Potřebné pro košík, autentizaci a bezpečnost webu.</p>
+                  <h4 className="text-sm font-semibold text-linda-espresso">Technické &amp; Nezbytné (Povinné)</h4>
+                  <p className="mt-0.5 text-linda-espresso/70">Potřebné pro košík, autentizaci a bezpečnost webu.</p>
                 </div>
-                <input type="checkbox" checked disabled className="w-4 h-4 accent-[#7A4B32] cursor-not-allowed" />
+                <input
+                  type="checkbox"
+                  checked
+                  disabled
+                  aria-label="Technické a nezbytné cookies – nelze vypnout"
+                  className="h-4 w-4 shrink-0 cursor-not-allowed accent-linda-cognac"
+                />
               </div>
 
-              {/* Analytické */}
-              <div className="p-4 bg-white rounded-xl border border-[#E4D9C8]/60 flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
                 <div>
-                  <h4 className="font-semibold text-sm text-[#2B2019]">Analytické cookies</h4>
-                  <p className="text-[#2B2019]/60 mt-0.5">Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</p>
+                  <h4 className="text-sm font-semibold text-linda-espresso">Analytické cookies</h4>
+                  <p className="mt-0.5 text-linda-espresso/70">Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.analytical}
                   onChange={(e) => setPrefs({ ...prefs, analytical: e.target.checked })}
-                  className="w-4 h-4 accent-[#7A4B32] cursor-pointer"
+                  aria-label="Analytické cookies"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />
               </div>
 
-              {/* Marketingové */}
-              <div className="p-4 bg-white rounded-xl border border-[#E4D9C8]/60 flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
                 <div>
-                  <h4 className="font-semibold text-sm text-[#2B2019]">Marketingové cookies (Meta Pixel)</h4>
-                  <p className="text-[#2B2019]/60 mt-0.5">Slouží k zobrazování relevantních reklam z italské módy.</p>
+                  <h4 className="text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</h4>
+                  <p className="mt-0.5 text-linda-espresso/70">Slouží k zobrazování relevantních reklam z italské módy.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.marketing}
                   onChange={(e) => setPrefs({ ...prefs, marketing: e.target.checked })}
-                  className="w-4 h-4 accent-[#7A4B32] cursor-pointer"
+                  aria-label="Marketingové cookies"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E4D9C8]">
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
+                type="button"
                 onClick={handleSaveCustom}
-                className="px-6 py-2.5 bg-[#7A4B32] text-white text-xs font-medium rounded-full hover:bg-[#633B26] transition-colors flex items-center gap-2"
+                className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
               >
-                <Check className="w-4 h-4" />
+                <Check className="h-4 w-4" aria-hidden="true" />
                 Uložit mé předvolby
               </button>
             </div>

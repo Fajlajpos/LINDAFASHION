@@ -2,6 +2,7 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, QrCode, ArrowRight } from 'lucide-react';
 import { generateQrPaymentString, getQrPaymentImageUrl } from '@/lib/qr-code';
@@ -26,65 +27,75 @@ function PotvrzeniContent() {
     <div className="space-y-10">
       {/* Icon & Congratulations */}
       <div className="space-y-4">
-        <div className="w-20 h-20 bg-[#6B7255]/20 text-[#6B7255] rounded-full flex items-center justify-center mx-auto">
-          <CheckCircle className="w-10 h-10" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-linda-sageLight text-linda-sage shadow-neu">
+          <CheckCircle className="h-10 w-10" aria-hidden="true" />
         </div>
-        <span className="text-xs uppercase tracking-widest text-[#7A4B32] font-semibold block">
+        <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
           Děkujeme za váš nákup
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl text-[#2B2019]">
-          Objednávka č. <span className="text-[#7A4B32] font-semibold">{cisloObjednavky}</span> byla přijata!
+        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">
+          Objednávka č. <span className="font-semibold text-linda-cognac">{cisloObjednavky}</span> byla přijata!
         </h1>
-        <p className="text-sm text-[#2B2019]/75 max-w-lg mx-auto font-light leading-relaxed">
+        <p className="mx-auto max-w-lg text-sm font-light leading-relaxed text-linda-espresso/75">
           Na váš e-mail jsme právě odeslali potvrzení objednávky společně s obchodními podmínkami a poučením o odstoupení od smlouvy.
         </p>
       </div>
 
       {/* QR Code and Bank Details Box (Bank Transfer Temporary Bridge) */}
       {paymentMethod === 'bank_transfer' && (
-        <div className="bg-white p-8 rounded-3xl border border-[#E4D9C8] shadow-elevated max-w-xl mx-auto space-y-6 text-left">
-          <div className="flex items-center gap-3 border-b border-[#E4D9C8]/60 pb-4">
-            <QrCode className="w-6 h-6 text-[#7A4B32]" />
+        <div className="mx-auto max-w-xl space-y-6 rounded-3xl bg-linda-cream p-8 text-left shadow-neuLg">
+          <div className="flex items-center gap-3 border-b border-linda-sand/60 pb-4">
+            <QrCode className="h-6 w-6 shrink-0 text-linda-cognac" aria-hidden="true" />
             <div>
-              <h3 className="font-serif text-xl text-[#2B2019]">Platební údaje &amp; QR Platba</h3>
-              <p className="text-xs text-[#2B2019]/60">Naskenujte QR kód v mobilním bankovnictví pro okamžitou úhradu.</p>
+              <h2 className="font-serif text-xl text-linda-espresso">Platební údaje &amp; QR Platba</h2>
+              <p className="text-xs text-linda-espresso/70">Naskenujte QR kód v mobilním bankovnictví pro okamžitou úhradu.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-            <div className="flex justify-center p-3 bg-[#FAF8F4] rounded-2xl border border-[#E4D9C8]/60">
-              <img src={qrcodeUrl} alt="QR Platba" className="w-48 h-48 rounded-xl shadow-sm" />
+          <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-2">
+            {/* QR kód leží v prohlubni. `<img>` nahradil `next/image`
+                s pevnými rozměry – místo je rezervované, obrázek tedy
+                nedoskočí a nerozhodí rozvržení (CLS). */}
+            <div className="flex justify-center rounded-2xl bg-linda-sandLight p-3 shadow-neuInset">
+              <Image
+                src={qrcodeUrl}
+                alt={`QR platba pro objednávku ${cisloObjednavky}`}
+                width={192}
+                height={192}
+                unoptimized
+                className="h-48 w-48 rounded-xl bg-white p-1"
+              />
             </div>
 
-            <div className="space-y-2 text-xs text-[#2B2019]">
-              <div className="p-2.5 bg-[#FAF8F4] rounded-xl border border-[#E4D9C8]/40">
-                <span className="text-[#2B2019]/60 block text-[10px] uppercase">Číslo účtu:</span>
-                <span className="font-semibold text-sm text-[#7A4B32]">{bankAccount}</span>
-              </div>
-              <div className="p-2.5 bg-[#FAF8F4] rounded-xl border border-[#E4D9C8]/40">
-                <span className="text-[#2B2019]/60 block text-[10px] uppercase">Variabilní symbol:</span>
-                <span className="font-semibold text-sm text-[#2B2019]">{cisloObjednavky.replace(/\D/g, '')}</span>
-              </div>
-              <div className="p-2.5 bg-[#FAF8F4] rounded-xl border border-[#E4D9C8]/40">
-                <span className="text-[#2B2019]/60 block text-[10px] uppercase">Částka k úhradě:</span>
-                <span className="font-semibold text-sm text-[#7A4B32]">{totalAmount.toLocaleString('cs-CZ')} Kč</span>
-              </div>
+            <div className="space-y-2 text-xs text-linda-espresso">
+              {[
+                { label: 'Číslo účtu:', hodnota: bankAccount, zvyraznit: true },
+                { label: 'Variabilní symbol:', hodnota: cisloObjednavky.replace(/\D/g, ''), zvyraznit: false },
+                { label: 'Částka k úhradě:', hodnota: `${totalAmount.toLocaleString('cs-CZ')} Kč`, zvyraznit: true },
+              ].map(({ label, hodnota, zvyraznit }) => (
+                <div key={label} className="rounded-xl bg-linda-sandLight p-2.5 shadow-neuInsetSm">
+                  <span className="block text-[10px] uppercase text-linda-espresso/70">{label}</span>
+                  <span className={`text-sm font-semibold ${zvyraznit ? 'text-linda-cognac' : 'text-linda-espresso'}`}>
+                    {hodnota}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      <div className="pt-6 flex flex-col sm:flex-row justify-center gap-4">
+      <div className="flex flex-col justify-center gap-4 pt-6 sm:flex-row">
         <Link
           href="/muj-ucet"
-          className="px-8 py-3.5 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-all flex items-center justify-center gap-2"
+          className="flex min-h-touch cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
         >
           Sledovat v zákaznickém účtu
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
         <Link
           href="/produkty"
-          className="px-8 py-3.5 border border-[#2B2019]/30 text-[#2B2019] text-xs font-semibold uppercase tracking-wider rounded-full hover:border-[#7A4B32] hover:text-[#7A4B32]"
+          className="flex min-h-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream px-8 text-xs font-semibold uppercase tracking-wider text-linda-espresso shadow-neu transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
         >
           Pokračovat v nákupu
         </Link>

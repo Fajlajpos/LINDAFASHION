@@ -4,16 +4,16 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center p-4 text-[#2B2019]">
-      <div className="max-w-md w-full text-center space-y-6 p-8 bg-white rounded-3xl border border-[#E4D9C8] shadow-elevated">
-        <div className="w-16 h-16 rounded-full bg-[#E4D9C8]/40 text-[#7A4B32] flex items-center justify-center mx-auto">
-          <Sparkles className="w-8 h-8 stroke-[1.5]" />
+    <div className="flex min-h-screen items-center justify-center bg-linda-cream p-4 text-linda-espresso">
+      <div className="w-full max-w-md space-y-6 rounded-3xl bg-linda-cream p-8 text-center shadow-neuLg">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-linda-sandLight text-linda-cognac shadow-neuInset">
+          <Sparkles className="h-8 w-8 stroke-[1.5]" aria-hidden="true" />
         </div>
 
         <div className="space-y-2">
-          <span className="font-serif text-6xl text-[#7A4B32] font-semibold block">404</span>
-          <h1 className="font-serif text-3xl text-[#2B2019]">Stránka nebyla nalezena</h1>
-          <p className="text-xs text-[#2B2019]/70 font-light leading-relaxed">
+          <span className="block font-serif text-6xl font-semibold text-linda-cognac">404</span>
+          <h1 className="font-serif text-3xl text-linda-espresso">Stránka nebyla nalezena</h1>
+          <p className="text-xs font-light leading-relaxed text-linda-espresso/75">
             Omlouváme se, ale hledaná stránka nebo model oblečení již neexistuje nebo byla přesunuta do jiné kolekce.
           </p>
         </div>
@@ -21,9 +21,9 @@ export default function NotFound() {
         <div>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-[#7A4B32] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#633B26] transition-colors"
+            className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Návrat na hlavní stránku
           </Link>
         </div>
