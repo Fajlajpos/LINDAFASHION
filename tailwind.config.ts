@@ -21,6 +21,11 @@ const config: Config = {
           sageLight: '#F1F4EB',
           sageHover: '#32401C',
           chocolate: '#3E2E25', // Hřejivá čokoládově hnědá – patička
+          /* Neutrální šedá pro prvky chromu prohlížeče (táhlo scrollbaru).
+             Záměrně bez hnědého i zeleného nádechu, aby nesoutěžila s brandem;
+             kontrast na `cream` je 3.4:1, tedy nad hranicí pro UI prvky. */
+          stone: '#8B857E',
+          stoneHover: '#6E6862',
         },
       },
       fontFamily: {
@@ -54,9 +59,13 @@ const config: Config = {
            Místo něj nese odsazení od fotky vrstvený espresso stín: úzký u
            hrany, široký a rozptýlený pod kartou. Rozostření je u obou vrstev
            větší než posun, takže stín obchází i boky a karta nad snímkem
-           opravdu levituje. Vnitřní horní linka drží hranu vyvýšenou. */
+           opravdu levituje. Vnitřní horní linka drží hranu vyvýšenou.
+
+           Krytí držíme na úrovni ostatních `neu*` tokenů (0.06–0.12). Silnější
+           varianta kreslila pod kartou tmavý pás, který na krémové sekci pod
+           herem vypadal jako zašpiněné pozadí, ne jako stín. */
         neuFloat:
-          '0 2px 6px rgba(43, 32, 25, 0.12), 0 12px 26px rgba(43, 32, 25, 0.18), 0 30px 64px rgba(43, 32, 25, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+          '0 2px 5px rgba(43, 32, 25, 0.05), 0 8px 16px rgba(43, 32, 25, 0.07), 0 18px 38px rgba(43, 32, 25, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
 
         /* Konkávní varianty – „vyfrézovaná“ prohlubeň. Používáme na místa,
            kam se něco vkládá: obrázkové niky, vstupní pole, stisknutý stav. */

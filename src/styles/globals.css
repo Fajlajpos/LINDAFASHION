@@ -95,20 +95,37 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   }
 }
 
-/* Custom Scrollbar */
+/* Scrollbar stránky
+ *
+ * Táhlo je neutrálně šedé (`linda-stone`), ne brandové. Dřív tu byla olivová
+ * sage přes celou výšku okna – jediná zelená plocha na krémové stránce a
+ * působila jako cizí prvek; hnědá varianta zase táhla pozornost k chromu
+ * prohlížeče místo ke zboží. Šedá zmizí a nechá barvu produktovým fotkám.
+ *
+ * Dráha je o odstín tmavší než stránka (`sandLight`), aby byl žlábek znát i
+ * když se táhlo zrovna nikam neposouvá. Firefox `::-webkit-*` neumí, proto
+ * ještě standardní `scrollbar-color` na <html>. */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAF8F4;
+  background: theme('colors.linda.sandLight');
 }
 ::-webkit-scrollbar-thumb {
-  background: #405023;
-  border-radius: 4px;
+  background: theme('colors.linda.stone');
+  border: 2px solid theme('colors.linda.sandLight');
+  border-radius: 999px;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2B2019;
+  background: theme('colors.linda.stoneHover');
+  background-clip: padding-box;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.linda.stone') theme('colors.linda.sandLight');
 }
 
 /* Omítnutá stěna – levá polovina heru.
