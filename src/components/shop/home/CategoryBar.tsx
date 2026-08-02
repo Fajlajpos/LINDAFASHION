@@ -30,6 +30,12 @@ import { KATEGORIE_ROZCESTNIK } from '@/lib/home-data';
  * Pod `lg` se pole posouvají vodorovně; že řada pokračuje, napovídá prolnutí
  * u pravé hrany karty.
  */
+/*
+ * Záporný margin je půlka výšky karty, ne náhodné číslo. Karta měří 112 px
+ * (čip 88 + `p-1` + `p-2`), od `sm` pak 120 px (čip 96) – `-mt-14` a `-mt-16`
+ * ji tedy zanoří do heru přesně do poloviny a spodní hrana fotky vede jejím
+ * středem. Když se změní výška čipu, musí se s ní posunout i tohle.
+ */
 export const CategoryBar: React.FC = () => (
   <section aria-label="Kategorie" className="relative z-10 -mt-14 lg:-mt-16">
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

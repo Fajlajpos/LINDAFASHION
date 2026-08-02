@@ -41,14 +41,28 @@ import { MediaFrame } from './MediaFrame';
  */
 export const HeroSplit: React.FC = () => (
   <section aria-label="Nová kolekce" className="relative w-full bg-linda-cream">
-    <div className="grid lg:h-[calc(100vh-6rem)] lg:min-h-[34rem] lg:max-h-[45rem] lg:grid-cols-2">
+    {/* Výšku určuje `min-height`, nikdy `height` s `max-height`.
+        Ta dvojice tu byla a byla to past: text ve sloupci je vysoký 736 px,
+        takže na nižším okně přerostl strop, řádka mřížky se roztáhla za spodní
+        hranu sekce a pozadí obou polovin se vykreslilo pod ni. Karta kategorií
+        se přitom zanořuje záporným marginem od hrany *sekce*, takže na nižších
+        oknech zůstala fotka viset hluboko pod kartou.
+
+        `min-h` s `min()` uvnitř to řeší z principu: výška je `auto`, tedy vždy
+        aspoň tak velká jako obsah – přetečení nemůže nastat – a zároveň aspoň
+        výška okna bez hlavičky, zastropovaná na 52rem.
+
+        Strop není kosmetika, drží ostrost: čím vyšší sekce, tím užší svislý pás
+        zdroje se roztahuje přes celou polovinu. Na 52rem vychází výřez asi
+        1,8× nad hustotu displeje, o patro výš už by fotka měkla. */}
+    <div className="grid lg:min-h-[min(calc(100vh-6rem),52rem)] lg:grid-cols-2">
       {/* ------------------------------------------------------------------ */}
       {/* Fotografie                                                         */}
       {/* ------------------------------------------------------------------ */}
       {/* V DOMu první, na `lg` ale vpravo. Na mobilu tím pořadí v kódu sedí
           na pořadí na obrazovce; na desktopu je prohozený jen obrázek, který
           se nedá zaostřit ani proklikat, takže navigaci klávesnicí to nemíchá. */}
-      <div className="relative aspect-[4/3] w-full sm:aspect-[16/10] lg:order-last lg:aspect-auto lg:h-full">
+      <div className="relative aspect-[4/3] w-full sm:aspect-[16/10] lg:order-last lg:aspect-auto lg:h-auto">
         <MediaFrame
           src="/hero-amalfi.jpg"
           alt="Žena v lněných šatech opřená o omítnutou zeď nad mořem"
