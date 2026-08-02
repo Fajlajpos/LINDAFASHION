@@ -16,6 +16,11 @@ export interface MediaFrameProps {
   sizes: string;
   /** LCP snímek (hero) dostane priority, ostatní se dolazují lazy. */
   priority?: boolean;
+  /**
+   * Komprese next/image. Výchozích 75 stačí na dlaždice v mřížce; velké plochy
+   * (hero přes půl obrazovky) na nich viditelně měknou – tam dávejte 90.
+   */
+  quality?: number;
   /** Zvětšení snímku při hoveru nad rodičovskou `.group`. */
   zoomOnHover?: boolean;
   /** Kotva výřezu, např. `object-[70%_25%]`. */
@@ -41,6 +46,7 @@ export const MediaFrame: React.FC<MediaFrameProps> = ({
   alt = '',
   sizes,
   priority = false,
+  quality,
   zoomOnHover = false,
   objectPosition = 'object-center',
   className = '',
@@ -52,6 +58,7 @@ export const MediaFrame: React.FC<MediaFrameProps> = ({
         alt={alt}
         fill
         priority={priority}
+        quality={quality}
         sizes={sizes}
         className={`object-cover ${objectPosition} ${
           zoomOnHover ? 'transition-transform duration-500 group-hover:scale-105' : ''

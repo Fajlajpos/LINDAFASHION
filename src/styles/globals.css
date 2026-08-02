@@ -111,21 +111,25 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   background: #2B2019;
 }
 
-/* 🎨 1. Celý obrázek v kuse pro Hero sekci */
-.texture-hero-user {
-  position: relative;
-  background-color: #FAF8F4;
-}
-
-.texture-hero-user::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url('/textures/hero-texture.jpg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  opacity: 0.15;
+/* Omítnutá stěna – levá polovina heru.
+ *
+ * Textura jede přes `<Image>`, ne přes background-image: půlka obrazovky si
+ * zaslouží webp a srcset. Tahle třída proto řeší jen prolnutí.
+ *
+ * `multiply` znamená, že plocha může jen ztmavit – světla reliéfu tvoří sám
+ * krémový podklad pod obrázkem. Zní to jako ztráta, ale je to jediný způsob,
+ * jak si udržet značkovou `linda-cream`: omítka je na snímku studeně bílá
+ * a v plné síle by z levé poloviny stránky udělala jiný odstín než ze zbytku
+ * webu.
+ *
+ * Krytí je schválně nízké. Reliéf na snímku je hrubý – v plné síle z něj byla
+ * skalní stěna, jejíž hřbety vedly napříč nadpisem a přetahovaly si pozornost
+ * z typografie. Ve 0.35 zbyde tonální vlnění, které se čte jako omítnutá zeď
+ * a nechá text vést. Kontrast espressa drží i na nejtmavší spáře hluboko nad
+ * 4,5:1.
+ */
+.texture-plaster {
+  opacity: 0.35;
   mix-blend-mode: multiply;
   pointer-events: none;
 }

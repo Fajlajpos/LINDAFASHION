@@ -33,7 +33,7 @@ import { KATEGORIE_ROZCESTNIK } from '@/lib/home-data';
 export const CategoryBar: React.FC = () => (
   <section aria-label="Kategorie" className="relative z-10 -mt-14 lg:-mt-16">
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div className="relative overflow-hidden rounded-3xl bg-linda-cream p-2 shadow-neuLg">
+      <div className="relative overflow-hidden rounded-3xl bg-linda-cream p-2 shadow-neuFloat">
         <ul className="flex snap-x overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {KATEGORIE_ROZCESTNIK.map((kategorie, i) => (
             <li key={kategorie.href} className="relative shrink-0 snap-start p-1 lg:flex-1">

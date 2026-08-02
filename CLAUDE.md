@@ -36,6 +36,9 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
     `shadow-neuOnDark` / `shadow-neuOnDarkInset` for elements **inside** a dark panel
     (footer, admin sidebar). Never put a light-source highlight at 0.9 white on chocolate.
   - Full-width bars (header): `shadow-neuBar` → `shadow-neuBarRaised` when scrolled.
+  - Surfaces **overlapping a photo** (category card sunk into the hero): `shadow-neuFloat`.
+    It drops the white highlight — over a dark image the highlight has nothing to sit on
+    and paints a milky halo around the element. Only the warm espresso drop shadow is left.
   - **Rules:** a raised surface must match its background colour — never lighten it.
     Never combine a border with a relief shadow; that outlines the same edge twice.
     Buttons pair `shadow-neuDark` with `active:shadow-neuSm` so pressing them reads

@@ -48,6 +48,16 @@ const config: Config = {
         neuSm: '4px 4px 10px rgba(43, 32, 25, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9)',
         neuLg: '16px 16px 36px rgba(43, 32, 25, 0.12), -10px -10px 28px rgba(255, 255, 255, 1)',
 
+        /* Vyvýšená plocha, která přesahuje přes fotku (rozcestník kategorií
+           zanořený do heru). Bílý přísvit tu vynecháváme – nemá se do čeho
+           opřít a na tmavém snímku z něj je mléčná svatozář kolem karty.
+           Místo něj nese odsazení od fotky vrstvený espresso stín: úzký u
+           hrany, široký a rozptýlený pod kartou. Rozostření je u obou vrstev
+           větší než posun, takže stín obchází i boky a karta nad snímkem
+           opravdu levituje. Vnitřní horní linka drží hranu vyvýšenou. */
+        neuFloat:
+          '0 2px 6px rgba(43, 32, 25, 0.12), 0 12px 26px rgba(43, 32, 25, 0.18), 0 30px 64px rgba(43, 32, 25, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+
         /* Konkávní varianty – „vyfrézovaná“ prohlubeň. Používáme na místa,
            kam se něco vkládá: obrázkové niky, vstupní pole, stisknutý stav. */
         neuInset:
