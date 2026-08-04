@@ -11,6 +11,25 @@ const config: Config = {
       colors: {
         linda: {
           cream: '#FAF8F4',
+          /* Podklad stránky – o půl tónu pod `cream`, přesně mezi ním
+             a `sandLight`.
+
+             Není to kosmetika, je to podmínka, aby reliéf vůbec fungoval.
+             Klasický neumorfismus běží na středně šedé (#E0E5EC), protože
+             vystouplá plocha musí ukázat obojí: tmavý stín vpravo dole
+             i světlý přísvit vlevo nahoře. `cream` má ale L* ≈ 97,6, tedy
+             prakticky bílou – nad ní žádné světlo nezbývá a bílá složka
+             `neu*` tokenů (rgba(255,255,255,0.9)) se nemá do čeho opřít.
+             Z reliéfu tak byla vidět jen půlka: obdélník se stínem dole,
+             ne vypouklá plocha.
+
+             `paper` posadí zem doprostřed mezi vyvýšené a zapuštěné plochy:
+                vyvýšené  `cream`      #FAF8F4   ← světlejší než zem
+                zem       `paper`      #F6F3EC
+                zapuštěné `sandLight`  #F3EFE9   ← tmavší než zem
+             Rozestup je v obou směrech skoro stejný, takže vystouplá karta
+             i vyfrézovaná prohlubeň stojí proti zemi symetricky. */
+          paper: '#F6F3EC',
           sand: '#E4D9C8',
           sandLight: '#F3EFE9',
           espresso: '#2B2019',

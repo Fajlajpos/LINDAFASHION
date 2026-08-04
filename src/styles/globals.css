@@ -8,6 +8,7 @@
 
 :root {
   --color-cream: #FAF8F4;
+  --color-paper: #F6F3EC; /* Zem stránky – viz komentář u tokenu v tailwind.config.ts */
   --color-sand: #E4D9C8;
   --color-espresso: #2B2019;
   --color-cognac: #7A4B32;
@@ -15,13 +16,93 @@
   --color-sage-light: #F1F4EB;
 }
 
+/* Barva i na <html>: jednak ji vidí přetažení stránky za horní/dolní hranu
+   (overscroll), jednak tím zabráníme tomu, aby se pozadí <body> propagovalo
+   na canvas. Kdyby se propagovalo, počítaly by se procentuální pozice
+   gradientů níž vůči <html>, ne vůči <body>, a světelné kaluže by skákaly. */
+html {
+  background-color: var(--color-paper);
+}
+
 body {
-  background-color: var(--color-cream);
+  background-color: var(--color-paper);
   color: var(--color-espresso);
   font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+
+  /* Zem je **jedna plochá barva**, žádné světelné kaluže ani gradienty.
+     Není to opomenutí, je to výsledek měření – a stojí za to vědět proč,
+     protože „přidat do pozadí jemný gradient“ je nápad, který se vrátí.
+
+     Celá stavba stojí na tonálním srovnání: vyvýšená plocha je světlejší
+     než zem, zapuštěná tmavší. Ten rozdíl je tu ale ze své podstaty
+     nepatrný – mezi `cream` (250) a `sandLight` (243) je celkem sedm
+     úrovní jasu a `paper` sedí uprostřed. Na kaluže nezbývá rozpočet:
+
+       bílý přísvit vlevo nahoře   → zvedl zem o 1 úroveň (neviditelné)
+       usazení dole nad patičkou   → 1 úroveň (neviditelné)
+       teplý pískový nádech vpravo → **snížil zem na 238**, tedy přesně na
+                                      úroveň zapuštěných panelů
+
+     Ta třetí je ta nebezpečná: v místě kaluže se vyfrézovaná prohlubeň
+     srovná se zemí a zmizí. Na `/produkty` přesně v té výšce a na té
+     straně stojí pískový panel s filtry.
+
+     Buď gradient nedělá nic, nebo rozbije reliéf. Prostor mezi tím tady
+     není. Klasický neumorfismus proto vždycky jede na jedné ploché zemi –
+     materiál na ni patří přidat zrnem (níž), ne světlem. */
+}
+
+/* ---------------------------------------------------------------------------
+   Zrno.
+
+   Papírový/filmový šum přes celou plochu okna. Bez něj je podklad dokonale
+   hladká plocha jedné barvy – technicky správná, ale čte se jako displej,
+   ne jako materiál. Značka stojí na přírodních látkách a omítnuté zdi
+   v heru; zrno je nejlevnější způsob, jak tenhle slib udržet i pod ohybem.
+
+   Šum generuje `feTurbulence` přímo v data URI – žádný soubor v /public,
+   žádný HTTP request, pár set bajtů v CSS.
+
+   Dvě věci jsou zásadní:
+
+   `fixed`, ne `absolute`. Zrno, které skroluje s obsahem, čte jako tapeta
+   nalepená na stránku. Zrno, které stojí, čte jako zrno filmu nebo struktura
+   papíru, na kterém je stránka vytištěná – tedy přesně to, oč jde. Je to
+   opačné rozhodnutí než u světelných kaluží výš a je to záměr: kaluže patří
+   dokumentu, zrno patří povrchu.
+
+   Krytí je odměřené, ne odhadnuté. `feTurbulence` nevrací plnou krycí šeď –
+   výstup má proměnlivou alfu, takže se z deklarovaného krytí uplatní jen
+   zlomek. Naměřeno na ploché zemi (rozptyl jasu ve 30×30 px výřezu):
+
+       opacity 0,05  → rozsah 4 úrovně z 255  (1,6 %, pod prahem viditelnosti)
+       opacity 0,15  → rozsah ~12 úrovní      (materiál, ale ne šum)
+
+   Proto 0,15, ne „bezpečných“ 0,05. Strop je kolem 0,25: výš přestane být
+   zrno materiálem a začne vypadat jako překomprimovaný JPEG.
+
+   `multiply` znamená, že zrno může jen ztmavit. Kontrast textu na světlém
+   podkladu tím o zlomek stoupá, ne klesá. Na tmavých plochách (patička,
+   espresso tlačítka) je efekt při tomhle krytí neměřitelný.
+
+   `z-index` je nad obsahem i nad překryvy (nejvýš `z-50` u košíkového
+   panelu a cookie lišty), ale pod `.skip-link` (100) – ten musí zůstat
+   úplně navrchu. `pointer-events: none`, ať vrstva nepolyká kliknutí.
+--------------------------------------------------------------------------- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.15;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='zrno'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23zrno)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  background-repeat: repeat;
 }
 
 h1, h2, h3, h4, h5, h6, .font-editorial {
@@ -151,47 +232,13 @@ html {
   pointer-events: none;
 }
 
-/* 🎨 2. Celý druhý obrázek v kuse pro vzkaz zakladatelky */
-.texture-secondary-user {
-  position: relative;
-  background-color: #FAF8F4;
-}
-
-.texture-secondary-user::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url('/textures/secondary-texture.jpg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  opacity: 0.12;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
 /* Fotografická textura patičky byla odstraněna – pod drobným písmem snižovala
-   čitelnost. Patička jede na plné `linda-chocolate` s vlasovou linkou nahoře. */
+   čitelnost. Patička jede na plné `linda-chocolate` s vlasovou linkou nahoře.
 
-/* Textura textového panelu v heru.
-
-   Reliéf omítky jen naznačíme: `multiply` prokreslí pouze stíny ve spárách,
-   světlá místa nechá být, takže krémový podklad zůstane krémový. Držíme se
-   nízké krytí, aby pod titulkem a odstavcem nevznikaly tmavé skvrny –
-   kontrast textu měřený na nejtmavším místě zůstává nad 4,5:1.
-
-   Prvek s touto třídou musí mít `isolate` (vlastní stacking context), aby
-   `-z-10` schovalo texturu pod text, ale ne pod pozadí sekce. */
-.texture-hero-panel {
-  background-image: url('/textures/hero-panel-texture.webp');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  opacity: 0.16;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-}
+   Zrušené byly i `.texture-secondary-user` a `.texture-hero-panel`: žádná
+   komponenta je nepoužívala a jejich roli – dát podkladu materiál – teď nese
+   zrno na `body::before`, které platí pro celý web najednou a nestojí ani
+   jeden request. Soubory v /public/textures zůstávají. */
 
 /* Glassmorphism & Soft Effects */
 .glass-panel {
