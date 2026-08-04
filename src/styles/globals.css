@@ -116,6 +116,22 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
    Prstenec je proto vykreslený přes box-shadow, který `outline-none` nemůže
    přebít – jedním pravidlem tak platí napříč celým webem.
    `:focus-visible` = jen klávesnice, myš prstenec nevyvolá.
+
+   Průhledný `outline` není zbytečný: ve Windows High Contrast Mode se
+   `box-shadow` zahazuje, `outline` se naopak přebarví na systémovou barvu.
+   Prstenec tak přežije i tam, kde stín zmizí.
+
+   **`border-radius` tu nikdy nenastavujte.** Stál tu `border-radius: inherit`
+   a byla to tichá chyba: `border-radius` není dědičná vlastnost, takže
+   `inherit` nevezme zaoblení samotného pole, ale zaoblení **rodiče**. Vstupy
+   sedí v obyčejných `<div>`ech s nulovým rádiusem – při fokusu se proto
+   `rounded-full` pole srazilo na ostré rohy a prstenec ho obkreslil jako
+   hranatý rámeček (ověřeno: `border-radius` hlásil ve fokusu `0px` na
+   newsletteru, kontaktním formuláři i v košíku).
+
+   Bez toho řádku je to samospádem správně: `box-shadow` kopíruje vlastní
+   `border-radius` prvku, takže pilulka dostane pilulkový prstenec a
+   `rounded-xl` pole zaoblený.
 --------------------------------------------------------------------------- */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid transparent;
@@ -123,7 +139,6 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   box-shadow:
     0 0 0 2px var(--color-cream),
     0 0 0 4px var(--color-cognac);
-  border-radius: inherit;
 }
 
 /* Odkaz pro přeskočení navigace – viditelný až při fokusu klávesnicí */
