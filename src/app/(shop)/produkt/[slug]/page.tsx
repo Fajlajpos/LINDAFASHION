@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Heart, ShoppingBag, Sparkles, ShieldCheck, Truck, RotateCcw, Ruler, Check, AlertCircle, Gift } from 'lucide-react';
+import { useFavorites } from '@/lib/favorites-context';
 
 export default function DetailProduktPage({ params }: { params: { slug: string } }) {
   const [selectedVariant, setSelectedVariant] = useState<string>('v1');
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [addedToCart, setAddedToCart] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
 
@@ -55,6 +56,7 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
   };
 
   const activeVariant = product.variants.find((v) => v.id === selectedVariant) || product.variants[0];
+  const jeOblibeny = isFavorite(product.slug);
 
   const handleAddToCart = () => {
     setAddedToCart(true);
@@ -232,19 +234,28 @@ export default function DetailProduktPage({ params }: { params: { slug: string }
                 srdíčka, ne pouze barva. */}
             <button
               type="button"
-              onClick={() => setIsFavorite(!isFavorite)}
-              aria-pressed={isFavorite}
+              onClick={() =>
+                toggleFavorite({
+                  slug: product.slug,
+                  nazev: product.nazev,
+                  cena: product.cena,
+                  znacka: product.znacka,
+                  kategorieNazev: product.jeDarkovyPoukaz ? 'Dárkové poukazy' : undefined,
+                  jeDarkovyPoukaz: product.jeDarkovyPoukaz,
+                })
+              }
+              aria-pressed={jeOblibeny}
               className={`flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full py-3 text-xs font-semibold transition-all duration-200 ${
-                isFavorite
+                jeOblibeny
                   ? 'bg-linda-sandLight text-linda-cognac shadow-neuInsetSm'
                   : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:text-linda-cognac hover:shadow-neu'
               }`}
             >
               <Heart
-                className={`h-4 w-4 ${isFavorite ? 'fill-linda-cognac text-linda-cognac' : ''}`}
+                className={`h-4 w-4 ${jeOblibeny ? 'fill-linda-cognac text-linda-cognac' : ''}`}
                 aria-hidden="true"
               />
-              {isFavorite ? 'Uloženo v oblíbených' : 'Uložit mezi oblíbené'}
+              {jeOblibeny ? 'Uloženo v oblíbených' : 'Uložit mezi oblíbené'}
             </button>
           </div>
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Sparkles, Gift } from 'lucide-react';
 import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
+import { useFavorites } from '@/lib/favorites-context';
 
 /**
  * Kategorie → ilustrace pro kartu bez fotografie.
@@ -20,29 +21,30 @@ const GLYF_PODLE_KATEGORIE: ReadonlyArray<readonly [RegExp, CategoryGlyphName]> 
   [/sak|kabát|kabat/i, 'saka'],
 ];
 
-const vyberGlyf = (kategorie?: string, jePoukaz?: boolean): CategoryGlyphName => {
+const vyberGlyf = (kategorie?: string | null, jePoukaz?: boolean): CategoryGlyphName => {
   if (jePoukaz) return 'poukazy';
   const nalez = GLYF_PODLE_KATEGORIE.find(([vzor]) => vzor.test(kategorie ?? ''));
   return nalez ? nalez[1] : 'vse';
 };
 
+/**
+ * Identita karty je `slug` – ID sem nepatří, karta ho k ničemu nepoužívá
+ * a oblíbené se drží také na slugu. Volající ho může klidně rozprostřít
+ * (`{...produkt}`), JSX přebytečná pole ignoruje.
+ */
 export interface ProductCardProps {
-  id: string;
   nazev: string;
   slug: string;
   cena: number;
   cenaPoSleve?: number | null;
   znacka?: string | null;
-  kategorieNazev?: string;
+  kategorieNazev?: string | null;
   obrazekUrl?: string | null;
   doporuceny?: boolean;
   jeDarkovyPoukaz?: boolean;
-  isFavorite?: boolean;
-  onToggleFavorite?: (id: string) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
-  id,
   nazev,
   slug,
   cena,
@@ -52,9 +54,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   obrazekUrl,
   doporuceny,
   jeDarkovyPoukaz,
-  isFavorite = false,
-  onToggleFavorite,
 }) => {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const jeOblibeny = isFavorite(slug);
   const hasDiscount = Boolean(cenaPoSleve && cenaPoSleve < cena);
   const displayPrice = hasDiscount ? cenaPoSleve : cena;
   const discountPercent = hasDiscount ? Math.round(((cena - cenaPoSleve!) / cena) * 100) : 0;
@@ -100,20 +102,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         type="button"
         onClick={(e) => {
           e.preventDefault();
-          onToggleFavorite?.(id);
+          toggleFavorite({
+            slug,
+            nazev,
+            cena,
+            cenaPoSleve,
+            znacka,
+            kategorieNazev,
+            obrazekUrl,
+            jeDarkovyPoukaz,
+          });
         }}
         /* Srdíčko leží na fotce; u chybějícího snímku by na krému splynulo,
-           proto ho drží reliéf místo sotva znatelného `shadow-sm`. */
-        className="absolute right-2 top-2 z-10 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream/80 text-linda-espresso shadow-neuSm backdrop-blur-md transition-all duration-200 hover:bg-white hover:text-linda-cognac active:shadow-neuInsetSm"
-        aria-pressed={isFavorite}
+           proto ho drží reliéf místo sotva znatelného `shadow-sm`.
+           Uložený stav = zamáčknuté tlačítko, stejně jako na detailu:
+           nese ho tvar i výplň srdíčka, ne jenom barva. */
+        className={`absolute right-2 top-2 z-10 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full backdrop-blur-md transition-all duration-200 ${
+          jeOblibeny
+            ? 'bg-linda-sandLight/90 text-linda-cognac shadow-neuInsetSm'
+            : 'bg-linda-cream/80 text-linda-espresso shadow-neuSm hover:bg-white hover:text-linda-cognac active:shadow-neuInsetSm'
+        }`}
+        aria-pressed={jeOblibeny}
         aria-label={
-          isFavorite
+          jeOblibeny
             ? `Odebrat ${nazev} z oblíbených`
             : `Přidat ${nazev} do oblíbených`
         }
       >
         <Heart
-          className={`w-4 h-4 ${isFavorite ? 'fill-linda-cognac text-linda-cognac' : ''}`}
+          className={`w-4 h-4 ${jeOblibeny ? 'fill-linda-cognac text-linda-cognac' : ''}`}
           aria-hidden="true"
         />
       </button>
