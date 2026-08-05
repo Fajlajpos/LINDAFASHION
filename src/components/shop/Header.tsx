@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShoppingBag, Heart, User, Menu, X, Search, Sparkles } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
@@ -25,6 +26,16 @@ const NAV_LINKS = [
 /** Počty nad 9 zkracujeme, aby se odznak nerozjel mimo ikonu. */
 const formatBadge = (count: number) => (count > 9 ? '9+' : String(count));
 
+/**
+ * Stránky, kde je hlavička rovnou sbalená, i když je návštěvník na začátku
+ * stránky. Detail produktu není čtení – vybírá se tu velikost, kontroluje
+ * dostupnost a přidává do košíku. Vysoká lišta z toho ukrajuje první obrazovku
+ * a volba velikosti spadne pod okraj. Vysoká hlavička patří k rozhlížení
+ * (homepage, katalog), ne k práci s jedním kusem.
+ */
+const jeKompaktniStranka = (pathname: string | null) =>
+  Boolean(pathname?.startsWith('/produkt/'));
+
 export const Header: React.FC<HeaderProps> = ({
   user,
   vacationMode,
@@ -33,6 +44,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+
+  /* Sbalený tvar drží buď skrol, nebo samotná stránka. Skrolem se pak už jen
+     nic nemění – zpátky nahoru se na detailu lišta nerozevírá. */
+  const pathname = usePathname();
+  const isCompact = isScrolled || jeKompaktniStranka(pathname);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
@@ -103,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
          rozjelo druhou, konkurenční animaci výšky vedle té na vnitřní mřížce
          – lišta pak při skrolu poskakovala. Výšku mění jediné místo. */
       className={`sticky top-0 z-40 bg-linda-cream transition-shadow duration-300 ${
-        isScrolled ? 'shadow-neuBarRaised' : 'shadow-neuBar'
+        isCompact ? 'shadow-neuBarRaised' : 'shadow-neuBar'
       }`}
     >
       {/* Vacation mode banner */}
@@ -122,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
             potřebují, a logo dostane zbytek. Od `lg` zůstává mřížka 4/4/4. */}
         <div
           className={`flex items-center justify-between gap-2 transition-[height] duration-300 ease-out lg:grid lg:grid-cols-12 ${
-            isScrolled ? 'h-16' : 'h-24'
+            isCompact ? 'h-16' : 'h-24'
           }`}
         >
           {/* Left Column: Nav links.
@@ -179,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({
                    `scale` běží na kompozitoru. Poměry odpovídají původním
                    velikostem – sm 24→20 px (0.833), xl 30→24 px (0.8). */
                 className={`font-serif uppercase font-medium text-linda-espresso group-hover:text-linda-cognac transition-[transform,color] duration-300 ease-out block origin-center transform-gpu text-[13px] tracking-[0.05em] sm:whitespace-nowrap sm:text-2xl sm:tracking-[0.14em] xl:text-3xl xl:tracking-[0.2em] ${
-                  isScrolled ? 'scale-100 sm:scale-[0.833] xl:scale-[0.8]' : 'scale-100'
+                  isCompact ? 'scale-100 sm:scale-[0.833] xl:scale-[0.8]' : 'scale-100'
                 }`}
               >
                 LINDA FASHION
@@ -187,9 +203,9 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Podtitul zůstává v DOM a jen se sbalí. Dřív se odmountoval,
                   takže zmizel skokem uprostřed přechodu hlavičky. */}
               <span
-                aria-hidden={isScrolled}
+                aria-hidden={isCompact}
                 className={`block overflow-hidden -mt-1 text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold transition-[max-height,opacity] duration-300 ease-out ${
-                  isScrolled ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100'
+                  isCompact ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100'
                 }`}
               >
                 Moda Italiana
