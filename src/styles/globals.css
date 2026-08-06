@@ -255,6 +255,17 @@ html {
    zrno na `body::before`, které platí pro celý web najednou a nestojí ani
    jeden request. Soubory v /public/textures zůstávají. */
 
+/* Šev (`components/shop/home/Sev.tsx`) tu žádné pravidlo nemá a je to záměr.
+
+   Stála tu scroll-driven animace (`animation-timeline: view()`), která nit
+   dokreslovala podle pozice ve skrolu. Technicky hezké, prakticky rušivé:
+   dělicí prvek, který se objevuje a mizí podle toho, kde zrovna jsi, nedělá
+   předěl – dělá blikání. Šev je součást archu, ne událost. Je tedy prostě
+   nakreslený, celý, pořád.
+
+   Kdyby se sem animace někdy vracela: pohyb patří na to, co je nové nebo
+   se dá ovládat, ne na povrch stránky. */
+
 /* Glassmorphism & Soft Effects */
 .glass-panel {
   background: rgba(250, 248, 244, 0.88);
