@@ -22,6 +22,14 @@ export const TMP_DIR = process.env.UPLOAD_TMP_DIR || 'storage/tmp';
 export const MAX_VSTUP_MB = Number(process.env.UPLOAD_MAX_MB || 15);
 export const MAX_VSTUP_BAJTU = MAX_VSTUP_MB * 1024 * 1024;
 
+/**
+ * Strop na celou dávku. `request.formData()` si celé tělo natáhne do paměti,
+ * takže 20 souborů po 15 MB by znamenalo 300 MB v RAM jednoho požadavku –
+ * na malém VPS by to shodilo celý kontejner `web`.
+ */
+export const MAX_DAVKA_MB = Number(process.env.UPLOAD_MAX_BATCH_MB || 60);
+export const MAX_DAVKA_BAJTU = MAX_DAVKA_MB * 1024 * 1024;
+
 /** Co pustíme dovnitř. Kontroluje se i skutečná hlavička souboru, ne jen MIME z prohlížeče. */
 export const POVOLENE_TYPY: Record<string, string> = {
   'image/jpeg': 'jpg',

@@ -7,6 +7,8 @@ import { jePlatnyToken } from '@/lib/uloziste';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
 import { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/produkty – seznam pro administraci, s hledáním a stránkováním. */
 export async function GET(request: Request) {
   try {

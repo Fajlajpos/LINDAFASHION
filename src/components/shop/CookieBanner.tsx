@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, Settings, X, Check } from 'lucide-react';
-
-interface CookiePreferences {
-  necessary: boolean;
-  analytical: boolean;
-  marketing: boolean;
-}
+import {
+  VYCHOZI_SOUHLAS,
+  nacistSouhlas,
+  smazatSledovaciCookies,
+  ulozitSouhlas,
+  type SouhlasCookies,
+} from '@/lib/souhlas-cookies';
 
 interface CookieBannerProps {
   isOpenExternal?: boolean;
@@ -21,17 +22,22 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
 }) => {
   const [showBanner, setShowBanner] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [prefs, setPrefs] = useState<CookiePreferences>({
-    necessary: true,
-    analytical: true,
-    marketing: true,
-  });
+
+  // Volitelné kategorie startují VYPNUTÉ. Dřív tu bylo `analytical: true,
+  // marketing: true` – předzaškrtnutý souhlas GDPR neuznává a zadání ho
+  // v sekci 11 výslovně zakazuje.
+  const [prefs, setPrefs] = useState<SouhlasCookies>(VYCHOZI_SOUHLAS);
 
   useEffect(() => {
-    const saved = localStorage.getItem('linda_cookie_consent');
-    if (!saved && !isOpenExternal) {
+    const ulozeny = nacistSouhlas();
+
+    // Lišta se ukáže jen tomu, kdo ještě nerozhodl.
+    if (!ulozeny && !isOpenExternal) {
       setShowBanner(true);
     }
+
+    // Kdo už rozhodl a otevírá nastavení znovu, uvidí své skutečné volby.
+    if (ulozeny) setPrefs(ulozeny);
   }, [isOpenExternal]);
 
   useEffect(() => {
@@ -40,24 +46,30 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     }
   }, [isOpenExternal]);
 
-  const saveConsent = (preferences: CookiePreferences) => {
-    localStorage.setItem('linda_cookie_consent', JSON.stringify(preferences));
+  const saveConsent = (souhlas: SouhlasCookies) => {
+    const predchozi = nacistSouhlas();
+
+    ulozitSouhlas(souhlas);
+    setPrefs(souhlas);
     setShowBanner(false);
     setShowSettingsModal(false);
     if (onCloseExternal) onCloseExternal();
 
-    // Trigger Meta Pixel loading if marketing consented
-    if (preferences.marketing && typeof window !== 'undefined') {
-      console.log('⚡ Marketingové cookies schváleny - aktivuji Meta Pixel');
-    }
+    // Odvolání souhlasu musí odstranit i cookies, které skripty stihly založit –
+    // samotné nenačtení skriptu při další návštěvě nestačí.
+    const odvolano =
+      (predchozi?.analyticke && !souhlas.analyticke) ||
+      (predchozi?.marketingove && !souhlas.marketingove);
+
+    if (odvolano) smazatSledovaciCookies();
   };
 
   const handleAcceptAll = () => {
-    saveConsent({ necessary: true, analytical: true, marketing: true });
+    saveConsent({ nezbytne: true, analyticke: true, marketingove: true });
   };
 
   const handleRejectOptional = () => {
-    saveConsent({ necessary: true, analytical: false, marketing: false });
+    saveConsent(VYCHOZI_SOUHLAS);
   };
 
   const handleSaveCustom = () => {
@@ -162,8 +174,8 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
                 </div>
                 <input
                   type="checkbox"
-                  checked={prefs.analytical}
-                  onChange={(e) => setPrefs({ ...prefs, analytical: e.target.checked })}
+                  checked={prefs.analyticke}
+                  onChange={(e) => setPrefs({ ...prefs, analyticke: e.target.checked })}
                   aria-label="Analytické cookies"
                   className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />
@@ -176,8 +188,8 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
                 </div>
                 <input
                   type="checkbox"
-                  checked={prefs.marketing}
-                  onChange={(e) => setPrefs({ ...prefs, marketing: e.target.checked })}
+                  checked={prefs.marketingove}
+                  onChange={(e) => setPrefs({ ...prefs, marketingove: e.target.checked })}
                   aria-label="Marketingové cookies"
                   className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />

@@ -119,24 +119,28 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 ### Still mockups — read from hardcoded data, no backend
 
-The admin side (products, categories, photo upload, auth) is wired to the database.
-**The shop side is not.** These still render from [home-data.ts](src/lib/home-data.ts)
-or from arrays inside the component:
+Catalog, product detail, categories, cart and favourites now read from the database.
+These do not yet:
 
-- `(shop)/page.tsx`, `produkty/`, `produkt/[slug]/`, `kosik/`, `pokladna/`, `muj-ucet/`,
-  `oblibene/`
-- admin `objednavky/`, `zakaznici/`, `slevove-kody/`, `reklamace/`, `nastaveni/`, dashboard
-- [api/feed/xml](src/app/api/feed/xml/route.ts) returns two invented products
-- Cart lives only in `localStorage` — no DB persistence, no merge on login
+- **Checkout** `pokladna/` — no order is created; `Order`/`OrderItem` are never written.
+  This is the single biggest remaining hole: everything downstream of it (invoices,
+  order e-mails, gift-card generation, stock decrement) depends on it.
+- **`muj-ucet/`** — order history, saved addresses and the "cancel order" button are still
+  hardcoded. The GDPR delete endpoint exists ([api/ucet/smazat](src/app/api/ucet/smazat/route.ts))
+  but nothing calls it.
+- admin `objednavky/`, `zakaznici/`, `slevove-kody/`, `reklamace/`, dashboard
+- `oblibene/` page renders from the context, which is correct, but the page itself was
+  never rewritten to use the server data shape.
+- Newsletter form (hero, footer) and the contact form have **no endpoint** — they only
+  confirm receipt locally. `TODO` markers sit in the components.
+- "Upozornit, až bude skladem" on the product detail is disabled — `StockNotification`
+  has no endpoint yet.
 
 ### Other gaps
 
-- **[src/app/(shop)/layout.tsx](<src/app/(shop)/layout.tsx>)** renders `<Header />` with no
-  `user` / `vacationMode` props, so the account name and vacation banner never appear.
-- No `opengraph-image` asset — social previews have no image.
-- The newsletter form (hero section, footer) and the contact form still have **no endpoint**;
-  they only confirm receipt locally. `TODO` markers sit in the components.
-- `/zapomenute-heslo` is linked from the login form but the route does not exist (404).
+- Transactional e-mail is queued but never sent — [odeslat-email.ts](src/worker/jobs/odeslat-email.ts)
+  logs instead, until SMTP credentials exist. The password-reset link is printed to the
+  worker log in development only.
 - Rate limiting ([rate-limit.ts](src/lib/rate-limit.ts)) counts in process memory — fine for
   the single-container deployment, but it resets on restart and would not be shared if the
   app ever scaled to several `web` instances.
@@ -144,11 +148,18 @@ or from arrays inside the component:
   Windows and omits the Linux platform binaries (`@img/sharp-linuxmusl-x64` and friends),
   so `npm ci` fails inside the image. Fully reproducible builds would need the lock file
   generated on Linux.
+- Captcha (Turnstile) is not wired to any form yet, only the `.env` keys exist.
 
-Closed: raw hex literals (only SVG gradients in
-[CategoryGlyph.tsx](src/components/shop/home/CategoryGlyph.tsx) and the `themeColor` meta
-value remain, both legitimate) · `focus:outline-none` (0 occurrences) · `alert()` for form
-validation (replaced by inline errors next to the offending field) · ESLint now configured
-in [.eslintrc.json](.eslintrc.json) · wildcard remote image host narrowed in
-[next.config.js](next.config.js) · `/admin` was reachable by anyone who knew the URL, now
-gated by [middleware.ts](src/middleware.ts) plus a role check in every admin endpoint.
+Closed: raw hex literals · `focus:outline-none` · `alert()` for form validation · ESLint
+configured · wildcard remote image host narrowed · `/admin` gated by
+[middleware.ts](src/middleware.ts) **plus a database role check in every admin endpoint** ·
+`/produkty/[kategorie]` existed only in sitemap.xml, now a real route · zero structured
+data, now Product/Offer/Breadcrumb/Organization/LocalBusiness · sitemap and product feed
+generated from the database instead of invented rows · cookie banner pre-ticked the
+optional categories (GDPR breach) and the consent controlled nothing, now
+[souhlas-cookies.ts](src/lib/souhlas-cookies.ts) gates GA4 and Meta Pixel ·
+`/zapomenute-heslo` 404'd, now a full reset flow with hashed one-time tokens · money was
+computed in floats, now [penize.ts](src/lib/penize.ts) works in integer haléře · cart was
+localStorage-only, now merges with the account on login and revalidates availability ·
+`opengraph-image` missing, now `/public/og-image.png` · no tests at all, now Vitest covers
+money, slugs and upload validation.

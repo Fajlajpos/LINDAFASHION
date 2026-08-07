@@ -6,6 +6,9 @@ import { ArrowRight, Facebook, Instagram } from 'lucide-react';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
+  /** Odkazy na sociální sítě spravuje admin (sekce 6.8) – nejsou natvrdo v kódu. */
+  socialInstagram?: string | null;
+  socialFacebook?: string | null;
 }
 
 const KOLEKCE_ODKAZY = [
@@ -25,10 +28,16 @@ const SERVIS_ODKAZY = [
   { href: '/reklamacni-rad', label: 'Reklamační řád' },
 ];
 
-const SITE = [
-  { href: 'https://instagram.com', label: 'Instagram', Ikona: Instagram },
-  { href: 'https://facebook.com', label: 'Facebook', Ikona: Facebook },
-];
+/**
+ * Ikona se zobrazí jen tehdy, když má majitelka odkaz vyplněný v administraci.
+ * Prázdný profil je horší než žádný – odkaz na obecné instagram.com nikam nevede.
+ */
+function sestavitSite(instagram?: string | null, facebook?: string | null) {
+  return [
+    instagram?.trim() ? { href: instagram.trim(), label: 'Instagram', Ikona: Instagram } : null,
+    facebook?.trim() ? { href: facebook.trim(), label: 'Facebook', Ikona: Facebook } : null,
+  ].filter((s): s is { href: string; label: string; Ikona: typeof Instagram } => s !== null);
+}
 
 /** Skupina odkazů: štítek nad, odkazy pod ním do šířky. */
 const SkupinaOdkazu: React.FC<{
@@ -68,7 +77,13 @@ const SkupinaOdkazu: React.FC<{
  * ve spodní liště u copyrightu. Oproti původnímu rozvržení je patička zhruba
  * o polovinu nižší.
  */
-export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
+export const Footer: React.FC<FooterProps> = ({
+  onOpenCookieSettings,
+  socialInstagram,
+  socialFacebook,
+}) => {
+  const site = sestavitSite(socialInstagram, socialFacebook);
+
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');
 
@@ -188,7 +203,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenCookieSettings }) => {
         {/* Spodní lišta */}
         <div className="mt-5 flex flex-col items-center gap-3 border-t border-linda-cream/10 pt-3 text-center text-[11px] text-linda-cream/60 sm:flex-row sm:justify-between sm:text-left">
           <div className="flex items-center gap-2">
-            {SITE.map(({ href, label, Ikona }) => (
+            {site.map(({ href, label, Ikona }) => (
               <a
                 key={label}
                 href={href}

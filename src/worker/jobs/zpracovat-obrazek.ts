@@ -38,9 +38,11 @@ export async function zpracovatObrazekUloha(data: UlohaZpracovatObrazek): Promis
     return; // pg-boss úlohu zopakoval, ale práce už je hotová
   }
 
+  // `zpracovaniOd` je značka pro úklid: podle ní pozná fotku, která uvízla
+  // v rozpracovaném stavu, protože worker mezitím spadl.
   await db.productImage.update({
     where: { id: obrazekId },
-    data: { stavZpracovani: 'ZPRACOVAVA_SE', chybaDuvod: null },
+    data: { stavZpracovani: 'ZPRACOVAVA_SE', chybaDuvod: null, zpracovaniOd: new Date() },
   });
 
   try {
@@ -58,6 +60,7 @@ export async function zpracovatObrazekUloha(data: UlohaZpracovatObrazek): Promis
         chybaDuvod: null,
         // Originál je smazaný, odkaz na něj by už jen mátl.
         originalSoubor: null,
+        zpracovaniOd: null,
       },
     });
 
@@ -80,6 +83,10 @@ export async function zpracovatObrazekUloha(data: UlohaZpracovatObrazek): Promis
       data: {
         stavZpracovani: 'CHYBA',
         chybaDuvod: duvod.slice(0, 500),
+        zpracovaniOd: null,
+        // `originalSoubor` tu schválně necháváme – pg-boss úlohu ještě zopakuje
+        // a bez originálu by neměl s čím pracovat. Až se pokusy vyčerpají,
+        // originál z disku odstraní úklidová úloha (uklid-uloziste.ts).
       },
     });
 

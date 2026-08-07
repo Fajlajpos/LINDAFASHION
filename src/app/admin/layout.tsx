@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { getSession } from '@/lib/auth';
+import { overitAdmina } from '@/lib/admin';
 import { AdminNav } from '@/components/admin/AdminNav';
 import { OdhlasitSe } from '@/components/admin/OdhlasitSe';
 
@@ -12,10 +12,11 @@ export const metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Middleware sem nepřihlášeného nepustí, ale kontrolujeme i tady –
-  // ochrana administrace nesmí viset na jediném místě (sekce 10).
-  const session = await getSession();
-  if (!session || session.role !== 'ADMIN') redirect('/prihlaseni?dalsi=/admin');
+  // Middleware sem nepřihlášeného nepustí, ale kontrolujeme i tady – a proti
+  // databázi, ne jen podle tokenu. Ochrana administrace nesmí viset na jediném
+  // místě (sekce 10) a odebrání práv musí platit okamžitě.
+  const admin = await overitAdmina();
+  if (!admin) redirect('/prihlaseni?dalsi=/admin');
 
   return (
     <div className="flex min-h-screen flex-col bg-linda-cream font-sans text-linda-espresso md:flex-row">
@@ -39,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             {/* Značková olivová (#405023) je na espressu prakticky
                 neviditelná (~1,5:1) – kontrolka svítí smaragdovou. */}
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-            <span className="truncate">{session.jmeno || session.email}</span>
+            <span className="truncate">{admin.jmeno || admin.email}</span>
           </p>
           <OdhlasitSe />
         </div>

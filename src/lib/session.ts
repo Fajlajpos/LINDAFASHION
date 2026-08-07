@@ -24,6 +24,12 @@ export interface SessionPayload {
   email: string;
   role: Role;
   jmeno: string | null;
+  /**
+   * Verze tokenu (`User.tokenVerze`). Kontroluje se proti databázi všude, kde
+   * na tom záleží – po změně hesla nebo odebrání práv se číslo zvýší a starý
+   * token tím okamžitě přestane platit.
+   */
+  tv: number;
 }
 
 function tajnyKlic(): Uint8Array {
@@ -67,6 +73,7 @@ export async function overitSessionToken(token: string | undefined | null): Prom
       email: payload.email,
       role: payload.role,
       jmeno: typeof payload.jmeno === 'string' ? payload.jmeno : null,
+      tv: typeof payload.tv === 'number' ? payload.tv : 0,
     };
   } catch {
     // Neplatný podpis, prošlá platnost, poškozený token – všechno je "nepřihlášen".

@@ -4,6 +4,8 @@ import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin
 import { kategorieSchema } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 
+export const dynamic = 'force-dynamic';
+
 /** GET – strom kategorií i s počty produktů (sekce 6.3). */
 export async function GET() {
   try {

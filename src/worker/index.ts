@@ -15,6 +15,8 @@ import { zalozitAdminaPokudChybi } from '../lib/admin-bootstrap';
 import { db } from '../lib/db';
 import { zpracovatObrazekUloha } from './jobs/zpracovat-obrazek';
 import { uklidUlozisteUloha } from './jobs/uklid-uloziste';
+import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
+import { uklidResetTokenu } from '../lib/reset-hesla';
 
 const FRONTA_UKLID = 'uklid-uloziste';
 const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
@@ -41,9 +43,19 @@ async function spustitWorker() {
     }
   );
 
+  // --- Transakční e-maily -------------------------------------------------
+  // Bez SMTP se zpráva jen zaloguje; fronta ale musí mít obsluhu, jinak by se
+  // úlohy hromadily v databázi a nikdo by je nikdy nevyzvedl.
+  await boss.work<UlohaEmail>(FRONTY.ODESLAT_EMAIL, async (job) => {
+    await odeslatEmailUloha(job.data);
+  });
+
   // --- Úklid úložiště -----------------------------------------------------
   await boss.work(FRONTA_UKLID, async () => {
     await uklidUlozisteUloha();
+
+    const smazano = await uklidResetTokenu();
+    if (smazano > 0) console.log(`[úklid] Smazáno ${smazano} prošlých tokenů pro obnovu hesla.`);
   });
   await boss.schedule(FRONTA_UKLID, '*/15 * * * *');
 

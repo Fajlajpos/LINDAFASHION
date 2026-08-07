@@ -23,11 +23,37 @@ model User {
   telefon           String?
   role              Role       @default(CUSTOMER)
   newsletterSouhlas Boolean    @default(false)
-  createdAt         DateTime   @default(now())
-  addresses         Address[]
-  orders            Order[]
-  favorites         Favorite[]
-  cart              Cart?
+
+  // Číslo se nese v session tokenu. Zvýšením se okamžitě zneplatní všechny
+  // dosud vydané přihlášení – používá se při změně/resetu hesla a při odebrání
+  // administrátorských práv. Bez toho by odhlášený token platil až do vypršení.
+  tokenVerze Int @default(0)
+
+  // GDPR: účet se nemaže fyzicky (objednávky jsou účetní doklad), ale
+  // anonymizuje – tohle je značka, že se tak stalo.
+  anonymizovanoAt DateTime?
+
+  createdAt     DateTime       @default(now())
+  addresses     Address[]
+  orders        Order[]
+  favorites     Favorite[]
+  cart          Cart?
+  resetTokeny   PasswordReset[]
+}
+
+/// Jednorázový token pro obnovu zapomenutého hesla.
+/// Ukládá se jen hash tokenu – kdyby někdo získal přístup k databázi,
+/// ze záznamu se odkaz na reset nedá zpětně sestavit.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  platnyDo  DateTime
+  pouzitoAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum Role {
@@ -152,9 +178,13 @@ model ProductImage {
   stavZpracovani ImageProcessingStatus @default(CEKA)
   chybaDuvod     String? // důvod selhání, když stavZpracovani = CHYBA
   originalSoubor String? // název dočasného originálu ve storage/tmp
+  // Kdy si úlohu vyzvedl worker. Podle toho úklid pozná fotku, která uvízla
+  // v ZPRACOVAVA_SE (worker spadl uprostřed práce), a zařadí ji znovu.
+  zpracovaniOd   DateTime?
   createdAt      DateTime              @default(now())
 
   @@index([productId, poradi])
+  @@index([stavZpracovani])
 }
 
 enum ImageProcessingStatus {

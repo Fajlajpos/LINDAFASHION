@@ -1,7 +1,5 @@
-import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
-import { SESSION_COOKIE, sessionCookieNastaveni, vytvoritSessionToken } from '@/lib/session';
+import { hashPassword, prihlasit } from '@/lib/auth';
 import { registraceSchema } from '@/lib/validations/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
@@ -44,25 +42,20 @@ export async function POST(request: Request) {
         // v NewsletterSubscriber – ať není souhlas na dvou místech (sekce 5).
         newsletterSouhlas: vstup.newsletterSouhlas ?? false,
       },
-      select: { id: true, email: true, jmeno: true, role: true },
+      select: { id: true, email: true, jmeno: true, role: true, tokenVerze: true },
     });
 
     // Kdyby se stejný e-mail dřív přihlásil k newsletteru bez účtu, ať se
     // souhlas nezdvojuje – od téhle chvíle ho drží účet.
     await db.newsletterSubscriber.deleteMany({ where: { email: vstup.email } });
 
-    const token = await vytvoritSessionToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      jmeno: user.jmeno,
-    });
+    await prihlasit(user);
 
-    cookies().set(SESSION_COOKIE, token, sessionCookieNastaveni());
+    const { tokenVerze: _tv, ...verejne } = user;
 
     return odpovedOk(
       {
-        uzivatel: user,
+        uzivatel: verejne,
         presmerovat: '/muj-ucet',
       },
       201

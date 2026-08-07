@@ -1,7 +1,7 @@
 import React from 'react';
-import { NEJPRODAVANEJSI } from '@/lib/home-data';
 import { SectionHeading } from './SectionHeading';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { nacistDoporucene } from '@/lib/katalog';
 
 /**
  * Nejprodávanější kousky.
@@ -18,20 +18,29 @@ import { ProductCard } from '@/components/shop/ProductCard';
  * odsud nepředává (funkce nepřejde hranicí server → klient); až bude hotový
  * `useFavorites()`, napojí se přímo v `ProductCard`.
  */
-export const BestSellers: React.FC = () => (
-  <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div className="space-y-10">
-      <SectionHeading
-        eyebrow="Nejoblíbenější"
-        title="Nejčastěji volené kousky"
-        action={{ href: '/produkty', label: 'Zobrazit vše' }}
-      />
+export const BestSellers = async () => {
+  // Produkty označené v administraci jako „doporučené" (sekce 6.2).
+  const produkty = await nacistDoporucene(6);
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {NEJPRODAVANEJSI.map((produkt) => (
-          <ProductCard key={produkt.id} {...produkt} />
-        ))}
+  // Dokud majitelka žádný kousek nedoporučí, sekci raději vynecháme než
+  // ukazovat prázdný blok s nadpisem.
+  if (produkty.length === 0) return null;
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="space-y-10">
+        <SectionHeading
+          eyebrow="Nejoblíbenější"
+          title="Nejčastěji volené kousky"
+          action={{ href: '/produkty', label: 'Zobrazit vše' }}
+        />
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {produkty.map((produkt) => (
+            <ProductCard key={produkt.id} {...produkt} />
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { poslatJson } from './api-klient';
 
 /**
  * Oblíbené se ukládají jako otisk produktu, ne jako holé ID.
@@ -51,7 +52,10 @@ const parseFavorites = (raw: string): FavoriteItem[] => {
   );
 };
 
-export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const FavoritesProvider: React.FC<{ children: React.ReactNode; prihlasen?: boolean }> = ({
+  children,
+  prihlasen = false,
+}) => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   /* Pojistka proti přepsání: bez ní zápisový efekt proběhl hned po prvním
      renderu s prázdným polem a smazal uložený seznam dřív, než se stihl
@@ -77,16 +81,49 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
   }, [favorites, nacteno]);
 
+  /* Po přihlášení pošleme oblíbené z prohlížeče na server a převezmeme
+     sloučený seznam. Server je pak zdrojem pravdy – vypadnou z něj kousky,
+     které mezitím zmizely z nabídky. Sloučení běží jednou. */
+  const uzSlouceno = useRef(false);
+
+  useEffect(() => {
+    if (!nacteno) return;
+
+    if (!prihlasen) {
+      uzSlouceno.current = false;
+      return;
+    }
+
+    if (uzSlouceno.current) return;
+    uzSlouceno.current = true;
+
+    void (async () => {
+      const vysledek = await poslatJson<{ oblibene: FavoriteItem[] }>('/api/oblibene', {
+        slugy: favorites.map((f) => f.slug),
+      });
+
+      if (vysledek.ok) setFavorites(vysledek.data.oblibene);
+    })();
+    // `favorites` schválně mimo závislosti – jinak by se sloučení spouštělo
+    // po každém kliknutí na srdíčko.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prihlasen, nacteno]);
+
   const toggleFavorite = (item: FavoriteItem) => {
+    const jeUlozeny = favorites.some((f) => f.slug === item.slug);
+
     setFavorites((prev) =>
-      prev.some((f) => f.slug === item.slug)
-        ? prev.filter((f) => f.slug !== item.slug)
-        : [...prev, item]
+      jeUlozeny ? prev.filter((f) => f.slug !== item.slug) : [...prev, item]
     );
+
+    if (prihlasen) {
+      void poslatJson('/api/oblibene', { slug: item.slug }, jeUlozeny ? 'DELETE' : 'POST');
+    }
   };
 
   const removeFavorite = (slug: string) => {
     setFavorites((prev) => prev.filter((f) => f.slug !== slug));
+    if (prihlasen) void poslatJson('/api/oblibene', { slug }, 'DELETE');
   };
 
   const isFavorite = (slug: string) => favorites.some((f) => f.slug === slug);

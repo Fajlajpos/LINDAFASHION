@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano } from '@/lib/admin';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/obrazky?produkt=<id>
  * GET /api/admin/obrazky?ids=<id>,<id>

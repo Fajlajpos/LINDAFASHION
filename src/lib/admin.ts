@@ -4,14 +4,20 @@
  * Middleware sice `/api/admin/*` hlídá, ale role se kontroluje i tady –
  * kdyby se někdy změnil `matcher`, endpointy nesmí zůstat nechráněné.
  */
-import { getSession } from './auth';
+import { overitUzivatele, type OverenyUzivatel } from './auth';
 import { db } from './db';
 import { odpovedChyba } from './api';
-import type { SessionPayload } from './session';
 
-export async function overitAdmina(): Promise<SessionPayload | null> {
-  const session = await getSession();
-  return session && session.role === 'ADMIN' ? session : null;
+/**
+ * Ověří, že volající je administrátor – proti databázi, ne jen podle tokenu.
+ *
+ * Dřív se role četla ze session tokenu. Ten platí 30 dní, takže odebrání práv
+ * (nebo smazání účtu) by se projevilo až po jeho vypršení. Tady se pokaždé
+ * ověří i `tokenVerze`, takže zneplatnění relace zabere okamžitě.
+ */
+export async function overitAdmina(): Promise<OverenyUzivatel | null> {
+  const uzivatel = await overitUzivatele();
+  return uzivatel && uzivatel.role === 'ADMIN' ? uzivatel : null;
 }
 
 /** Odpověď, kterou vrací endpoint, když volající není admin. */

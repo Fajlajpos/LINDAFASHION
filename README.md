@@ -77,6 +77,7 @@ spouštěcím příkazem.
 | `npm run db:seed` | ukázková data |
 | `npm run db:studio` | Prisma Studio – prohlížeč databáze |
 | `npm run admin:reset-heslo -- <email> <heslo>` | reset hesla administrátorky |
+| `npm test` | testy (peníze, slugy, validace uploadu) |
 
 ---
 
@@ -114,8 +115,36 @@ Naměřeno na fotce z mobilu **4032 × 3024 px, 8,5 MB**:
 | originál | – | smazán |
 | **celkem** | | **~202 kB (2,4 % původní velikosti)** |
 
-Worker navíc každých 15 minut uklidí osiřelé originály (admin vybral fotky,
-ale produkt neuložil) a znovu zařadí fotky, které uvízly ve frontě.
+**Fotky se mažou samy.** Když majitelka smaže produkt nebo jednotlivou fotku,
+odejdou z disku i všechny tři WebP varianty – v databázi po nich nezůstane
+odkaz na soubor, který by tam ležel navždy.
+
+Worker navíc každých 15 minut uklidí čtyři místa, kterými by disk jinak pomalu
+utíkal:
+
+| co | proč vzniká |
+|---|---|
+| osiřelé originály | admin vybral fotky ve formuláři a produkt neuložil |
+| fotky zaseknuté v `CEKA` | v okamžiku nahrání se nepodařilo oslovit frontu |
+| fotky zaseknuté v `ZPRACOVAVA_SE` | worker spadl nebo se restartoval uprostřed práce |
+| originály po chybě zpracování | pokusy se vyčerpaly, originál už není k čemu |
+
+### Kam se fotky ukládají
+
+```
+storage/tmp/      originál, jen do zpracování (pak se maže)
+public/uploads/   hotové WebP varianty, tohle se servíruje
+```
+
+V Dockeru jsou obě složky **pojmenované volumes**, takže přežijí přestavbu image.
+Pokud chceš mít fotky přímo na disku VPS (kvůli zálohování), přepiš v
+`docker-compose.yml` volume na bind mount:
+
+```yaml
+volumes:
+  - /srv/linda/uploads:/app/public/uploads
+  - /srv/linda/storage:/app/storage
+```
 
 ---
 

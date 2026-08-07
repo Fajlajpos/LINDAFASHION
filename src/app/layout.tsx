@@ -32,6 +32,22 @@ export const metadata: Metadata = {
     siteName: 'LINDA FASHION',
     locale: 'cs_CZ',
     type: 'website',
+    // Statické PNG v /public, ne generované přes @vercel/og – to při buildu
+    // padalo na načtení fontu a shodilo celý export.
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'LINDA FASHION – italská dámská móda',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LINDA FASHION | Luxusní italská dámská móda',
+    description: 'Nadčasová elegance a kvalita z Itálie.',
+    images: ['/og-image.png'],
   },
 };
 

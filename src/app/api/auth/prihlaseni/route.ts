@@ -1,6 +1,4 @@
-import { cookies } from 'next/headers';
-import { overitPrihlaseni } from '@/lib/auth';
-import { SESSION_COOKIE, sessionCookieNastaveni, vytvoritSessionToken } from '@/lib/session';
+import { overitPrihlaseni, prihlasit } from '@/lib/auth';
 import { prihlaseniSchema } from '@/lib/validations/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, vynulovatLimit, zkontrolovatLimit } from '@/lib/rate-limit';
@@ -34,14 +32,7 @@ export async function POST(request: Request) {
 
     vynulovatLimit(`prihlaseni:${klientskaIp(request)}`);
 
-    const token = await vytvoritSessionToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      jmeno: user.jmeno,
-    });
-
-    cookies().set(SESSION_COOKIE, token, sessionCookieNastaveni());
+    await prihlasit(user);
 
     return odpovedOk({
       uzivatel: { id: user.id, email: user.email, jmeno: user.jmeno, role: user.role },

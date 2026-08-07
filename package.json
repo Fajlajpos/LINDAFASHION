@@ -15,7 +15,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "ts-node -P tsconfig.node.json prisma/seed.ts",
-    "admin:reset-heslo": "ts-node -P tsconfig.node.json src/scripts/reset-admin-password.ts"
+    "admin:reset-heslo": "ts-node -P tsconfig.node.json src/scripts/reset-admin-password.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "ts-node -P tsconfig.node.json prisma/seed.ts"
@@ -47,6 +49,7 @@
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.9"
   }
 }

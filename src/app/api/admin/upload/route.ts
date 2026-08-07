@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import {
+  MAX_DAVKA_BAJTU,
+  MAX_DAVKA_MB,
   MAX_VSTUP_BAJTU,
   MAX_VSTUP_MB,
   POVOLENE_TYPY,
@@ -35,6 +37,17 @@ export async function POST(request: Request) {
     const admin = await overitAdmina();
     if (!admin) return odpovedNeautorizovano();
     if (!jeStejnyPuvod(request)) return odpovedChyba('Neplatný požadavek.', 403);
+
+    // Kontrola velikosti MUSÍ být před `formData()` – ten si celé tělo natáhne
+    // do paměti, takže po něm už je na obranu pozdě.
+    const delka = Number(request.headers.get('content-length') ?? 0);
+    if (delka > MAX_DAVKA_BAJTU) {
+      return odpovedChyba(
+        `Najednou lze nahrát nejvýš ${MAX_DAVKA_MB} MB fotek (vybráno ${(delka / 1024 / 1024).toFixed(0)} MB). ` +
+          'Rozdělte prosím nahrávání do několika dávek.',
+        413
+      );
+    }
 
     const formData = await request.formData();
     const soubory = formData.getAll('fotky').filter((f): f is File => f instanceof File);
