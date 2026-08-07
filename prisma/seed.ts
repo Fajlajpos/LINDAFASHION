@@ -50,19 +50,24 @@ async function main() {
   });
 
   // 3. Vytvoření Uživatelů
-  const adminPasswordHash = await bcrypt.hash('adminpassword123', 12);
+  // Admin se bere z .env, ne natvrdo – jinak by seed přepsal heslo, které si
+  // majitelka nastavila, a v produkci by vznikl účet se známým heslem.
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim() || 'admin@lindafashion.cz';
+  const adminHeslo = process.env.ADMIN_PASSWORD || 'adminpassword123';
   const customerPasswordHash = await bcrypt.hash('heslo123', 12);
 
   await prisma.user.create({
     data: {
-      email: 'admin@lindafashion.cz',
-      passwordHash: adminPasswordHash,
+      email: adminEmail,
+      passwordHash: await bcrypt.hash(adminHeslo, 12),
       jmeno: 'Linda Administrátorka',
       telefon: '+420 777 888 999',
       role: Role.ADMIN,
       newsletterSouhlas: true,
     },
   });
+
+  console.log(`   admin účet: ${adminEmail} (heslo z ADMIN_PASSWORD v .env)`);
 
   const testCustomer = await prisma.user.create({
     data: {
@@ -204,17 +209,11 @@ async function main() {
           },
         ],
       },
-      images: {
-        create: [
-          {
-            url: null,
-            altText: 'Hedvábné šaty Bellissima - přední pohled',
-            poradi: 1,
-            jeHlavni: true,
-            stavZpracovani: 'HOTOVO',
-          },
-        ],
-      },
+      // Fotky se schválně neseedují. Reálné fotografie dodá majitelka
+      // (sekce 1 zadání) a AI-generované obrázky se použít nesmí. Produkt bez
+      // fotek se v e-shopu i v administraci zobrazí s grafickým zástupným
+      // symbolem – dřív tu vznikal řádek se stavem HOTOVO a `url: null`,
+      // tedy "hotová" fotka, kterou není kde vzít.
     },
   });
 

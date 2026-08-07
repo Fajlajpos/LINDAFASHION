@@ -8,11 +8,18 @@
 
 # production
 /build
+# zkompilovaný worker (npm run build:worker)
+/dist
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# logy z lokálního běhu (npm run dev > dev.log apod.)
+/dev.log
+/worker.log
+/docker-build.log
 
 # local env files
 .env
@@ -20,9 +27,12 @@ yarn-error.log*
 .env.local
 .env*.local
 
-# uploads
+# uploads – hotové WebP varianty
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# dočasné originály čekající na zpracování workerem
+/storage
 
 # vercel
 .vercel

@@ -7,10 +7,42 @@ This file only records what is **specific to this project** and overrides the gl
 ## Stack
 
 Next.js 14 (App Router) + TypeScript + Tailwind CSS + Prisma/Postgres e-shop, Czech UI.
-[src/app/](src/app/) routes · [src/components/](src/components/) (`shop/`, `ui/`) ·
+[src/app/](src/app/) routes · [src/components/](src/components/) (`shop/`, `ui/`, `admin/`) ·
 [src/lib/](src/lib/) · [src/worker/](src/worker/) (pg-boss) · [prisma/](prisma/).
 
 When querying the skill, always pass `--stack nextjs`.
+
+## Backend — three runtimes, three import rules
+
+The same `src/` tree is compiled for three different runtimes. Putting code in the wrong
+file breaks a build that looks unrelated, so the split is deliberate:
+
+| runtime | what runs there | must not import |
+|---|---|---|
+| **Edge** ([middleware.ts](src/middleware.ts)) | session signature check only | Prisma, bcrypt, `node:*` |
+| **Node / Next** (route handlers, Server Components) | everything else | — |
+| **Node / worker** ([src/worker/](src/worker/), built by [tsconfig.worker.json](tsconfig.worker.json)) | Sharp, queue jobs | `next/*`, alias `@/` |
+
+Consequences worth remembering:
+
+- [session.ts](src/lib/session.ts) is Edge-safe (`jose` only) — middleware imports it.
+- [hesla.ts](src/lib/hesla.ts) holds bcrypt separately from [auth.ts](src/lib/auth.ts),
+  because `auth.ts` imports `next/headers`, which the worker cannot load.
+- **Worker code uses relative imports** (`../lib/db`), never `@/` — `tsc` does not rewrite
+  path aliases in its output, so an alias compiles fine and then throws at runtime.
+- Auth is a **custom JWT session in an HttpOnly cookie**, not NextAuth. Admins are ordinary
+  `User` rows with `role = ADMIN`; `.env` only bootstraps the first one.
+- pg-boss: `schedule(name, cron)` takes **no handler**. A scheduled queue needs a matching
+  `work(name, handler)` or the job is enqueued and never picked up.
+- Image processing runs **only in the worker**. Never call
+  [sharp-image.ts](src/lib/sharp-image.ts) from a route handler.
+- API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
+  offending field — see [api.ts](src/lib/api.ts).
+- `binaryTargets` in [schema.prisma](prisma/schema.prisma) must keep
+  `linux-musl-openssl-3.0.x`. Without it the Docker image **builds fine and then dies on
+  the first query** with `Error loading shared library libssl.so.1.1` — Prisma guesses the
+  OpenSSL 1.1 engine, which current Alpine no longer ships. `openssl` is installed in the
+  image so Prisma can detect the version instead of guessing.
 
 ## Design system — existing tokens win
 
@@ -85,16 +117,38 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 ## Known gaps — worth fixing when touching these files
 
+### Still mockups — read from hardcoded data, no backend
+
+The admin side (products, categories, photo upload, auth) is wired to the database.
+**The shop side is not.** These still render from [home-data.ts](src/lib/home-data.ts)
+or from arrays inside the component:
+
+- `(shop)/page.tsx`, `produkty/`, `produkt/[slug]/`, `kosik/`, `pokladna/`, `muj-ucet/`,
+  `oblibene/`
+- admin `objednavky/`, `zakaznici/`, `slevove-kody/`, `reklamace/`, `nastaveni/`, dashboard
+- [api/feed/xml](src/app/api/feed/xml/route.ts) returns two invented products
+- Cart lives only in `localStorage` — no DB persistence, no merge on login
+
+### Other gaps
+
 - **[src/app/(shop)/layout.tsx](<src/app/(shop)/layout.tsx>)** renders `<Header />` with no
   `user` / `vacationMode` props, so the account name and vacation banner never appear.
-- **ESLint is not configured** — `npm run lint` opens an interactive setup prompt.
-- **[next.config.js](next.config.js)** allows remote images from `hostname: '**'`; the skill
-  flags wildcard image domains as High severity. Narrow it to the real CDN host.
 - No `opengraph-image` asset — social previews have no image.
 - The newsletter form (hero section, footer) and the contact form still have **no endpoint**;
   they only confirm receipt locally. `TODO` markers sit in the components.
+- `/zapomenute-heslo` is linked from the login form but the route does not exist (404).
+- Rate limiting ([rate-limit.ts](src/lib/rate-limit.ts)) counts in process memory — fine for
+  the single-container deployment, but it resets on restart and would not be shared if the
+  app ever scaled to several `web` instances.
+- The Docker build uses `npm install`, not `npm ci`: `package-lock.json` is generated on
+  Windows and omits the Linux platform binaries (`@img/sharp-linuxmusl-x64` and friends),
+  so `npm ci` fails inside the image. Fully reproducible builds would need the lock file
+  generated on Linux.
 
 Closed: raw hex literals (only SVG gradients in
 [CategoryGlyph.tsx](src/components/shop/home/CategoryGlyph.tsx) and the `themeColor` meta
 value remain, both legitimate) · `focus:outline-none` (0 occurrences) · `alert()` for form
-validation (replaced by inline errors next to the offending field).
+validation (replaced by inline errors next to the offending field) · ESLint now configured
+in [.eslintrc.json](.eslintrc.json) · wildcard remote image host narrowed in
+[next.config.js](next.config.js) · `/admin` was reachable by anyone who knew the URL, now
+gated by [middleware.ts](src/middleware.ts) plus a role check in every admin endpoint.

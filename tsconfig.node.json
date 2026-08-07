@@ -1,0 +1,20 @@
+{
+  // Společné nastavení pro všechno, co se pouští přes ts-node jako obyčejný
+  // Node skript (seed, worker ve vývoji, CLI skripty). Kořenový tsconfig.json
+  // je nastavený pro Next.js bundler (module: esnext) a Node ho nespustí.
+  //
+  // Schválně tu není outDir/rootDir – ts-node kompiluje v paměti a rootDir by
+  // si stěžoval na soubory mimo src/ (třeba prisma/seed.ts).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false
+  }
+}

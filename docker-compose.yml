@@ -1,51 +1,103 @@
-version: '3.8'
+# Produkční stack (VPS): web + worker + postgres, volitelně Caddy jako reverzní proxy.
+#
+#   docker compose up -d --build
+#   docker compose --profile proxy up -d --build     # + automatické HTTPS přes Caddy
+#
+# `web` a `worker` sdílí jeden image a jednu kódovou základnu (sekce 3 zadání),
+# liší se jen spouštěcím příkazem. Migrace se aplikují automaticky při startu `web`,
+# aby nasazení nevyžadovalo ruční krok v databázi.
 
 services:
   postgres:
     image: postgres:16-alpine
     container_name: linda_postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-linda}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lindapassword}
       POSTGRES_DB: ${POSTGRES_DB:-linda_fashion}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-linda} -d ${POSTGRES_DB:-linda_fashion}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # Databáze schválně NEpublikuje port ven – sahá na ni jen web a worker
+    # přes interní docker síť.
 
   web:
     build:
       context: .
       dockerfile: Dockerfile
+    image: linda-fashion:latest
     container_name: linda_web
-    restart: always
-    ports:
-      - "3000:3000"
+    restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && node server.js"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-linda}:${POSTGRES_PASSWORD:-lindapassword}@postgres:5432/${POSTGRES_DB:-linda_fashion}?schema=public
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-linda-fashion-super-secret-key-32-chars-minimum}
+    ports:
+      - '3000:3000'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - uploads_data:/app/public/uploads
+      - storage_data:/app/storage
+    # Zdravý `web` znamená "migrace doběhly a server odpovídá" – worker se na to
+    # níž váže, aby nestartoval do databáze bez tabulek.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/ || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
 
   worker:
+    # Stejný image jako web – nestaví se podruhé, jen se jinak spustí.
     build:
       context: .
       dockerfile: Dockerfile
+    image: linda-fashion:latest
     container_name: linda_worker
-    restart: always
-    command: npx ts-node src/worker/index.ts
+    restart: unless-stopped
+    command: sh -c "node dist/worker/index.js"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-linda}:${POSTGRES_PASSWORD:-lindapassword}@postgres:5432/${POSTGRES_DB:-linda_fashion}?schema=public
     depends_on:
-      - postgres
-      - web
+      postgres:
+        condition: service_healthy
+      # Ne `service_started` – to čeká jen na spuštění kontejneru, ne na
+      # dokončení `prisma migrate deploy`. Worker pak startoval do databáze
+      # bez tabulek a padal na P2021, než ho restart politika zvedla.
+      web:
+        condition: service_healthy
     volumes:
       - uploads_data:/app/public/uploads
+      - storage_data:/app/storage
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: linda_caddy
+    restart: unless-stopped
+    profiles: ['proxy']
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
-  uploads_data:
+  uploads_data: # hotové WebP varianty, servíruje je web
+  storage_data: # dočasné originály čekající na zpracování workerem
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,8 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "ignorePatterns": ["dist/**", ".next/**", "node_modules/**"],
+  "rules": {
+    "@next/next/no-img-element": "error",
+    "@next/next/no-html-link-for-pages": "error"
+  }
+}

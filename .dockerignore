@@ -1,0 +1,29 @@
+# Bez tohohle souboru se do build kontextu kopíruje node_modules i .next –
+# build je pak řádově pomalejší a image zbytečně velký.
+node_modules
+.next
+dist
+.git
+.gitignore
+npm-debug.log*
+*.tsbuildinfo
+
+# Tajemství se do image nikdy nepečou – předávají se za běhu přes env_file.
+.env
+.env.*
+!.env.example
+
+# Nahrané fotky žijí ve volume, ne v image.
+public/uploads
+storage
+
+# Vývojové a dokumentační soubory
+README.md
+CLAUDE.md
+prompt.md
+.claude
+docker-compose*.yml
+Dockerfile
+*.jpg
+*.png
+textury

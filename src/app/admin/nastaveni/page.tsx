@@ -59,7 +59,7 @@ export default function AdminNastaveniPage() {
           <div className="flex items-center justify-between border-b border-linda-sand/40 pb-3">
             <h3 className="font-serif text-xl text-linda-espresso flex items-center gap-2">
               <Palmtree className="w-5 h-5 text-linda-cognac" />
-              Režim dovolené ("Jsem pryč")
+              Režim dovolené („Jsem pryč“)
             </h3>
             <input
               type="checkbox"

@@ -1,0 +1,17 @@
+{
+  // Build workeru do dist/ pro produkční kontejner (npm run build:worker).
+  // Ve vývoji se worker pouští přes ts-node s tsconfig.node.json.
+  //
+  // `include` je jen vstupní bod; TypeScript si přes importy dotáhne i src/lib/*.ts,
+  // které worker používá. Proto v kódu workeru drž relativní importy (../lib/db),
+  // ne alias @/ – tsc cesty v outputu nepřepisuje.
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": false,
+    "sourceMap": false,
+    "incremental": false
+  },
+  "include": ["src/worker/**/*.ts"]
+}

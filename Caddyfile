@@ -1,0 +1,23 @@
+# Reverzní proxy pro produkci (sekce 3 zadání).
+# Caddy si sám vyřídí Let's Encrypt certifikát a HTTPS redirect.
+#
+# Před nasazením přepiš doménu níž a spusť:
+#   docker compose --profile proxy up -d
+
+lindafashion.cz, www.lindafashion.cz {
+	encode zstd gzip
+
+	# Hotové fotky produktů se mění jen při novém uploadu (v názvu mají timestamp),
+	# takže je můžeme cachovat natvrdo.
+	@uploads path /uploads/*
+	header @uploads Cache-Control "public, max-age=31536000, immutable"
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	reverse_proxy web:3000
+}

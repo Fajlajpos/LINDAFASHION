@@ -1,0 +1,30 @@
+# Lokální vývoj: v Dockeru běží JEN databáze.
+# `web` a `worker` si pouštíš nativně (`npm run dev` / `npm run worker`),
+# protože hot reload uvnitř kontejneru je na Windows pomalý.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Port je schválně 5433 – na 5432 už ti běží nativní PostgreSQL 18 jako služba
+# a tenhle kontejner by se s ním pral.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: linda_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-linda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lindapassword}
+      POSTGRES_DB: ${POSTGRES_DB:-linda_fashion}
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-linda} -d ${POSTGRES_DB:-linda_fashion}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgres_dev_data:

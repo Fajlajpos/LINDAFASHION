@@ -1,136 +1,142 @@
-'use client';
-
-import React, { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Eye, EyeOff, Trash2, Gift, Sparkles, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
+import { AlertCircle, Gift, ImageOff, Loader2, Plus, Sparkles } from 'lucide-react';
+import { db } from '@/lib/db';
 
-export default function AdminProduktyPage() {
-  const [products, setProducts] = useState([
-    {
-      id: 'p1',
-      nazev: 'Hedvábné šaty Bellissima',
-      kategorie: 'Šaty',
-      cena: 3490,
-      skladCelkem: 10,
-      aktivni: true,
-      jeDarkovyPoukaz: false,
-      hasOrders: true, // Objevuje se v objednávce => ZÁKAZ MAZÁNÍ (Section 6.2)
-    },
-    {
-      id: 'p2',
-      nazev: 'Lněná halenka Firenze',
-      kategorie: 'Halenky & Košile',
-      cena: 1890,
-      skladCelkem: 10,
-      aktivni: true,
-      jeDarkovyPoukaz: false,
-      hasOrders: false,
-    },
-    {
-      id: 'p5',
-      nazev: 'Dárkový poukaz LINDA FASHION',
-      kategorie: 'Dárkové poukazy',
-      cena: 1000,
-      skladCelkem: 400,
-      aktivni: true,
-      jeDarkovyPoukaz: true,
-      hasOrders: true,
-    },
-  ]);
+export const dynamic = 'force-dynamic';
 
-  const toggleActive = (id: string) => {
-    setProducts(products.map((p) => (p.id === id ? { ...p, aktivni: !p.aktivni } : p)));
-  };
+export const metadata = {
+  title: 'Správa produktů | Administrace LINDA FASHION',
+};
+
+export default async function AdminProduktyPage() {
+  const produkty = await db.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: { select: { nazev: true } },
+      variants: { select: { skladem: true } },
+      images: {
+        orderBy: { poradi: 'asc' },
+        select: { urlThumb: true, altText: true, jeHlavni: true, stavZpracovani: true },
+      },
+    },
+  });
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-linda-sand pb-6">
+      <div className="flex flex-col justify-between gap-4 border-b border-linda-sand pb-6 sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Správa produktů</h1>
-          <p className="text-xs text-linda-espresso/60 mt-1">Přehled nabízeného zboží, variant a mír</p>
+          <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Správa produktů</h1>
+          <p className="mt-1 text-xs text-linda-espresso/70">
+            {produkty.length === 0
+              ? 'Zatím tu není žádný produkt'
+              : `${produkty.length} ${produkty.length === 1 ? 'produkt' : produkty.length < 5 ? 'produkty' : 'produktů'} v katalogu`}
+          </p>
         </div>
 
         <Link
           href="/admin/produkty/novy"
-          className="px-5 min-h-touch bg-linda-cognac text-white text-xs font-semibold rounded-full hover:bg-linda-cognacHover flex items-center gap-1.5 shadow-neuDark transition-all duration-200 active:shadow-neuSm cursor-pointer"
+          className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cognac px-5 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" aria-hidden="true" />
           Přidat nový produkt
         </Link>
       </div>
 
-      <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
-            <tr>
-              <th className="p-4 font-semibold">Název produktu</th>
-              <th className="p-4 font-semibold">Kategorie</th>
-              <th className="p-4 font-semibold">Cena</th>
-              <th className="p-4 font-semibold">Sklad celkem</th>
-              <th className="p-4 font-semibold">Stav</th>
-              <th className="p-4 font-semibold text-right">Akce</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-linda-sand/40">
-            {products.map((p) => (
-              <tr key={p.id} className="hover:bg-linda-cream/50 transition-colors">
-                <td className="p-4 font-medium text-linda-espresso flex items-center gap-2">
-                  {p.jeDarkovyPoukaz ? (
-                    <span className="p-1 bg-linda-espresso text-linda-sand rounded">
-                      <Gift className="w-3.5 h-3.5" />
-                    </span>
-                  ) : (
-                    <span className="p-1 bg-linda-cognac/10 text-linda-cognac rounded">
-                      <Sparkles className="w-3.5 h-3.5" />
-                    </span>
-                  )}
-                  <span>{p.nazev}</span>
-                </td>
-                <td className="p-4 text-linda-espresso/70">{p.kategorie}</td>
-                <td className="p-4 font-semibold text-linda-cognac">{p.cena.toLocaleString('cs-CZ')} Kč</td>
-                <td className="p-4 font-medium">{p.skladCelkem} ks</td>
-                <td className="p-4">
-                  <button
-                    onClick={() => toggleActive(p.id)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 ${
-                      p.aktivni ? 'bg-linda-sageLight text-linda-sage' : 'bg-linda-sandLight text-linda-espresso/80 shadow-neuInsetSm'
+      {produkty.length === 0 ? (
+        <div className="space-y-3 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
+          <Sparkles className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
+          <h2 className="font-serif text-xl text-linda-espresso">Katalog je zatím prázdný</h2>
+          <p className="mx-auto max-w-md text-xs text-linda-espresso/75">
+            Přidejte první kousek. Fotky stačí nahrát v původní velikosti – zmenšení
+            a převod do WebP proběhne na pozadí.
+          </p>
+          <Link
+            href="/admin/produkty/novy"
+            className="mx-auto flex w-fit min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cognac px-5 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Přidat první produkt
+          </Link>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {produkty.map((produkt) => {
+            const sklad = produkt.variants.reduce((s, v) => s + v.skladem, 0);
+            const hlavni = produkt.images.find((o) => o.jeHlavni) ?? produkt.images[0];
+            const zpracovavaSe = produkt.images.some(
+              (o) => o.stavZpracovani === 'CEKA' || o.stavZpracovani === 'ZPRACOVAVA_SE'
+            );
+
+            return (
+              <li key={produkt.id}>
+                <Link
+                  href={`/admin/produkty/${produkt.id}`}
+                  className="flex cursor-pointer items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+                >
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-linda-sandLight shadow-neuInsetSm">
+                    {hlavni?.urlThumb ? (
+                      <Image
+                        src={hlavni.urlThumb}
+                        alt={hlavni.altText ?? produkt.nazev}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center">
+                        {zpracovavaSe ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-linda-cognac" aria-hidden="true" />
+                        ) : (
+                          <ImageOff className="h-5 w-5 text-linda-espresso/40" aria-hidden="true" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-linda-espresso">
+                      {produkt.jeDarkovyPoukaz && (
+                        <Gift className="h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+                      )}
+                      {produkt.nazev}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-linda-espresso/70">
+                      {produkt.category.nazev}
+                      {produkt.sku && ` · ${produkt.sku}`}
+                      {zpracovavaSe && ' · fotky se zpracovávají'}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-linda-espresso">
+                      {Number(produkt.cenaPoSleve ?? produkt.cena).toLocaleString('cs-CZ')} Kč
+                    </p>
+                    <p
+                      className={`mt-0.5 flex items-center justify-end gap-1 text-[11px] ${
+                        sklad === 0 ? 'font-semibold text-red-800' : 'text-linda-espresso/70'
+                      }`}
+                    >
+                      {sklad === 0 && <AlertCircle className="h-3 w-3" aria-hidden="true" />}
+                      {sklad === 0 ? 'Vyprodáno' : `${sklad} ks skladem`}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                      produkt.aktivni
+                        ? 'bg-linda-sageLight text-linda-sage'
+                        : 'bg-linda-sandLight text-linda-espresso/75 shadow-neuInsetSm'
                     }`}
                   >
-                    {p.aktivni ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                    {p.aktivni ? 'Aktivní' : 'Skryté'}
-                  </button>
-                </td>
-                <td className="p-4 text-right space-x-2">
-                  <Link
-                    href={`/admin/produkty/novy?edit=${p.id}`}
-                    className="inline-flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-
-                  {/* Section 6.2 Safety Rule: Hide physical delete button if product is in orders */}
-                  {!p.hasOrders ? (
-                    <button
-                      onClick={() => setProducts(products.filter((item) => item.id !== p.id))}
-                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-700 active:shadow-neuInsetSm"
-                      title="Smazat produkt"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <span
-                      className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full bg-linda-sandLight text-linda-espresso/50 shadow-neuInsetSm cursor-not-allowed"
-                      title="Produkt se objevuje v objednávce (smazání je zablokováno kvůli historii)"
-                    >
-                      <AlertCircle className="w-4 h-4" />
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    {produkt.aktivni ? 'Zveřejněno' : 'Koncept'}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

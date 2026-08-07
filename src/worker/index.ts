@@ -1,88 +1,149 @@
-import { getQueueBoss } from '../lib/queue';
+/**
+ * Vstupní bod `worker` kontejneru (sekce 3 zadání).
+ *
+ * Stejný kód i image jako `web`, jen jiný spouštěcí příkaz. Zpracovává na
+ * pozadí to, co by jinak zdržovalo zákaznice: kompresi fotek Sharpem, později
+ * transakční e-maily, PDF faktury a přegenerování produktového feedu.
+ *
+ * Pozn. k pg-boss: `schedule()` bere (název, cron, data, options) – NE handler.
+ * Naplánovaná úloha proto musí mít vedle sebe i `work()` se stejným názvem,
+ * jinak se do fronty jen zapisuje a nikdo ji nevyzvedne.
+ */
+import { getQueueBoss, zastavitFrontu, FRONTY, type UlohaZpracovatObrazek } from '../lib/queue';
+import { zajistitSlozky } from '../lib/uloziste';
+import { zalozitAdminaPokudChybi } from '../lib/admin-bootstrap';
 import { db } from '../lib/db';
+import { zpracovatObrazekUloha } from './jobs/zpracovat-obrazek';
+import { uklidUlozisteUloha } from './jobs/uklid-uloziste';
 
-async function startWorker() {
-  console.log('🚀 Spouštím worker kontejner LINDA FASHION...');
+const FRONTA_UKLID = 'uklid-uloziste';
+const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
+const FRONTA_NIZKY_SKLAD = 'nizky-sklad-upozorneni';
 
+async function spustitWorker() {
+  console.log('🚀 Spouštím worker LINDA FASHION…');
+
+  await zajistitSlozky();
+
+  // Na čerstvé databázi zajistí, že je kam se přihlásit do administrace.
+  await zalozitAdminaPokudChybi();
+
+  const boss = await getQueueBoss();
+
+  // --- Zpracování fotek Sharpem (sekce 9) ---------------------------------
+  // teamSize 2 = nejvýš dvě fotky naráz. Sharp je náročný na CPU a paměť,
+  // víc paralelních úloh by na malém VPS jen soutěžilo o stejné jádro.
+  await boss.work<UlohaZpracovatObrazek>(
+    FRONTY.ZPRACOVAT_OBRAZEK,
+    { teamSize: 2, teamConcurrency: 1 },
+    async (job) => {
+      await zpracovatObrazekUloha(job.data);
+    }
+  );
+
+  // --- Úklid úložiště -----------------------------------------------------
+  await boss.work(FRONTA_UKLID, async () => {
+    await uklidUlozisteUloha();
+  });
+  await boss.schedule(FRONTA_UKLID, '*/15 * * * *');
+
+  // --- Opuštěné košíky (sekce 14) -----------------------------------------
+  // Zatím jen označí košík jako připomenutý; odeslání e-mailu se doplní,
+  // až budou k dispozici SMTP přístupy (sekce 8, 16).
+  await boss.work(FRONTA_OPUSTENE_KOSIKY, async () => {
+    const hranice = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const kosiky = await db.cart.findMany({
+      where: {
+        updatedAt: { lte: hranice },
+        pripomenutoAt: null,
+        items: { some: {} },
+      },
+      include: { user: { select: { email: true } } },
+      take: 200,
+    });
+
+    for (const kosik of kosiky) {
+      if (!kosik.user?.email) continue;
+
+      // TODO(e-mail): až budou SMTP klíče, zařadit sem úlohu ODESLAT_EMAIL.
+      console.log(`[košíky] Připomínka pro ${kosik.user.email} (zatím bez odeslání – chybí SMTP).`);
+
+      await db.cart.update({
+        where: { id: kosik.id },
+        data: { pripomenutoAt: new Date() },
+      });
+    }
+  });
+  await boss.schedule(FRONTA_OPUSTENE_KOSIKY, '0 */4 * * *');
+
+  // --- Docházející sklad (sekce 14) ---------------------------------------
+  await boss.work(FRONTA_NIZKY_SKLAD, async () => {
+    const dochazi = await db.productVariant.findMany({
+      where: { skladem: { lte: 2, gt: 0 } },
+      include: {
+        product: { select: { nazev: true } },
+        cartItems: {
+          where: { upozornenoNaSklad: false },
+          include: { cart: { include: { user: { select: { email: true } } } } },
+        },
+      },
+      take: 200,
+    });
+
+    for (const varianta of dochazi) {
+      for (const polozka of varianta.cartItems) {
+        if (!polozka.cart.user?.email) continue;
+
+        // TODO(e-mail): až budou SMTP klíče, zařadit sem úlohu ODESLAT_EMAIL.
+        console.log(
+          `[sklad] ${varianta.product.nazev} dochází – upozornění pro ${polozka.cart.user.email} (zatím bez odeslání).`
+        );
+
+        await db.cartItem.update({
+          where: { id: polozka.id },
+          data: { upozornenoNaSklad: true },
+        });
+      }
+    }
+
+    // Jakmile se sklad doplní nad práh, příznak se vrátí zpět – ať při
+    // dalším poklesu přijde upozornění znovu (sekce 14).
+    await db.cartItem.updateMany({
+      where: { upozornenoNaSklad: true, variant: { skladem: { gt: 2 } } },
+      data: { upozornenoNaSklad: false },
+    });
+    await db.favorite.updateMany({
+      where: { upozornenoNaSklad: true, product: { variants: { some: { skladem: { gt: 2 } } } } },
+      data: { upozornenoNaSklad: false },
+    });
+  });
+  await boss.schedule(FRONTA_NIZKY_SKLAD, '0 */2 * * *');
+
+  // Jedno kolo úklidu hned po startu – posbírá, co zbylo z minulého běhu.
+  await uklidUlozisteUloha();
+
+  console.log('✅ Worker poslouchá na frontách:');
+  console.log(`   • ${FRONTY.ZPRACOVAT_OBRAZEK} (Sharp komprese fotek)`);
+  console.log(`   • ${FRONTA_UKLID} (každých 15 minut)`);
+  console.log(`   • ${FRONTA_OPUSTENE_KOSIKY} (každé 4 hodiny)`);
+  console.log(`   • ${FRONTA_NIZKY_SKLAD} (každé 2 hodiny)`);
+}
+
+async function ukoncit(signal: string) {
+  console.log(`\n${signal} – ukončuji worker…`);
   try {
-    const boss = await getQueueBoss();
-
-    // 1. Úloha pro zpracování fotek Sharpem
-    await boss.work('process-image', async (job) => {
-      console.log(`[WORKER] Zpracovávám obrázek pre produkt:`, job.data);
-      // Zpracování Sharp
-      return { success: true };
-    });
-
-    // 2. Transakční e-maily
-    await boss.work('send-email', async (job) => {
-      const { to, subject, body } = job.data as { to: string; subject: string; body: string };
-      console.log(`[WORKER] Odesílám e-mail na ${to} s předmětem "${subject}"`);
-      // SMTP/Resend odoslanie
-      return { success: true };
-    });
-
-    // 3. Generování PDF Faktury
-    await boss.work('generate-pdf-invoice', async (job) => {
-      const { orderId } = job.data as { orderId: string };
-      console.log(`[WORKER] Generuji PDF fakturu k objednávce: ${orderId}`);
-      return { success: true };
-    });
-
-    // 4. Opuštěné košíky (Pravidelná kontrola)
-    await boss.schedule('check-abandoned-carts', '0 */4 * * *', async () => {
-      console.log('[WORKER] Kontrola opuštěných košíků u přihlášených uživatelů...');
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hodin staré košíky
-      const abandonedCarts = await db.cart.findMany({
-        where: {
-          updatedAt: { lte: cutoff },
-          pripomenutoAt: null,
-          items: { some: {} },
-        },
-        include: { user: true },
-      });
-
-      for (const cart of abandonedCarts) {
-        if (cart.user?.email) {
-          console.log(`[WORKER] Odesílám e-mail o opuštěném košíku zákaznici: ${cart.user.email}`);
-          await db.cart.update({
-            where: { id: cart.id },
-            data: { pripomenutoAt: new Date() },
-          });
-        }
-      }
-    });
-
-    // 5. Automatické upozornění na docházející sklad
-    await boss.schedule('check-low-stock', '0 */2 * * *', async () => {
-      console.log('[WORKER] Kontrola docházejících zásob v košících a oblíbených...');
-      // Kontrola variant, které mají méně než 2 kusy
-      const lowStockVariants = await db.productVariant.findMany({
-        where: { skladem: { lte: 2, gt: 0 } },
-        include: {
-          product: true,
-          cartItems: { include: { cart: { include: { user: true } } } },
-          stockNotifications: { where: { vyrizeno: false } },
-        },
-      });
-
-      for (const variant of lowStockVariants) {
-        for (const item of variant.cartItems) {
-          if (!item.upozornenoNaSklad && item.cart.user?.email) {
-            console.log(`[WORKER] Posílám upozornění na docházející sklad (${variant.product.nazev}) zákaznici: ${item.cart.user.email}`);
-            await db.cartItem.update({
-              where: { id: item.id },
-              data: { upozornenoNaSklad: true },
-            });
-          }
-        }
-      }
-    });
-
-    console.log('✅ Worker úspěšně poslouchá na zadaných frontách.');
-  } catch (error) {
-    console.error('❌ Chyba při spouštění workeru:', error);
+    await zastavitFrontu();
+    await db.$disconnect();
+  } finally {
+    process.exit(0);
   }
 }
 
-startWorker();
+process.on('SIGTERM', () => void ukoncit('SIGTERM'));
+process.on('SIGINT', () => void ukoncit('SIGINT'));
+
+spustitWorker().catch((err) => {
+  console.error('❌ Worker se nepodařilo spustit:', err);
+  process.exit(1);
+});

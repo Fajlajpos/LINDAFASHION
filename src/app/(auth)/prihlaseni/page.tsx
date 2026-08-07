@@ -3,24 +3,50 @@
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle, Lock, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lock, Mail, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { AuthField } from '@/components/ui/AuthField';
+import { poslatJson } from '@/lib/api-klient';
 
 function PrihlaseniFormular() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const poRegistraci = searchParams.get('registrace') === 'ok';
+  /** Kam zákaznice mířila, než ji middleware poslal sem. */
+  const dalsi = searchParams.get('dalsi');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [odesila, setOdesila] = useState(false);
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Přihlášení
-    if (email === 'admin@lindafashion.cz') {
-      router.push('/admin');
-    } else {
-      router.push('/muj-ucet');
+    if (odesila) return;
+
+    setOdesila(true);
+    setChyba(null);
+    setChybyPoli({});
+
+    const vysledek = await poslatJson<{ presmerovat: string }>('/api/auth/prihlaseni', {
+      email,
+      heslo: password,
+    });
+
+    if (!vysledek.ok) {
+      setChyba(vysledek.chyba);
+      setChybyPoli(vysledek.pole ?? {});
+      setOdesila(false);
+      return;
     }
+
+    // `dalsi` je vždy jen cesta v rámci webu (nastavuje ho middleware),
+    // ale pro jistotu odmítáme absolutní URL – ať z toho nejde udělat
+    // otevřené přesměrování na cizí web.
+    const cil = dalsi?.startsWith('/') && !dalsi.startsWith('//') ? dalsi : vysledek.data.presmerovat;
+
+    router.push(cil);
+    router.refresh();
   };
 
   return (
@@ -47,6 +73,16 @@ function PrihlaseniFormular() {
           </p>
         )}
 
+        {chyba && (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
+          >
+            <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+            {chyba}
+          </p>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-4">
           <AuthField
             id="prihlaseni-email"
@@ -58,6 +94,8 @@ function PrihlaseniFormular() {
             placeholder="vas.email@example.cz"
             value={email}
             onChange={setEmail}
+            disabled={odesila}
+            chyba={chybyPoli.email}
           />
 
           <AuthField
@@ -70,6 +108,8 @@ function PrihlaseniFormular() {
             placeholder="••••••••"
             value={password}
             onChange={setPassword}
+            disabled={odesila}
+            chyba={chybyPoli.heslo}
             akce={
               <Link
                 href="/zapomenute-heslo"
@@ -88,10 +128,21 @@ function PrihlaseniFormular() {
 
           <button
             type="submit"
-            className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-3.5 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+            disabled={odesila}
+            aria-busy={odesila}
+            className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-3.5 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Přihlásit se
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            {odesila ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Přihlašuji…
+              </>
+            ) : (
+              <>
+                Přihlásit se
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </>
+            )}
           </button>
         </form>
 

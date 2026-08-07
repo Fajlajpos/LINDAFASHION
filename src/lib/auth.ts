@@ -1,22 +1,59 @@
-import bcrypt from 'bcryptjs';
+/**
+ * Autentizace v kontextu Next.js requestu (čtení session cookie).
+ *
+ * Rozdělení souborů je záměrné:
+ *   session.ts          – práce s JWT, Edge-safe (importuje middleware)
+ *   hesla.ts            – bcrypt, bez vazby na Next.js (importuje i worker)
+ *   admin-bootstrap.ts  – prvotní admin účet z .env
+ *   auth.ts (tenhle)    – lepidlo pro route handlery a Server Components
+ */
+import { cookies } from 'next/headers';
 import { db } from './db';
+import { falesnePorovnani, verifyPassword } from './hesla';
+import { SESSION_COOKIE, overitSessionToken, type SessionPayload } from './session';
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
+export { hashPassword, verifyPassword } from './hesla';
+export { zalozitAdminaPokudChybi } from './admin-bootstrap';
+
+/**
+ * Přečte session z cookie. Vrací `null`, když nikdo přihlášený není.
+ * Nesahá do databáze – data pochází z podepsaného tokenu.
+ */
+export async function getSession(): Promise<SessionPayload | null> {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  return overitSessionToken(token);
 }
 
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+/**
+ * Načte aktuálně přihlášeného uživatele z databáze.
+ * Použij, když potřebuješ čerstvá data (role se mezitím mohla změnit,
+ * účet mohl být smazaný) – jinak stačí `getSession()`.
+ */
+export async function getCurrentUser() {
+  const session = await getSession();
+  if (!session) return null;
+
+  return db.user.findUnique({
+    where: { id: session.userId },
+    select: { id: true, email: true, jmeno: true, telefon: true, role: true, newsletterSouhlas: true },
+  });
 }
 
-export async function getAdminCredentials() {
-  return {
-    email: process.env.ADMIN_EMAIL || 'admin@lindafashion.cz',
-    password: process.env.ADMIN_PASSWORD || 'adminpassword123',
-  };
-}
+/**
+ * Ověří přihlašovací údaje proti databázi.
+ * Vrací `null` jak pro neexistující e-mail, tak pro špatné heslo – volající
+ * tak nemůže omylem prozradit, které e-maily jsou registrované.
+ */
+export async function overitPrihlaseni(email: string, heslo: string) {
+  const user = await db.user.findUnique({
+    where: { email: email.toLowerCase().trim() },
+  });
 
-export async function verifyAdminCredentials(email: string, pass: string): Promise<boolean> {
-  const admin = await getAdminCredentials();
-  return email.toLowerCase() === admin.email.toLowerCase() && pass === admin.password;
+  if (!user) {
+    await falesnePorovnani(heslo);
+    return null;
+  }
+
+  const sedi = await verifyPassword(heslo, user.passwordHash);
+  return sedi ? user : null;
 }

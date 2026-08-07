@@ -1,5 +1,13 @@
 generator client {
   provider = "prisma-client-js"
+
+  // "native" = vývojový stroj (Windows).
+  // "linux-musl-openssl-3.0.x" = produkční kontejner nad node:20-alpine.
+  //
+  // Bez druhého cíle se image sice postaví, ale při prvním dotazu do databáze
+  // spadne na `Error loading shared library libssl.so.1.1` – Prisma si bez
+  // nápovědy vybere engine pro OpenSSL 1.1, který dnešní Alpine nemá.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -82,6 +90,10 @@ model Product {
   variants        ProductVariant[]
   images          ProductImage[]
   favorites       Favorite[]
+
+  // Katalog filtruje na aktivní a řadí podle novinek; admin listuje po kategoriích.
+  @@index([aktivni, createdAt])
+  @@index([categoryId])
 }
 
 model ProductVariant {
@@ -120,14 +132,29 @@ model CartItem {
 }
 
 model ProductImage {
-  id             String                 @id @default(cuid())
-  productId      String
-  product        Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url            String?
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Tři varianty, které vygeneruje worker Sharpem (sekce 9). Do doby, než je
+  // hotovo, jsou null a administrace zobrazuje stav "zpracovává se".
+  url       String? // velká (detail produktu, 1600 px)
+  urlMedium String? // střední (výpisy katalogu, 800 px)
+  urlThumb  String? // náhled (administrace, košík, 300 px)
+
+  // Rozměry velké varianty – aby <Image> mohl rezervovat místo a nedělal CLS.
+  sirka Int?
+  vyska Int?
+
   altText        String?
-  poradi         Int                    @default(0)
-  jeHlavni       Boolean                @default(false)
-  stavZpracovani ImageProcessingStatus  @default(CEKA)
+  poradi         Int                   @default(0)
+  jeHlavni       Boolean               @default(false)
+  stavZpracovani ImageProcessingStatus @default(CEKA)
+  chybaDuvod     String? // důvod selhání, když stavZpracovani = CHYBA
+  originalSoubor String? // název dočasného originálu ve storage/tmp
+  createdAt      DateTime              @default(now())
+
+  @@index([productId, poradi])
 }
 
 enum ImageProcessingStatus {
@@ -166,6 +193,9 @@ model Order {
   createdAt           DateTime      @default(now())
   items               OrderItem[]
   reklamace           Reklamace[]
+
+  @@index([userId])
+  @@index([stav, createdAt])
 }
 
 enum ZrusilKdo {
@@ -292,4 +322,18 @@ enum ReklamaceStav {
   RESI_SE
   VYRIZENA_UZNANA
   VYRIZENA_ZAMITNUTA
+}
+
+// Jednoduchý audit log akcí administrátora (sekce 14) – kdo, kdy a co změnil.
+// Schválně bez cizího klíče na User: záznam musí přežít i smazání účtu admina.
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminEmail  String
+  akce        String // např. "produkt.vytvoren", "produkt.skryt"
+  entita      String // např. "Product"
+  entitaId    String?
+  podrobnosti Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }

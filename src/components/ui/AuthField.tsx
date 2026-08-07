@@ -13,6 +13,9 @@ export interface AuthFieldProps {
   autoComplete?: string;
   required?: boolean;
   minLength?: number;
+  disabled?: boolean;
+  /** Chybová hláška ze serveru pro tohle konkrétní pole. */
+  chyba?: string;
   /** Volitelný odkaz vpravo v řádku popisku („Zapomněli jste heslo?“). */
   akce?: React.ReactNode;
 }
@@ -39,6 +42,8 @@ export const AuthField: React.FC<AuthFieldProps> = ({
   autoComplete,
   required,
   minLength,
+  disabled,
+  chyba,
   akce,
 }) => (
   <div>
@@ -55,16 +60,25 @@ export const AuthField: React.FC<AuthFieldProps> = ({
         type={type}
         required={required}
         minLength={minLength}
+        disabled={disabled}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="min-h-touch w-full rounded-xl bg-linda-sandLight py-2.5 pl-10 pr-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
+        aria-invalid={chyba ? true : undefined}
+        aria-describedby={chyba ? `${id}-chyba` : undefined}
+        className="min-h-touch w-full rounded-xl bg-linda-sandLight py-2.5 pl-10 pr-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60 disabled:cursor-not-allowed disabled:opacity-60"
       />
       <Ikona
         className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-linda-cognac"
         aria-hidden="true"
       />
     </div>
+
+    {chyba && (
+      <p id={`${id}-chyba`} role="alert" className="mt-1.5 text-[11px] font-medium text-red-800">
+        {chyba}
+      </p>
+    )}
   </div>
 );
