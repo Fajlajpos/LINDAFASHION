@@ -1,115 +1,228 @@
-'use client';
-
-import React, { Suspense } from 'react';
+import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
-import { CheckCircle, QrCode, ArrowRight } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { CheckCircle, Package, QrCode, Truck } from 'lucide-react';
+import { db } from '@/lib/db';
+import { nacistNastaveni } from '@/lib/nastaveni';
 import { generateQrPaymentString, getQrPaymentImageUrl } from '@/lib/qr-code';
 
-function PotvrzeniContent() {
-  const searchParams = useSearchParams();
-  const cisloObjednavky = searchParams.get('cislo') || 'LF-2026001';
-  const totalAmount = Number(searchParams.get('celkem')) || 5380;
-  const paymentMethod = searchParams.get('platba') || 'bank_transfer';
+export const dynamic = 'force-dynamic';
 
-  const bankAccount = process.env.NEXT_PUBLIC_BANK_ACCOUNT || '1234567890/0100';
-  const iban = process.env.NEXT_PUBLIC_BANK_IBAN || 'CZ6501000000001234567890';
+export const metadata: Metadata = {
+  title: 'Objednávka přijata | LINDA FASHION',
+  robots: { index: false, follow: false },
+};
 
-  const qrcodeString = generateQrPaymentString({
-    iban,
-    amount: totalAmount,
-    variableSymbol: cisloObjednavky,
+const NAZVY_DOPRAVY: Record<string, string> = {
+  zasilkovna: 'Zásilkovna',
+  ppl: 'PPL',
+  ceska_posta: 'Česká pošta',
+};
+
+interface Props {
+  searchParams: { cislo?: string };
+}
+
+/**
+ * Poděkování a platební údaje.
+ *
+ * Data se čtou z databáze podle čísla objednávky, ne z query parametrů –
+ * dřív se sem částka i číslo objednávky předávaly v URL, takže si je šlo
+ * libovolně přepsat.
+ */
+export default async function PotvrzeniPage({ searchParams }: Props) {
+  const cislo = searchParams.cislo?.trim();
+  if (!cislo) notFound();
+
+  const objednavka = await db.order.findUnique({
+    where: { cisloObjednavky: cislo },
+    include: {
+      items: { include: { variant: { include: { product: { select: { nazev: true } } } } } },
+    },
   });
-  const qrcodeUrl = getQrPaymentImageUrl(qrcodeString, 240);
+
+  if (!objednavka) notFound();
+
+  const nastaveni = await nacistNastaveni();
+
+  const celkem = Number(objednavka.celkovaCena);
+  const zPoukazu = objednavka.castkaZGiftCard === null ? 0 : Number(objednavka.castkaZGiftCard);
+  const kUhrade = celkem - zPoukazu;
+
+  const iban = process.env.BANK_IBAN ?? '';
+  const cisloUctu = process.env.BANK_ACCOUNT_NUMBER ?? '';
+  const variabilniSymbol = objednavka.cisloObjednavky.replace(/\D/g, '');
+
+  // QR platba dává smysl jen u převodu, který ještě není uhrazený.
+  const zobrazitQr =
+    objednavka.zpusobPlatby === 'bankovni_prevod' && kUhrade > 0 && Boolean(iban);
+
+  const qrUrl = zobrazitQr
+    ? getQrPaymentImageUrl(
+        generateQrPaymentString({
+          iban,
+          amount: kUhrade,
+          variableSymbol: variabilniSymbol,
+          message: `Objednavka ${objednavka.cisloObjednavky}`,
+        })
+      )
+    : null;
 
   return (
-    <div className="space-y-10">
-      {/* Icon & Congratulations */}
-      <div className="space-y-4">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-linda-sageLight text-linda-sage shadow-neu">
-          <CheckCircle className="h-10 w-10" aria-hidden="true" />
-        </div>
-        <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
-          Děkujeme za váš nákup
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-16 sm:px-6">
+      <div className="space-y-3 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-linda-sageLight">
+          <CheckCircle className="h-8 w-8 text-linda-sage" aria-hidden="true" />
         </span>
-        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">
-          Objednávka č. <span className="font-semibold text-linda-cognac">{cisloObjednavky}</span> byla přijata!
-        </h1>
-        <p className="mx-auto max-w-lg text-sm font-light leading-relaxed text-linda-espresso/75">
-          Na váš e-mail jsme právě odeslali potvrzení objednávky společně s obchodními podmínkami a poučením o odstoupení od smlouvy.
+        <h1 className="font-serif text-4xl text-linda-espresso">Děkujeme za objednávku</h1>
+        <p className="text-sm text-linda-espresso/85">
+          Potvrzení jsme vám poslali e-mailem. Objednávka má číslo{' '}
+          <strong className="text-linda-cognac">{objednavka.cisloObjednavky}</strong>.
         </p>
       </div>
 
-      {/* QR Code and Bank Details Box (Bank Transfer Temporary Bridge) */}
-      {paymentMethod === 'bank_transfer' && (
-        <div className="mx-auto max-w-xl space-y-6 rounded-3xl bg-linda-cream p-8 text-left shadow-neuLg">
-          <div className="flex items-center gap-3 border-b border-linda-sand/60 pb-4">
-            <QrCode className="h-6 w-6 shrink-0 text-linda-cognac" aria-hidden="true" />
-            <div>
-              <h2 className="font-serif text-xl text-linda-espresso">Platební údaje &amp; QR Platba</h2>
-              <p className="text-xs text-linda-espresso/70">Naskenujte QR kód v mobilním bankovnictví pro okamžitou úhradu.</p>
-            </div>
-          </div>
+      {/* Platební údaje */}
+      {kUhrade > 0 && objednavka.zpusobPlatby === 'bankovni_prevod' && (
+        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
+          <h2 className="flex items-center gap-2 font-serif text-2xl text-linda-espresso">
+            <QrCode className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+            Zaplaťte převodem
+          </h2>
 
           <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-2">
-            {/* QR kód leží v prohlubni. `<img>` nahradil `next/image`
-                s pevnými rozměry – místo je rezervované, obrázek tedy
-                nedoskočí a nerozhodí rozvržení (CLS). */}
-            <div className="flex justify-center rounded-2xl bg-linda-sandLight p-3 shadow-neuInset">
-              <Image
-                src={qrcodeUrl}
-                alt={`QR platba pro objednávku ${cisloObjednavky}`}
-                width={192}
-                height={192}
-                unoptimized
-                className="h-48 w-48 rounded-xl bg-white p-1"
-              />
-            </div>
+            <dl className="space-y-2 rounded-xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-linda-espresso/75">Číslo účtu</dt>
+                <dd className="font-semibold text-linda-espresso">{cisloUctu || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-linda-espresso/75">Variabilní symbol</dt>
+                <dd className="font-semibold text-linda-espresso">{variabilniSymbol}</dd>
+              </div>
+              <div className="flex justify-between gap-3 border-t border-linda-sand/60 pt-2">
+                <dt className="text-linda-espresso/75">Částka</dt>
+                <dd className="text-base font-semibold text-linda-cognac">
+                  {kUhrade.toLocaleString('cs-CZ')} Kč
+                </dd>
+              </div>
+            </dl>
 
-            <div className="space-y-2 text-xs text-linda-espresso">
-              {[
-                { label: 'Číslo účtu:', hodnota: bankAccount, zvyraznit: true },
-                { label: 'Variabilní symbol:', hodnota: cisloObjednavky.replace(/\D/g, ''), zvyraznit: false },
-                { label: 'Částka k úhradě:', hodnota: `${totalAmount.toLocaleString('cs-CZ')} Kč`, zvyraznit: true },
-              ].map(({ label, hodnota, zvyraznit }) => (
-                <div key={label} className="rounded-xl bg-linda-sandLight p-2.5 shadow-neuInsetSm">
-                  <span className="block text-[10px] uppercase text-linda-espresso/70">{label}</span>
-                  <span className={`text-sm font-semibold ${zvyraznit ? 'text-linda-cognac' : 'text-linda-espresso'}`}>
-                    {hodnota}
-                  </span>
+            {qrUrl ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="rounded-xl bg-white p-3 shadow-neuSm">
+                  <Image
+                    src={qrUrl}
+                    alt={`QR kód pro platbu ${kUhrade} Kč, variabilní symbol ${variabilniSymbol}`}
+                    width={200}
+                    height={200}
+                    unoptimized
+                  />
                 </div>
-              ))}
-            </div>
+                <p className="text-center text-[11px] text-linda-espresso/70">
+                  Naskenujte v bankovní aplikaci
+                </p>
+              </div>
+            ) : (
+              <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
+                QR platbu zobrazíme, jakmile budou doplněné bankovní údaje.
+              </p>
+            )}
           </div>
-        </div>
+
+          <p className="text-[11px] text-linda-espresso/70">
+            Zásilku odešleme, jakmile platba dorazí na účet. Obvykle do jednoho pracovního dne.
+          </p>
+        </section>
       )}
 
-      <div className="flex flex-col justify-center gap-4 pt-6 sm:flex-row">
-        <Link
-          href="/muj-ucet"
-          className="flex min-h-touch cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
-        >
-          Sledovat v zákaznickém účtu
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      {zPoukazu > 0 && (
+        <p className="rounded-xl bg-linda-sageLight p-4 text-xs font-medium text-linda-sage">
+          Z objednávky bylo {zPoukazu.toLocaleString('cs-CZ')} Kč uhrazeno dárkovým poukazem.
+          {kUhrade === 0 && ' Objednávka je tím plně zaplacená.'}
+        </p>
+      )}
+
+      {/* Shrnutí */}
+      <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
+        <h2 className="flex items-center gap-2 font-serif text-2xl text-linda-espresso">
+          <Package className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+          Co jste si objednali
+        </h2>
+
+        <ul className="space-y-2 text-xs">
+          {objednavka.items.map((polozka) => (
+            <li key={polozka.id} className="flex justify-between gap-3 border-b border-linda-sand/40 py-2">
+              <span className="text-linda-espresso">
+                {polozka.variant.product.nazev}
+                <span className="text-linda-espresso/70">
+                  {' '}
+                  · {polozka.variant.velikost} · {polozka.mnozstvi} ks
+                </span>
+              </span>
+              <span className="shrink-0 font-semibold text-linda-espresso">
+                {(Number(polozka.cenaVDobeNakupu) * polozka.mnozstvi).toLocaleString('cs-CZ')} Kč
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex justify-between text-sm font-semibold text-linda-espresso">
+          <span>Celkem</span>
+          <span>{celkem.toLocaleString('cs-CZ')} Kč</span>
+        </div>
+
+        <p className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso/85 shadow-neuInsetSm">
+          <Truck className="mt-px h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+          <span>
+            {NAZVY_DOPRAVY[objednavka.zpusobDopravy] ?? objednavka.zpusobDopravy}
+            {objednavka.vydejniMistoNazev && ` · ${objednavka.vydejniMistoNazev}`}
+            <br />
+            {objednavka.dodaciJmenoPrijmeni}, {objednavka.dodaciUlice}, {objednavka.dodaciPsc}{' '}
+            {objednavka.dodaciMesto}
+          </span>
+        </p>
+      </section>
+
+      {/* Zákonné poučení – u zásilkového prodeje povinné (sekce 11) */}
+      <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] leading-relaxed text-linda-espresso/75 shadow-neuInsetSm">
+        Od smlouvy můžete odstoupit do 14 dnů od převzetí zboží bez udání důvodu. Postup i vzorový
+        formulář najdete v{' '}
+        <Link href="/obchodni-podminky" className="font-semibold text-linda-cognac underline">
+          obchodních podmínkách
         </Link>
+        . Reklamace řeší{' '}
+        <Link href="/reklamacni-rad" className="font-semibold text-linda-cognac underline">
+          reklamační řád
+        </Link>
+        .
+        {nastaveni.emailFirmy && (
+          <>
+            {' '}
+            S čímkoliv se ozvěte na{' '}
+            <a href={`mailto:${nastaveni.emailFirmy}`} className="font-semibold text-linda-cognac underline">
+              {nastaveni.emailFirmy}
+            </a>
+            .
+          </>
+        )}
+      </p>
+
+      <div className="flex flex-wrap justify-center gap-3">
         <Link
           href="/produkty"
-          className="flex min-h-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream px-8 text-xs font-semibold uppercase tracking-wider text-linda-espresso shadow-neu transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
+          className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
         >
           Pokračovat v nákupu
         </Link>
+        <Link
+          href="/muj-ucet"
+          className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+        >
+          Moje objednávky
+        </Link>
       </div>
-    </div>
-  );
-}
-
-export default function PotvrzeniObjednavkyPage() {
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-      <Suspense fallback={<div className="text-center text-xs py-12">Načítání potvrzení objednávky...</div>}>
-        <PotvrzeniContent />
-      </Suspense>
     </div>
   );
 }

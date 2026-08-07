@@ -119,22 +119,21 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 ### Still mockups — read from hardcoded data, no backend
 
-Catalog, product detail, categories, cart and favourites now read from the database.
-These do not yet:
+The shop now runs end to end: catalog → cart → checkout → order → invoice → admin.
+What is still missing:
 
-- **Checkout** `pokladna/` — no order is created; `Order`/`OrderItem` are never written.
-  This is the single biggest remaining hole: everything downstream of it (invoices,
-  order e-mails, gift-card generation, stock decrement) depends on it.
-- **`muj-ucet/`** — order history, saved addresses and the "cancel order" button are still
-  hardcoded. The GDPR delete endpoint exists ([api/ucet/smazat](src/app/api/ucet/smazat/route.ts))
-  but nothing calls it.
-- admin `objednavky/`, `zakaznici/`, `slevove-kody/`, `reklamace/`, dashboard
-- `oblibene/` page renders from the context, which is correct, but the page itself was
-  never rewritten to use the server data shape.
-- Newsletter form (hero, footer) and the contact form have **no endpoint** — they only
-  confirm receipt locally. `TODO` markers sit in the components.
-- "Upozornit, až bude skladem" on the product detail is disabled — `StockNotification`
+- **Newsletter form** (hero, footer) and the **contact form** have **no endpoint** — they
+  only confirm receipt locally. `TODO` markers sit in the components.
+- **"Upozornit, až bude skladem"** on the product detail is disabled — `StockNotification`
   has no endpoint yet.
+- **`oblibene/`** page renders from the context, which works, but was never rewritten to
+  use the server data shape returned by [api/oblibene](src/app/api/oblibene/route.ts).
+- **Saved addresses** in `muj-ucet` — the `Address` model exists and the admin shows them,
+  but the customer cannot add or edit one; checkout always asks for the address again.
+- **Invoices are generated but not delivered.** The PDF lands in `storage/faktury/`; there
+  is no route that serves it to the customer or the admin (it holds personal data, so it
+  must not go into `public/`).
+- **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
 
 ### Other gaps
 
@@ -162,4 +161,24 @@ optional categories (GDPR breach) and the consent controlled nothing, now
 computed in floats, now [penize.ts](src/lib/penize.ts) works in integer haléře · cart was
 localStorage-only, now merges with the account on login and revalidates availability ·
 `opengraph-image` missing, now `/public/og-image.png` · no tests at all, now Vitest covers
-money, slugs and upload validation.
+money, slugs, upload validation, order input and gift-card amounts · checkout created no
+order at all, now writes `Order`/`OrderItem` in one transaction with stock decrement,
+discount-code and gift-card handling.
+
+## Orders — rules that are easy to break
+
+- **Prices come from the database, never from the request.** [objednavka.ts](src/lib/objednavka.ts)
+  re-reads every variant; the browser only sends `variantId` and `mnozstvi`.
+- The whole write is **one transaction**: order, stock decrement, discount-code counter and
+  gift-card balance move together, or not at all.
+- Cancelling (customer or admin) **reverses all three** — stock back up, code counter down,
+  gift-card balance restored and reactivated. Same for an approved return, which also flips
+  the order to `VRACENA`.
+- Gift cards bought as goods are issued **only once payment is marked `ZAPLACENO`**, and one
+  code per piece ([vygenerovat-poukazy.ts](src/worker/jobs/vygenerovat-poukazy.ts)).
+  `castkaZVarianty` deliberately requires the whole variant name to be an amount — matching
+  "the first number in the string" would mint a 38 Kč card from the clothing size "M (38)".
+- Order numbers (`2026-00001`) are derived from a per-year count; the unique index is the
+  real guard against a collision under concurrency.
+- PDF invoices embed **DejaVu Sans** from `assets/fonts/`. The PDF standard fonts have no
+  Czech diacritics — without the embedded font the invoice shows `?` instead of ř/š/ž.

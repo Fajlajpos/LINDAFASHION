@@ -1,147 +1,273 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Tag, Gift, Plus, Trash2 } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, Loader2, Plus, Tag, Trash2 } from 'lucide-react';
+import { nacist, poslatJson } from '@/lib/api-klient';
+import { formatDatum } from '@/lib/objednavka-popisky';
+
+interface SlevovyKod {
+  id: string;
+  kod: string;
+  procentoSlevy: number;
+  platnyOd: string | null;
+  platnyDo: string | null;
+  limitPouziti: number | null;
+  pocetPouziti: number;
+  aktivni: boolean;
+  pocetObjednavek: number;
+}
+
+const POLE =
+  'w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 text-xs text-linda-espresso disabled:opacity-60';
 
 export default function AdminSlevoveKodyPage() {
-  const [discountCodes, setDiscountCodes] = useState([
-    { id: 'd1', kod: 'VITAJTE10', procento: 10, pocetPouziti: 5, limitPouziti: 100, aktivni: true },
-    { id: 'd2', kod: 'LINDA15', procento: 15, pocetPouziti: 12, limitPouziti: 50, aktivni: true },
-  ]);
+  const [kody, setKody] = useState<SlevovyKod[]>([]);
+  const [nacitam, setNacitam] = useState(true);
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
+  const [pracuje, setPracuje] = useState(false);
 
-  const [giftCards, setGiftCards] = useState([
-    { id: 'g1', kod: 'GIFT-LINDA-1000-XYZ', castka: 1000, zustatek: 1000, aktivni: true },
-  ]);
+  const [form, setForm] = useState({
+    kod: '',
+    procentoSlevy: '10',
+    platnyDo: '',
+    limitPouziti: '',
+  });
 
-  const [newCode, setNewCode] = useState('');
-  const [newPercent, setNewPercent] = useState('10');
+  const nacistKody = useCallback(async () => {
+    const vysledek = await nacist<{ kody: SlevovyKod[] }>('/api/admin/slevove-kody');
 
-  const handleAddCode = (e: React.FormEvent) => {
+    if (vysledek.ok) setKody(vysledek.data.kody);
+    else setChyba(vysledek.chyba);
+
+    setNacitam(false);
+  }, []);
+
+  useEffect(() => {
+    void nacistKody();
+  }, [nacistKody]);
+
+  const vytvorit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newCode) {
-      setDiscountCodes([
-        ...discountCodes,
-        { id: `d_${Date.now()}`, kod: newCode.toUpperCase(), procento: Number(newPercent), pocetPouziti: 0, limitPouziti: 100, aktivni: true },
-      ]);
-      setNewCode('');
+    if (pracuje) return;
+
+    setPracuje(true);
+    setChyba(null);
+    setChybyPoli({});
+
+    const vysledek = await poslatJson('/api/admin/slevove-kody', {
+      // Prázdný kód = server ho vygeneruje sám (sekce 6.6).
+      kod: form.kod || null,
+      procentoSlevy: form.procentoSlevy,
+      platnyDo: form.platnyDo || null,
+      limitPouziti: form.limitPouziti || null,
+    });
+
+    if (vysledek.ok) {
+      setForm({ kod: '', procentoSlevy: '10', platnyDo: '', limitPouziti: '' });
+      await nacistKody();
+    } else {
+      setChyba(vysledek.chyba);
+      setChybyPoli(vysledek.pole ?? {});
     }
+
+    setPracuje(false);
   };
 
-  const handleGenerateGiftCard = () => {
-    const code = `GIFT-LINDA-${Math.floor(1000 + Math.random() * 9000)}`;
-    setGiftCards([
-      ...giftCards,
-      { id: `g_${Date.now()}`, kod: code, castka: 1000, zustatek: 1000, aktivni: true },
-    ]);
+  const prepnout = async (kod: SlevovyKod) => {
+    setChyba(null);
+    const vysledek = await poslatJson(`/api/admin/slevove-kody/${kod.id}`, { aktivni: !kod.aktivni }, 'PATCH');
+
+    if (vysledek.ok) await nacistKody();
+    else setChyba(vysledek.chyba);
+  };
+
+  const smazat = async (kod: SlevovyKod) => {
+    if (!window.confirm(`Opravdu smazat kód ${kod.kod}?`)) return;
+
+    setChyba(null);
+    const vysledek = await poslatJson(`/api/admin/slevove-kody/${kod.id}`, undefined, 'DELETE');
+
+    if (vysledek.ok) await nacistKody();
+    else setChyba(vysledek.chyba);
   };
 
   return (
-    <div className="space-y-10 max-w-5xl">
+    <div className="max-w-4xl space-y-8">
       <div className="border-b border-linda-sand pb-6">
-        <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Slevové kódy &amp; Dárkové poukazy</h1>
-        <p className="text-xs text-linda-espresso/60 mt-1">Správa procentuálních slev a dárkových poukazů jako platidla</p>
+        <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Slevové kódy</h1>
+        <p className="mt-1 text-xs text-linda-espresso/70">
+          Sleva se vždy počítá z aktuální prodejní ceny, tedy i ze zlevněné – slevy se nesčítají
+        </p>
       </div>
 
-      {/* Slevové kódy */}
-      <div className="space-y-4">
-        <h3 className="font-serif text-2xl text-linda-espresso flex items-center gap-2">
-          <Tag className="w-5 h-5 text-linda-cognac" />
-          Slevové kódy (% sleva z prodejní ceny)
-        </h3>
+      {chyba && (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
+        >
+          <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+          {chyba}
+        </p>
+      )}
 
-        <form onSubmit={handleAddCode} className="p-4 bg-linda-cream rounded-2xl shadow-neu flex gap-4 text-xs">
-          <input
-            type="text"
-            required
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value)}
-            placeholder="Kód (např. LETO20)"
-            className="flex-1 bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5 uppercase"
-          />
-          <input
-            type="number"
-            required
-            value={newPercent}
-            onChange={(e) => setNewPercent(e.target.value)}
-            placeholder="Sleva %"
-            className="w-24 bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5"
-          />
-          <button type="submit" className="px-6 min-h-touch bg-linda-cognac text-white font-semibold rounded-xl hover:bg-linda-cognacHover flex items-center gap-1 shadow-neuDark transition-all duration-200 active:shadow-neuSm cursor-pointer">
-            <Plus className="w-4 h-4" /> Vytvořit kód
-          </button>
-        </form>
+      <form onSubmit={vytvorit} className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <h2 className="font-serif text-xl text-linda-espresso">Nový kód</h2>
 
-        <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden text-xs">
-          <table className="w-full text-left">
-            <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
-              <tr>
-                <th className="p-4 font-semibold">Kód slevy</th>
-                <th className="p-4 font-semibold">Výše slevy</th>
-                <th className="p-4 font-semibold">Použití</th>
-                <th className="p-4 font-semibold text-right">Akce</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-linda-sand/40">
-              {discountCodes.map((d) => (
-                <tr key={d.id}>
-                  <td className="p-4 font-mono font-bold text-linda-cognac">{d.kod}</td>
-                  <td className="p-4 font-semibold">{d.procento} %</td>
-                  <td className="p-4 text-linda-espresso/70">{d.pocetPouziti} / {d.limitPouziti || '∞'}</td>
-                  <td className="p-4 text-right">
-                    <button onClick={() => setDiscountCodes(discountCodes.filter((item) => item.id !== d.id))} className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-700 active:shadow-neuInsetSm">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label htmlFor="kod" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Kód
+            </label>
+            <input
+              id="kod"
+              type="text"
+              value={form.kod}
+              disabled={pracuje}
+              onChange={(e) => setForm({ ...form, kod: e.target.value.toUpperCase() })}
+              placeholder="Nechte prázdné = vygenerujeme"
+              className={`${POLE} uppercase placeholder:normal-case`}
+            />
+            {chybyPoli.kod && (
+              <p role="alert" className="mt-1.5 text-[11px] font-medium text-red-800">
+                {chybyPoli.kod}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="procento" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Sleva (%) *
+            </label>
+            <input
+              id="procento"
+              type="number"
+              min="1"
+              max="100"
+              required
+              value={form.procentoSlevy}
+              disabled={pracuje}
+              onChange={(e) => setForm({ ...form, procentoSlevy: e.target.value })}
+              className={POLE}
+            />
+            {chybyPoli.procentoSlevy && (
+              <p role="alert" className="mt-1.5 text-[11px] font-medium text-red-800">
+                {chybyPoli.procentoSlevy}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="platnyDo" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Platnost do
+            </label>
+            <input
+              id="platnyDo"
+              type="date"
+              value={form.platnyDo}
+              disabled={pracuje}
+              onChange={(e) => setForm({ ...form, platnyDo: e.target.value })}
+              className={POLE}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="limit" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Limit použití
+            </label>
+            <input
+              id="limit"
+              type="number"
+              min="1"
+              value={form.limitPouziti}
+              disabled={pracuje}
+              onChange={(e) => setForm({ ...form, limitPouziti: e.target.value })}
+              placeholder="neomezeně"
+              className={POLE}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Dárkové poukazy */}
-      <div className="space-y-4 pt-6 border-t border-linda-sand">
-        <div className="flex justify-between items-center">
-          <h3 className="font-serif text-2xl text-linda-espresso flex items-center gap-2">
-            <Gift className="w-5 h-5 text-linda-cognac" />
-            Dárkové poukazy (Platidlo)
-          </h3>
-          <button
-            onClick={handleGenerateGiftCard}
-            className="px-4 py-2 bg-linda-espresso text-white text-xs font-semibold rounded-full hover:bg-linda-cognac flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            Vygenerovat nový poukaz
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={pracuje}
+          aria-busy={pracuje}
+          className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:opacity-70"
+        >
+          {pracuje ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Vytvářím…
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Vytvořit kód
+            </>
+          )}
+        </button>
+      </form>
 
-        <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden text-xs">
-          <table className="w-full text-left">
-            <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
-              <tr>
-                <th className="p-4 font-semibold">Unikátní kód poukazu</th>
-                <th className="p-4 font-semibold">Původní hodnota</th>
-                <th className="p-4 font-semibold">Zbývající zůstatek</th>
-                <th className="p-4 font-semibold">Stav</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-linda-sand/40">
-              {giftCards.map((g) => (
-                <tr key={g.id}>
-                  <td className="p-4 font-mono font-bold text-linda-espresso">{g.kod}</td>
-                  <td className="p-4 font-medium">{g.castka.toLocaleString('cs-CZ')} Kč</td>
-                  <td className="p-4 font-semibold text-linda-sage">{g.zustatek.toLocaleString('cs-CZ')} Kč</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 bg-linda-sageLight text-linda-sage font-semibold rounded-full text-[10px]">
-                      Aktivní
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {nacitam ? (
+        <p className="flex items-center justify-center gap-2 rounded-2xl bg-linda-cream p-10 text-xs text-linda-espresso/75 shadow-neu">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Načítám…
+        </p>
+      ) : kody.length === 0 ? (
+        <div className="space-y-2 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
+          <Tag className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
+          <p className="text-xs text-linda-espresso/75">Zatím žádný slevový kód.</p>
         </div>
-      </div>
+      ) : (
+        <ul className="space-y-2">
+          {kody.map((k) => {
+            const vycerpany = k.limitPouziti !== null && k.pocetPouziti >= k.limitPouziti;
+            const prosly = k.platnyDo !== null && new Date(k.platnyDo) < new Date();
+
+            return (
+              <li key={k.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-sm font-semibold tracking-wider text-linda-espresso">{k.kod}</p>
+                  <p className="text-[11px] text-linda-espresso/70">
+                    −{k.procentoSlevy} % · použito {k.pocetPouziti}
+                    {k.limitPouziti !== null && ` z ${k.limitPouziti}`}
+                    {k.platnyDo && ` · do ${formatDatum(new Date(k.platnyDo))}`}
+                  </p>
+                </div>
+
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                    !k.aktivni || vycerpany || prosly
+                      ? 'bg-linda-sandLight text-linda-espresso/75 shadow-neuInsetSm'
+                      : 'bg-linda-sageLight text-linda-sage'
+                  }`}
+                >
+                  {!k.aktivni ? 'Vypnutý' : vycerpany ? 'Vyčerpaný' : prosly ? 'Prošlý' : 'Aktivní'}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => void prepnout(k)}
+                  className="min-h-touch shrink-0 cursor-pointer rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+                >
+                  {k.aktivni ? 'Vypnout' : 'Zapnout'}
+                </button>
+
+                {k.pocetObjednavek === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void smazat(k)}
+                    aria-label={`Smazat kód ${k.kod}`}
+                    className="flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-800 active:shadow-neuInsetSm"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

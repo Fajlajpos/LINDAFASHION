@@ -16,6 +16,8 @@ import { db } from '../lib/db';
 import { zpracovatObrazekUloha } from './jobs/zpracovat-obrazek';
 import { uklidUlozisteUloha } from './jobs/uklid-uloziste';
 import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
+import { vygenerovatFakturuUloha, type UlohaFaktura } from './jobs/vygenerovat-fakturu';
+import { vygenerovatPoukazyUloha, type UlohaPoukazy } from './jobs/vygenerovat-poukazy';
 import { uklidResetTokenu } from '../lib/reset-hesla';
 
 const FRONTA_UKLID = 'uklid-uloziste';
@@ -48,6 +50,16 @@ async function spustitWorker() {
   // úlohy hromadily v databázi a nikdo by je nikdy nevyzvedl.
   await boss.work<UlohaEmail>(FRONTY.ODESLAT_EMAIL, async (job) => {
     await odeslatEmailUloha(job.data);
+  });
+
+  // --- Doklad k objednávce (sekce 14) -------------------------------------
+  await boss.work<UlohaFaktura>(FRONTY.VYGENEROVAT_FAKTURU, async (job) => {
+    await vygenerovatFakturuUloha(job.data);
+  });
+
+  // --- Dárkové poukazy koupené jako zboží (sekce 6.11) --------------------
+  await boss.work<UlohaPoukazy>(FRONTY.VYGENEROVAT_POUKAZY, async (job) => {
+    await vygenerovatPoukazyUloha(job.data);
   });
 
   // --- Úklid úložiště -----------------------------------------------------
@@ -137,6 +149,9 @@ async function spustitWorker() {
 
   console.log('✅ Worker poslouchá na frontách:');
   console.log(`   • ${FRONTY.ZPRACOVAT_OBRAZEK} (Sharp komprese fotek)`);
+  console.log(`   • ${FRONTY.VYGENEROVAT_FAKTURU} (PDF doklad k objednávce)`);
+  console.log(`   • ${FRONTY.VYGENEROVAT_POUKAZY} (dárkové poukazy po zaplacení)`);
+  console.log(`   • ${FRONTY.ODESLAT_EMAIL} (transakční e-maily)`);
   console.log(`   • ${FRONTA_UKLID} (každých 15 minut)`);
   console.log(`   • ${FRONTA_OPUSTENE_KOSIKY} (každé 4 hodiny)`);
   console.log(`   • ${FRONTA_NIZKY_SKLAD} (každé 2 hodiny)`);

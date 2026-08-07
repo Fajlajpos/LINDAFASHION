@@ -180,6 +180,33 @@ samostatně přes `tsconfig.worker.json` a `tsc` cesty v outputu nepřepisuje.
 
 ---
 
+## Jak projde objednávka
+
+```
+zákaznice odešle pokladnu
+   │
+   ├─ server znovu načte ceny z databáze (z prohlížeče bere jen id a počet kusů)
+   ├─ ověří sklad, slevový kód a dárkový poukaz
+   ├─ v JEDNÉ transakci: založí objednávku, sníží sklad,
+   │  započítá kód a odečte z poukazu
+   └─ vyprázdní košík
+          │
+          ▼
+   worker na pozadí
+   ├─ vygeneruje PDF doklad do storage/faktury/
+   ├─ u koupených poukazů vydá po zaplacení samostatné kódy
+   └─ zařadí potvrzovací e-mail (zatím jen do logu, chybí SMTP)
+```
+
+Zrušení objednávky – ať už zákaznicí v účtu, nebo adminem – vrátí zboží na sklad,
+sníží počítadlo slevového kódu a vrátí částku na dárkový poukaz. Totéž platí pro
+uznané vrácení, které navíc přepne objednávku na „Vrácena".
+
+**Faktury jsou v `storage/faktury/`, ne v `public/`** – obsahují osobní údaje, takže
+nesmí být dostupné komukoli, kdo uhodne název souboru.
+
+---
+
 ## Co zatím čeká na API klíče
 
 E-shop běží i bez nich; klíče se doplní do `.env`, bez zásahu do kódu.

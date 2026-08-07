@@ -1,99 +1,110 @@
-'use client';
+import React from 'react';
+import Link from 'next/link';
+import { Users } from 'lucide-react';
+import { db } from '@/lib/db';
+import { formatDatum } from '@/lib/objednavka-popisky';
 
-import React, { useState } from 'react';
-import { Users, Mail, Phone, Calendar, ShoppingBag, Eye } from 'lucide-react';
+export const dynamic = 'force-dynamic';
 
-export default function AdminZakazniciPage() {
-  const [customers, setCustomers] = useState([
-    {
-      id: 'u1',
-      jmeno: 'Marie Nováková',
-      email: 'zakaznice@example.cz',
-      telefon: '+420 608 112 233',
-      pocetObjednavek: 2,
-      celkovaUtrata: 7770,
-      posledniObjednavka: '29. 07. 2026',
-      adresa: 'Vodičkova 45, 110 00 Praha 1',
+export const metadata = {
+  title: 'Zákazníci | Administrace LINDA FASHION',
+};
+
+/**
+ * Zákaznická databáze (sekce 6.5).
+ *
+ * Do útraty se nezapočítávají zrušené a vrácené objednávky – jinak by číslo
+ * ukazovalo peníze, které nikdy nedorazily.
+ */
+export default async function AdminZakazniciPage() {
+  const zakaznici = await db.user.findMany({
+    where: { role: 'CUSTOMER' },
+    orderBy: { createdAt: 'desc' },
+    take: 200,
+    include: {
+      orders: {
+        select: { celkovaCena: true, createdAt: true, stav: true },
+      },
     },
-    {
-      id: 'u2',
-      jmeno: 'Eva Dvořáková',
-      email: 'eva.dvorakova@example.cz',
-      telefon: '+420 777 123 456',
-      pocetObjednavek: 1,
-      celkovaUtrata: 2390,
-      posledniObjednavka: '15. 06. 2026',
-      adresa: 'Dlouhá 12, 602 00 Brno',
-    },
-  ]);
+  });
 
-  const [selectedCustomer, setSelectedCustomer] = useState<typeof customers[0] | null>(null);
+  const prehled = zakaznici.map((z) => {
+    const zapocitatelne = z.orders.filter((o) => o.stav !== 'ZRUSENA' && o.stav !== 'VRACENA');
+    const utrata = zapocitatelne.reduce((s, o) => s + Number(o.celkovaCena), 0);
+    const posledni = z.orders.reduce<Date | null>(
+      (nejnovejsi, o) => (!nejnovejsi || o.createdAt > nejnovejsi ? o.createdAt : nejnovejsi),
+      null
+    );
+
+    return {
+      id: z.id,
+      email: z.email,
+      jmeno: z.jmeno,
+      telefon: z.telefon,
+      newsletterSouhlas: z.newsletterSouhlas,
+      anonymizovano: z.anonymizovanoAt !== null,
+      registrace: z.createdAt,
+      pocetObjednavek: z.orders.length,
+      utrata,
+      posledni,
+    };
+  });
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-4xl space-y-8">
       <div className="border-b border-linda-sand pb-6">
-        <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Zákaznická databáze</h1>
-        <p className="text-xs text-linda-espresso/60 mt-1">Přehled registrovaných zákaznic, historie nákupů a celková útrata (LTV)</p>
+        <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Zákaznice</h1>
+        <p className="mt-1 text-xs text-linda-espresso/70">
+          {prehled.length === 0 ? 'Zatím žádná registrace' : `${prehled.length} registrovaných účtů`}
+        </p>
       </div>
 
-      <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
-            <tr>
-              <th className="p-4 font-semibold">Jméno a příjmení</th>
-              <th className="p-4 font-semibold">E-mail</th>
-              <th className="p-4 font-semibold">Telefon</th>
-              <th className="p-4 font-semibold">Objednávky</th>
-              <th className="p-4 font-semibold">Celková útrata</th>
-              <th className="p-4 font-semibold text-right">Detail</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-linda-sand/40">
-            {customers.map((c) => (
-              <tr key={c.id} className="hover:bg-linda-cream/50">
-                <td className="p-4 font-semibold text-linda-espresso flex items-center gap-2">
-                  <Users className="w-4 h-4 text-linda-cognac" />
-                  {c.jmeno}
-                </td>
-                <td className="p-4 text-linda-espresso/70">{c.email}</td>
-                <td className="p-4 text-linda-espresso/70">{c.telefon}</td>
-                <td className="p-4 font-medium">{c.pocetObjednavek}x</td>
-                <td className="p-4 font-semibold text-linda-cognac">{c.celkovaUtrata.toLocaleString('cs-CZ')} Kč</td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => setSelectedCustomer(c)}
-                    className="p-1.5 bg-linda-cream text-linda-cognac hover:bg-linda-cognac hover:text-white rounded-lg border border-linda-sand"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Customer Detail Modal for Owner */}
-      {selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-linda-cream rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-neuLg relative">
-            <div className="flex justify-between items-center border-b border-linda-sand/60 pb-3">
-              <h3 className="font-serif text-2xl text-linda-espresso">{selectedCustomer.jmeno}</h3>
-              <button onClick={() => setSelectedCustomer(null)} className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream font-bold text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-linda-espresso active:shadow-neuInsetSm">
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs text-linda-espresso">
-              <p><strong>E-mail:</strong> {selectedCustomer.email}</p>
-              <p><strong>Telefon:</strong> {selectedCustomer.telefon}</p>
-              <p><strong>Doručovací adresa:</strong> {selectedCustomer.adresa}</p>
-              <p><strong>Počet vytvořených objednávek:</strong> {selectedCustomer.pocetObjednavek}</p>
-              <p><strong>Celková tržba (LTV):</strong> <span className="text-linda-cognac font-semibold">{selectedCustomer.celkovaUtrata.toLocaleString('cs-CZ')} Kč</span></p>
-              <p><strong>Poslední nákup:</strong> {selectedCustomer.posledniObjednavka}</p>
-            </div>
-          </div>
+      {prehled.length === 0 ? (
+        <div className="space-y-2 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
+          <Users className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
+          <p className="text-xs text-linda-espresso/75">
+            Zatím se nikdo neregistroval. Objednávat lze i bez účtu, takže i tak vám můžou chodit
+            objednávky.
+          </p>
         </div>
+      ) : (
+        <ul className="space-y-2">
+          {prehled.map((z) => (
+            <li key={z.id}>
+              <Link
+                href={`/admin/zakaznici/${z.id}`}
+                className="flex flex-wrap items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-linda-espresso">
+                    {z.anonymizovano ? 'Smazaný účet' : (z.jmeno ?? z.email)}
+                  </p>
+                  <p className="truncate text-[11px] text-linda-espresso/70">
+                    {z.anonymizovano ? 'údaje anonymizovány (GDPR)' : z.email}
+                    {' · registrace '}
+                    {formatDatum(z.registrace)}
+                  </p>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold text-linda-espresso">
+                    {z.utrata.toLocaleString('cs-CZ')} Kč
+                  </p>
+                  <p className="text-[11px] text-linda-espresso/70">
+                    {z.pocetObjednavek} objednávek
+                    {z.posledni && ` · naposledy ${formatDatum(z.posledni)}`}
+                  </p>
+                </div>
+
+                {z.newsletterSouhlas && !z.anonymizovano && (
+                  <span className="shrink-0 rounded-full bg-linda-sageLight px-2.5 py-1 text-[10px] font-semibold text-linda-sage">
+                    newsletter
+                  </span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

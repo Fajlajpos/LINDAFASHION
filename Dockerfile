@@ -56,6 +56,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Písmo pro PDF faktury. Standardní fonty v PDF neumí českou diakritiku,
+# bez tohohle by na dokladu byly místo ř/š/ž otazníky.
+COPY --from=builder --chown=nextjs:nodejs /app/assets ./assets
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 # Plné produkční node_modules – standalone si nese jen to, co si Next vytrasoval
 # pro web; worker navíc potřebuje sharp, pg-boss a Prisma CLI na `migrate deploy`.
@@ -63,7 +66,7 @@ COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Sdílené úložiště fotek: storage/tmp = originály čekající na zpracování,
 # public/uploads = hotové WebP varianty. Obojí je v compose namountované jako volume.
-RUN mkdir -p public/uploads storage/tmp \
+RUN mkdir -p public/uploads storage/tmp storage/faktury \
  && chown -R nextjs:nodejs public/uploads storage
 
 USER nextjs

@@ -1,96 +1,178 @@
 'use client';
 
-import React, { useState } from 'react';
-import { AlertTriangle, RotateCcw, CheckCircle, Clock, Check } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { nacist, poslatJson } from '@/lib/api-klient';
+import { STAV_REKLAMACE } from '@/lib/objednavka-popisky';
 
+interface Reklamace {
+  id: string;
+  typ: 'REKLAMACE' | 'VRACENI';
+  stav: string;
+  duvod: string | null;
+  poznamkaAdmina: string | null;
+  datumPrijeti: string;
+  datumVyrizeni: string | null;
+  cisloObjednavky: string;
+  orderId: string;
+  zakaznik: string;
+  polozka: string | null;
+}
+
+const STAVY = ['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA', 'VYRIZENA_ZAMITNUTA'];
+
+/**
+ * Přehled reklamací a vrácení (sekce 6.10).
+ *
+ * Uznané vrácení vrací kusy na sklad – server to udělá sám, tady jen
+ * upozorníme, že se to stalo.
+ */
 export default function AdminReklamacePage() {
-  const [reklamaceList, setReklamaceList] = useState([
-    {
-      id: 'r1',
-      cisloObjednavky: 'LF-2026001',
-      zakaznice: 'Marie Nováková',
-      typ: 'VRACENI', // Vrácení zboží do 14 dnů
-      duvod: 'Nesedí velikost šatů (vyzkoušeno M)',
-      stav: 'PRIJATA',
-      datumPrijeti: '29. 07. 2026',
-    },
-  ]);
+  const [reklamace, setReklamace] = useState<Reklamace[]>([]);
+  const [nacitam, setNacitam] = useState(true);
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [meniId, setMeniId] = useState<string | null>(null);
+  const [hlaska, setHlaska] = useState<string | null>(null);
 
-  const handleResolveReklamace = (id: string, newStatus: string) => {
-    setReklamaceList(
-      reklamaceList.map((r) => {
-        if (r.id === id) {
-          if (r.typ === 'VRACENI' && newStatus === 'VYRIZENA_UZNANA') {
-            // Sekce 6.10 rule: automatické naskladnění kusů a změna stavu objednávky
-            alert(' Vrácení schváleno! Položky byly automaticky naskladněny zpět do skladu a stav objednávky změněn na VRÁCENA.');
-          }
-          return { ...r, stav: newStatus };
-        }
-        return r;
-      })
+  const nacistData = useCallback(async () => {
+    const vysledek = await nacist<{ reklamace: Reklamace[] }>('/api/admin/reklamace');
+
+    if (vysledek.ok) setReklamace(vysledek.data.reklamace);
+    else setChyba(vysledek.chyba);
+
+    setNacitam(false);
+  }, []);
+
+  useEffect(() => {
+    void nacistData();
+  }, [nacistData]);
+
+  const zmenitStav = async (r: Reklamace, novyStav: string) => {
+    if (novyStav === 'VYRIZENA_UZNANA' && r.typ === 'VRACENI') {
+      const potvrzeno = window.confirm(
+        'Uznáním vrácení se kusy automaticky vrátí na sklad. Pokračovat?'
+      );
+      if (!potvrzeno) return;
+    }
+
+    setMeniId(r.id);
+    setChyba(null);
+    setHlaska(null);
+
+    const vysledek = await poslatJson<{ vracenoNaSklad: boolean }>(
+      `/api/admin/reklamace/${r.id}`,
+      { stav: novyStav, poznamkaAdmina: r.poznamkaAdmina },
+      'PATCH'
     );
+
+    if (vysledek.ok) {
+      if (vysledek.data.vracenoNaSklad) setHlaska('Kusy byly vráceny na sklad.');
+      await nacistData();
+    } else {
+      setChyba(vysledek.chyba);
+    }
+
+    setMeniId(null);
   };
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="max-w-4xl space-y-8">
       <div className="border-b border-linda-sand pb-6">
-        <h1 className="font-serif text-3xl sm:text-4xl text-linda-espresso">Reklamace a Vrácení zboží</h1>
-        <p className="text-xs text-linda-espresso/60 mt-1">Správa vrátky do 14 dnů a záručních reklamací s automatickým naskladněním</p>
+        <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Reklamace a vrácení</h1>
+        <p className="mt-1 text-xs text-linda-espresso/70">
+          Nové záznamy se zakládají v detailu konkrétní objednávky
+        </p>
       </div>
 
-      <div className="bg-linda-cream rounded-2xl shadow-neu overflow-hidden text-xs">
-        <table className="w-full text-left">
-          <thead className="bg-linda-cream border-b border-linda-sand/60 text-linda-espresso">
-            <tr>
-              <th className="p-4 font-semibold">Objednávka</th>
-              <th className="p-4 font-semibold">Zákaznice</th>
-              <th className="p-4 font-semibold">Typ</th>
-              <th className="p-4 font-semibold">Důvod</th>
-              <th className="p-4 font-semibold">Stav vyřízení</th>
-              <th className="p-4 font-semibold text-right">Akce</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-linda-sand/40">
-            {reklamaceList.map((r) => (
-              <tr key={r.id} className="hover:bg-linda-cream/50">
-                <td className="p-4 font-mono font-bold text-linda-cognac">#{r.cisloObjednavky}</td>
-                <td className="p-4 font-medium text-linda-espresso">{r.zakaznice}</td>
-                <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
-                    r.typ === 'VRACENI' ? 'bg-linda-sageLight text-linda-sage shadow-neuInsetSm' : 'bg-linda-sandLight text-linda-espresso shadow-neuInsetSm'
-                  }`}>
-                    {r.typ === 'VRACENI' ? 'Vrácení (14 dnů)' : 'Reklamace vady'}
+      {chyba && (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
+        >
+          <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+          {chyba}
+        </p>
+      )}
+
+      {hlaska && (
+        <p
+          role="status"
+          className="rounded-xl bg-linda-sageLight p-3 text-xs font-medium text-linda-sage"
+        >
+          {hlaska}
+        </p>
+      )}
+
+      {nacitam ? (
+        <p className="flex items-center justify-center gap-2 rounded-2xl bg-linda-cream p-10 text-xs text-linda-espresso/75 shadow-neu">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Načítám…
+        </p>
+      ) : reklamace.length === 0 ? (
+        <div className="space-y-2 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
+          <AlertTriangle className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
+          <p className="text-xs text-linda-espresso/75">
+            Zatím žádná reklamace ani vrácení. To je dobrá zpráva.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {reklamace.map((r) => {
+            const popis = STAV_REKLAMACE[r.stav] ?? { text: r.stav, tridy: 'bg-linda-sandLight' };
+
+            return (
+              <li key={r.id} className="space-y-3 rounded-2xl bg-linda-cream p-4 shadow-neuSm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-linda-espresso">
+                      {r.typ === 'VRACENI' ? 'Vrácení' : 'Reklamace'} ·{' '}
+                      <Link
+                        href={`/admin/objednavky/${r.orderId}`}
+                        className="text-linda-cognac underline"
+                      >
+                        {r.cisloObjednavky}
+                      </Link>
+                    </p>
+                    <p className="text-[11px] text-linda-espresso/70">
+                      {r.zakaznik}
+                      {r.polozka && ` · ${r.polozka}`}
+                      {!r.polozka && ' · celá objednávka'}
+                    </p>
+                    {r.duvod && <p className="mt-1 text-xs text-linda-espresso/85">{r.duvod}</p>}
+                  </div>
+
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${popis.tridy}`}>
+                    {popis.text}
                   </span>
-                </td>
-                <td className="p-4 text-linda-espresso/70">{r.duvod}</td>
-                <td className="p-4 font-semibold">
-                  {r.stav === 'PRIJATA' && <span className="text-linda-cognac font-semibold">Přijata &bull; Čeká na vyřízení</span>}
-                  {r.stav === 'VYRIZENA_UZNANA' && <span className="text-linda-sage font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Uznána (Naskladněno)</span>}
-                  {r.stav === 'VYRIZENA_ZAMITNUTA' && <span className="text-red-600 font-semibold">Zamítnuta</span>}
-                </td>
-                <td className="p-4 text-right">
-                  {r.stav === 'PRIJATA' && (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleResolveReklamace(r.id, 'VYRIZENA_UZNANA')}
-                        className="px-3 py-1 bg-linda-sage text-white text-[10px] font-semibold rounded-full hover:bg-linda-sageHover"
-                      >
-                        Uznat &amp; Naskladnit
-                      </button>
-                      <button
-                        onClick={() => handleResolveReklamace(r.id, 'VYRIZENA_ZAMITNUTA')}
-                        className="px-3 py-1 bg-red-600 text-white text-[10px] font-semibold rounded-full hover:bg-red-700"
-                      >
-                        Zamítnout
-                      </button>
-                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label htmlFor={`stav-${r.id}`} className="text-[11px] font-semibold text-linda-espresso">
+                    Změnit stav:
+                  </label>
+                  <select
+                    id={`stav-${r.id}`}
+                    value={r.stav}
+                    disabled={meniId === r.id}
+                    onChange={(e) => void zmenitStav(r, e.target.value)}
+                    className="min-h-touch cursor-pointer rounded-lg bg-linda-sandLight px-3 text-xs text-linda-espresso shadow-neuInsetSm disabled:opacity-60"
+                  >
+                    {STAVY.map((s) => (
+                      <option key={s} value={s}>
+                        {STAV_REKLAMACE[s]?.text ?? s}
+                      </option>
+                    ))}
+                  </select>
+                  {meniId === r.id && (
+                    <Loader2 className="h-4 w-4 animate-spin text-linda-cognac" aria-hidden="true" />
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
