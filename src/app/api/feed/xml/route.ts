@@ -9,11 +9,12 @@ import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
  * Dřív vracel dva natvrdo napsané vymyšlené produkty. Teď se generuje
  * z databáze, takže se katalog do Facebooku i Google Nákupů propíše sám.
  *
- * Feed se přepočítává nejvýš jednou za hodinu (`revalidate`) – Meta i Google
- * si ho stahují pravidelně a nemá smysl kvůli tomu sahat do databáze při
- * každém požadavku.
+ * `force-dynamic`, ne `revalidate`: s revalidací by se feed generoval už při
+ * buildu, jenže image se v Dockeru staví bez databáze a build by na tom spadl.
+ * Meta ani Google si feed nestahují často, takže dotaz na požadavek nevadí –
+ * a čerstvost drží hlavička `Cache-Control` níž.
  */
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 function esc(text: string): string {
   return text

@@ -10,7 +10,12 @@ import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
  * takže Google dostával pět adres vracejících 404. A žádný produkt v mapě
  * naopak nebyl.
  */
-export const revalidate = 3600;
+/*
+ * `force-dynamic` ze stejného důvodu jako u feedu: s revalidací by se sitemap
+ * skládala už při buildu, kde databáze není k dispozici. Vyhledávače si ji
+ * tahají zřídka, takže dotaz na požadavek je levnější než zastaralá mapa.
+ */
+export const dynamic = 'force-dynamic';
 
 const STATICKE: Array<{ cesta: string; priorita: number; frekvence: 'daily' | 'weekly' | 'monthly' }> = [
   { cesta: '', priorita: 1.0, frekvence: 'daily' },

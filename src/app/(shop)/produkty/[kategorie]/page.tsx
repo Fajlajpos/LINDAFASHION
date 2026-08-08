@@ -34,11 +34,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** Kategorie se mění zřídka – necháme Next předgenerovat jejich cesty. */
-export async function generateStaticParams() {
-  const kategorie = await nacistKategorie();
-  return kategorie.map((k) => ({ kategorie: k.slug }));
-}
+/*
+ * `generateStaticParams` tu schválně NENÍ.
+ *
+ * Stránka je `force-dynamic` (ceny a skladovost se mění), takže by
+ * předgenerování cest nic nepřineslo – zato by při buildu sáhlo do databáze.
+ * V Dockeru se image staví bez běžícího Postgresu, takže build padal na
+ * `Can't reach database server`. Lokálně to prošlo jen proto, že tam
+ * vývojová databáze náhodou běžela.
+ */
 
 export default async function KategoriePage({ params, searchParams }: Props) {
   const kategorie = await nacistKategorii(params.kategorie);
