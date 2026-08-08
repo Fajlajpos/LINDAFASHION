@@ -308,7 +308,7 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
           aria-labelledby="zalozka-reklamace"
           className="animate-fadeIn"
         >
-          <ReklamaceKarta objednavky={objednavky} />
+          <ReklamaceKarta objednavky={objednavky} objednavkyNacitaji={nacitam} />
         </div>
       )}
 

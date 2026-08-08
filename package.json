@@ -17,7 +17,9 @@
     "db:seed": "ts-node -P tsconfig.node.json prisma/seed.ts",
     "admin:reset-heslo": "ts-node -P tsconfig.node.json src/scripts/reset-admin-password.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:vse": "npm run test && npm run test:integration"
   },
   "prisma": {
     "seed": "ts-node -P tsconfig.node.json prisma/seed.ts"

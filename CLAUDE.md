@@ -141,6 +141,38 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 - Czech copy throughout, including `aria-label`s.
 - Czech number formatting: `.toLocaleString('cs-CZ')`.
 
+## Tests — two suites, on purpose
+
+| příkaz | co spustí | potřebuje Postgres |
+|---|---|---|
+| `npm test` | jednotkové testy nad čistou logikou | ne |
+| `npm run test:integration` | testy nad skutečnou databází | ano |
+| `npm run test:vse` | obojí | ano |
+
+`npm test` **musí projít i bez databáze** — jinak si nikdo netroufne testy pustit.
+Integrační testy proto mají vlastní `vitest.integration.config.ts` a výchozí
+konfigurace je vylučuje.
+
+- **Integrační testy mažou tabulky** (`TRUNCATE`). Jedinou pojistkou proti smazání
+  vývojové databáze je [testovaci-databaze.ts](src/test/testovaci-databaze.ts):
+  název databáze **musí končit na `_test`**, jinak se testy odmítnou spustit.
+  Ta pojistka má vlastní testy — neruš je.
+- Databázi (`linda_fashion_test`) i migrace do ní zařídí
+  [global-setup.ts](src/test/global-setup.ts) sám. Stačí běžící
+  `docker compose -f docker-compose.dev.yml up -d`.
+- **Testy běží po souborech, ne paralelně** (`fileParallelism: false`). Některé
+  schválně pouštějí několik objednávek naráz, aby ověřily souběh; druhý soubor
+  nad toutéž databází by výsledky přebíjel a testy by padaly náhodně.
+- `nastaveni.ts` používá `cache()` z Reactu, které je jen v serverovém buildu.
+  [setup-integration.ts](src/test/setup-integration.ts) ho nahrazuje průchozí
+  funkcí **bez memoizace** — testy si mezi případy mění nastavení e-shopu
+  a s memoizací by četly hodnoty předchozího testu.
+- Do integračních testů patří jen to, co bez databáze nedává smysl: transakce,
+  unikátní indexy a podmínky uvnitř `UPDATE`. Zesměšněná Prisma by u nich
+  potvrzovala jen to, že jsme kód napsali tak, jak jsme ho napsali.
+- Route handler se testuje s `vi.mock('@/lib/auth')` (respektive `@/lib/admin`) —
+  `next/headers` mimo požadavek Next.js neexistuje.
+
 ## Known gaps — worth fixing when touching these files
 
 ### Still incomplete
@@ -201,7 +233,10 @@ optional categories (GDPR breach) and the consent controlled nothing, now
 computed in floats, now [penize.ts](src/lib/penize.ts) works in integer haléře · cart was
 localStorage-only, now merges with the account on login and revalidates availability ·
 `opengraph-image` missing, now `/public/og-image.png` · no tests at all, now Vitest covers
-money, slugs, upload validation, order input and gift-card amounts · checkout created no
+money, slugs, upload validation, order input, gift-card amounts and the CSRF check, plus
+integration tests over the order transaction, storno and reklamace — including the
+concurrency races (six simultaneous orders for the last piece, double-clicked
+cancel) that used to be verified only by hand · checkout created no
 order at all, now writes `Order`/`OrderItem` in one transaction with stock decrement,
 discount-code and gift-card handling.
 

@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { overitUzivatele } from '@/lib/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { adresaSchema } from '@/lib/validations/ucet';
-import { nacistAdresy } from '@/lib/adresy';
+import { nacistAdresy, zajistitVychoziAdresu } from '@/lib/adresy';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,13 +34,10 @@ export async function PATCH(request: Request, { params }: Kontext) {
 
     if (!stavajici) return odpovedChyba('Adresa nebyla nalezena.', 404);
 
-    // Poslední adresu svého typu nelze zbavit příznaku výchozí – pokladna by
-    // pak neměla co předvyplnit, přestože adresa existuje.
-    const pocetTypu = await db.address.count({ where: { userId: uzivatel.id, typ: vstup.typ } });
-    const jeVychozi = vstup.jeVychozi || (pocetTypu === 1 && stavajici.typ === vstup.typ);
-
     await db.$transaction(async (tx) => {
-      if (jeVychozi) {
+      // Výchozí adresa je jedna na typ. Kdyby jich bylo víc, pokladna by
+      // nevěděla, kterou předvyplnit.
+      if (vstup.jeVychozi) {
         await tx.address.updateMany({
           where: {
             userId: uzivatel.id,
@@ -62,9 +59,18 @@ export async function PATCH(request: Request, { params }: Kontext) {
           zeme: vstup.zeme.toUpperCase(),
           telefon: vstup.telefon,
           typ: vstup.typ,
-          jeVychozi,
+          jeVychozi: vstup.jeVychozi,
         },
       });
+
+      /*
+       * Žádný typ nesmí zůstat bez výchozí adresy – ani ten, ze kterého
+       * adresa právě odešla změnou typu. `Set` pokrývá obojí a u nezměněného
+       * typu proběhne jen jednou.
+       */
+      for (const typ of new Set([vstup.typ, stavajici.typ])) {
+        await zajistitVychoziAdresu(tx, uzivatel.id, typ);
+      }
     });
 
     return odpovedOk({ adresy: await nacistAdresy(uzivatel.id) });
@@ -82,7 +88,7 @@ export async function DELETE(request: Request, { params }: Kontext) {
 
     const smazana = await db.address.findFirst({
       where: { id: params.id, userId: uzivatel.id },
-      select: { id: true, typ: true, jeVychozi: true },
+      select: { id: true, typ: true },
     });
 
     if (!smazana) return odpovedChyba('Adresa nebyla nalezena.', 404);
@@ -92,17 +98,7 @@ export async function DELETE(request: Request, { params }: Kontext) {
 
       // Po smazání výchozí adresy povýšíme nejstarší zbylou téhož typu –
       // jinak by zákaznici zůstaly adresy, ze kterých se žádná nepředvyplní.
-      if (!smazana.jeVychozi) return;
-
-      const nastupce = await tx.address.findFirst({
-        where: { userId: uzivatel.id, typ: smazana.typ },
-        orderBy: { id: 'asc' },
-        select: { id: true },
-      });
-
-      if (nastupce) {
-        await tx.address.update({ where: { id: nastupce.id }, data: { jeVychozi: true } });
-      }
+      await zajistitVychoziAdresu(tx, uzivatel.id, smazana.typ);
     });
 
     return odpovedOk({ adresy: await nacistAdresy(uzivatel.id) });

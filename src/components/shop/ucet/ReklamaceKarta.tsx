@@ -38,7 +38,15 @@ const TRIDY_VYBERU =
  * neměla jak vrácení uplatnit jinak než e-mailem, přestože na odstoupení od
  * smlouvy do 14 dnů má ze zákona nárok.
  */
-export function ReklamaceKarta({ objednavky }: { objednavky: ObjednavkaProReklamaci[] }) {
+export function ReklamaceKarta({
+  objednavky,
+  objednavkyNacitaji,
+}: {
+  objednavky: ObjednavkaProReklamaci[];
+  /** Objednávky se načítají v nadřazené komponentě – bez tohohle by prázdný
+      seznam během načítání vypadal jako „nemáte co reklamovat". */
+  objednavkyNacitaji: boolean;
+}) {
   const zpusobile = objednavky.filter((o) => o.lzeReklamovat);
 
   const [reklamace, setReklamace] = useState<Reklamace[]>([]);
@@ -115,7 +123,12 @@ export function ReklamaceKarta({ objednavky }: { objednavky: ObjednavkaProReklam
         {chyba && <Hlaska druh="chyba">{chyba}</Hlaska>}
         {hlaska && <Hlaska druh="uspech">{hlaska}</Hlaska>}
 
-        {zpusobile.length === 0 ? (
+        {objednavkyNacitaji ? (
+          <p className="flex items-center justify-center gap-2 rounded-xl bg-linda-sandLight p-6 text-xs text-linda-espresso/75 shadow-neuInsetSm">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Načítám vaše objednávky…
+          </p>
+        ) : zpusobile.length === 0 ? (
           <div className="space-y-2 rounded-xl bg-linda-sandLight p-6 text-center shadow-neuInsetSm">
             <PackageOpen className="mx-auto h-7 w-7 text-linda-cognac opacity-60" aria-hidden="true" />
             <p className="text-xs text-linda-espresso/75">

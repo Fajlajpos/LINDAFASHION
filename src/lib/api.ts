@@ -73,19 +73,21 @@ export function zpracovatChybu(err: unknown) {
  * Session cookie je SameSite=Lax, takže cizí web ji na POST vůbec nepřipojí –
  * tohle je druhá vrstva pro případ, že by se nastavení cookie někdy změnilo.
  *
- * První v pořadí je `Sec-Fetch-Site`, protože ho doplňuje sám prohlížeč
- * a stránka ho nemůže přepsat. `Origin` je až záloha pro klienty, které
- * hlavičku neposílají: kontrola nad ním stojí na porovnání s `APP_URL`,
- * což je jediná hodnota, kterou volající neovlivní.
+ * `Sec-Fetch-Site` slouží **jen k odmítnutí** zjevně cizího původu. Rozhodovat
+ * podle něj i o povolení by znamenalo, že jedna hlavička drží všech 38
+ * endpointů: kdyby ji nějaký klient poslal jinak, než čekáme, přestane
+ * fungovat každý zápis v aplikaci najednou. Když tedy nejde o zřejmé
+ * `cross-site`, pokračuje se původní kontrolou proti `Origin` – ta je léta
+ * v provozu a víme, jak se chová.
+ *
+ * `same-site` (jiná subdoména téže domény) se schválně **nezamítá**: web běží
+ * na apexu i na `www` a přísnější pravidlo by odstřihlo jednu z těch variant.
+ * Na tenhle případ stačí porovnání originu níž.
  */
 export function jeStejnyPuvod(request: Request): boolean {
-  const site = request.headers.get('sec-fetch-site');
-
-  if (site) {
-    // `none` = zadáno rovnou do adresního řádku, `same-origin` = náš vlastní
-    // skript. `cross-site` i `same-site` (jiná subdoména) sem nepatří.
-    return site === 'same-origin' || site === 'none';
-  }
+  // Prohlížeč hlavičku doplňuje sám a stránka ji nepřepíše, takže `cross-site`
+  // je spolehlivá informace „tenhle požadavek vyvolal cizí web“.
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
 
   const origin = request.headers.get('origin');
   if (!origin) return true; // stejný původ / non-browser klient origin neposílá
