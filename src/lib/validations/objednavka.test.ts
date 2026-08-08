@@ -44,6 +44,17 @@ describe('objednavkaSchema', () => {
     expect(objednavkaSchema.safeParse({ ...zaklad, zpusobPlatby: 'dobirka' }).success).toBe(false);
   });
 
+  /*
+   * Regrese: `gopay` bylo ve výčtu, přestože brána není zapojená. Formulář
+   * volbu zakazoval, ale ručně sestavený požadavek prošel – a založil
+   * objednávku, která odečetla sklad, nikdy nebyla zaplacená a na potvrzení
+   * nedostala ani platební údaje (QR se zobrazuje jen u převodu).
+   * Hodnota se sem vrátí, až budou v `.env` klíče.
+   */
+  it('nepustí platbu kartou, dokud brána není zapojená', () => {
+    expect(objednavkaSchema.safeParse({ ...zaklad, zpusobPlatby: 'gopay' }).success).toBe(false);
+  });
+
   it('odmítne neznámého dopravce', () => {
     expect(objednavkaSchema.safeParse({ ...zaklad, zpusobDopravy: 'dhl' }).success).toBe(false);
   });

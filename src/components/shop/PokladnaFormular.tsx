@@ -120,7 +120,20 @@ interface Props {
   dopravy: MoznostDopravy[];
   prahDopravaZdarma: number | null;
   /** Předvyplnění pro přihlášenou zákaznici. */
-  uzivatel: { email: string; jmeno: string | null } | null;
+  uzivatel: { email: string; jmeno: string | null; telefon: string | null } | null;
+  /**
+   * Výchozí doručovací adresa z účtu (sekce 7).
+   *
+   * Objednávka si z ní udělá vlastní kopii – tohle je jen předvyplnění.
+   * Pozdější úprava uložené adresy proto nepřepíše, kam zboží doopravdy šlo.
+   */
+  vychoziAdresa: {
+    jmenoPrijmeni: string;
+    ulice: string;
+    mesto: string;
+    psc: string;
+    telefon: string | null;
+  } | null;
   objednavaniZablokovano: boolean;
   zpravaODovolene: string | null;
   /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
@@ -141,6 +154,7 @@ export function PokladnaFormular({
   dopravy,
   prahDopravaZdarma,
   uzivatel,
+  vychoziAdresa,
   objednavaniZablokovano,
   zpravaODovolene,
   popisDph,
@@ -154,13 +168,17 @@ export function PokladnaFormular({
   /** Rozepsaný text pobočky – oddělený od potvrzené volby, ať jde psát plynule. */
   const [vydejniMistoText, setVydejniMistoText] = useState('');
 
+  /*
+   * Uložená adresa má při předvyplnění přednost před jménem z profilu –
+   * na zásilce má stát to, co si zákaznice uložila jako doručovací údaje.
+   */
   const [form, setForm] = useState({
     email: uzivatel?.email ?? '',
-    dodaciJmenoPrijmeni: uzivatel?.jmeno ?? '',
-    dodaciTelefon: '',
-    dodaciUlice: '',
-    dodaciMesto: '',
-    dodaciPsc: '',
+    dodaciJmenoPrijmeni: vychoziAdresa?.jmenoPrijmeni ?? uzivatel?.jmeno ?? '',
+    dodaciTelefon: vychoziAdresa?.telefon ?? uzivatel?.telefon ?? '',
+    dodaciUlice: vychoziAdresa?.ulice ?? '',
+    dodaciMesto: vychoziAdresa?.mesto ?? '',
+    dodaciPsc: vychoziAdresa?.psc ?? '',
     poznamka: '',
     souhlasPodminky: false,
   });
@@ -363,6 +381,20 @@ export function PokladnaFormular({
 
         <KrokKarty cislo={2} nadpis="Doručovací adresa">
           <div className="space-y-4">
+            {vychoziAdresa && (
+              <p className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-[11px] leading-relaxed text-linda-espresso/85 shadow-neuInsetSm">
+                <MapPin className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+                <span>
+                  Předvyplnili jsme vaši výchozí adresu z účtu. Můžete ji tady přepsat – uložené
+                  adresy se tím nezmění a spravujete je v{' '}
+                  <Link href="/muj-ucet" className="font-semibold text-linda-cognac hover:underline">
+                    mém účtu
+                  </Link>
+                  .
+                </span>
+              </p>
+            )}
+
             <Pole
               id="pokladna-jmeno"
               label="Jméno a příjmení"

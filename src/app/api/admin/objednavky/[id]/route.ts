@@ -116,8 +116,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       });
     }
 
-    // Faktura se generuje, až když je zaplaceno – dřív by nesouhlasila.
+    /*
+     * Po označení „zaplaceno" se doklad přepíše.
+     *
+     * Při založení objednávky vzniká podklad k platbě – u bankovního převodu
+     * tou dobou ještě nikdo nezaplatil. Bez tohohle kroku by v `storage/faktury/`
+     * navždy zůstala ta první verze. Úloha zapisuje pod stejným názvem souboru
+     * (`číslo objednávky.pdf`), takže jde o přepis, ne o druhý doklad.
+     */
     if (vstup.stavPlatby === 'ZAPLACENO') {
+      await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: params.id });
       await publishJob(FRONTY.VYGENEROVAT_POUKAZY, { orderId: params.id });
     }
 

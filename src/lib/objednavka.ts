@@ -45,6 +45,29 @@ async function cenaDopravy(zpusob: string): Promise<Halere | null> {
 }
 
 /**
+ * Číselná řada objednávek se láme podle českého kalendáře, ne podle časové
+ * zóny kontejneru – ta je v Dockeru UTC. Objednávka z 1. ledna 00:30 SEČ je
+ * v UTC ještě 31. prosince, takže se bez tohohle počítala do minulého roku
+ * a dostala číslo, které už bylo obsazené.
+ */
+const CASOVA_ZONA = 'Europe/Prague';
+
+function aktualniRok(): number {
+  const formatovac = new Intl.DateTimeFormat('en-CA', { timeZone: CASOVA_ZONA, year: 'numeric' });
+  return Number(formatovac.format(new Date()));
+}
+
+/**
+ * Půlnoc 1. ledna v Praze jako okamžik v UTC.
+ *
+ * 1. ledna je vždycky středoevropský čas (UTC+1) – letní čas začíná až
+ * v březnu – takže stačí odečíst hodinu a není potřeba obecný převod zón.
+ */
+function zacatekRoku(rok: number): Date {
+  return new Date(Date.UTC(rok, 0, 1, -1));
+}
+
+/**
  * Číslo objednávky ve tvaru `2026-00042`.
  *
  * Počítá se z počtu objednávek v daném roce. Při souběhu dvou objednávek ve
@@ -55,10 +78,10 @@ async function cenaDopravy(zpusob: string): Promise<Halere | null> {
  * stejné číslo a narazil znovu.
  */
 async function dalsiCisloObjednavky(tx: Prisma.TransactionClient, posun = 0): Promise<string> {
-  const rok = new Date().getFullYear();
+  const rok = aktualniRok();
 
   const pocet = await tx.order.count({
-    where: { createdAt: { gte: new Date(rok, 0, 1) } },
+    where: { createdAt: { gte: zacatekRoku(rok) } },
   });
 
   return `${rok}-${String(pocet + 1 + posun).padStart(5, '0')}`;
@@ -223,6 +246,19 @@ export async function vytvoritObjednavku(
           userId,
           email: vstup.email.trim().toLowerCase(),
           stav: 'NOVA',
+
+          /*
+           * Rozpis se ukládá celý, ne jen výsledná částka.
+           *
+           * Faktura si dřív slevu dopočítávala z aktuálního `procentoSlevy`
+           * slevového kódu a dopravu brala jako zbytek do celkové ceny. Jakmile
+           * majitelka u kódu procento změnila, vyšel doklad pro dávno uzavřenou
+           * objednávku jinak – a rozdíl tiše spolkla doprava. Rozpis patří
+           * k dokladu, takže musí být zmrazený stejně jako doručovací adresa.
+           */
+          mezisoucet: new Prisma.Decimal(halereNaCzk(rozpis.mezisoucet)),
+          slevaCastka: new Prisma.Decimal(halereNaCzk(rozpis.sleva)),
+          cenaDopravy: new Prisma.Decimal(halereNaCzk(rozpis.doprava)),
           celkovaCena: new Prisma.Decimal(halereNaCzk(rozpis.celkem)),
           discountCodeId,
           giftCardId,

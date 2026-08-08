@@ -40,8 +40,12 @@ export async function POST(request: Request) {
       return odpovedChyba(vysledek.chyba.zprava, vysledek.chyba.status, vysledek.chyba.pole);
     }
 
-    // Fakturu i potvrzovací e-mail vyřídí worker – zákaznice nemá čekat,
+    // Doklad i potvrzovací e-mail vyřídí worker – zákaznice nemá čekat,
     // až se vygeneruje PDF (sekce 3).
+    //
+    // Tenhle doklad je podklad k platbě: u bankovního převodu ještě nikdo
+    // nezaplatil. Jakmile admin objednávku označí jako zaplacenou, worker
+    // stejný soubor přepíše (viz `api/admin/objednavky/[id]`).
     await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: vysledek.data.id });
     await publishJob(FRONTY.VYGENEROVAT_POUKAZY, { orderId: vysledek.data.id });
     await publishJob(FRONTY.ODESLAT_EMAIL, {
@@ -93,7 +97,13 @@ export async function GET() {
         createdAt: o.createdAt,
         // Storno je možné jen dokud objednávka leží ve stavu NOVA (sekce 5).
         lzeStornovat: o.stav === 'NOVA',
+        // Reklamovat či vrátit jde, až když zboží odešlo – a dokud objednávka
+        // pořád platí. Endpoint si to ověřuje znovu, tohle řídí jen tlačítko.
+        lzeReklamovat: o.stav === 'EXPEDOVANA' || o.stav === 'DORUCENA',
         polozky: o.items.map((i) => ({
+          // Id položky potřebuje formulář reklamace, aby šlo vrátit jeden kus
+          // z objednávky, ne rovnou celou.
+          id: i.id,
           nazev: i.variant.product.nazev,
           slug: i.variant.product.slug,
           velikost: i.variant.velikost,

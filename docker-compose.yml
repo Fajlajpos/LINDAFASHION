@@ -54,7 +54,11 @@ services:
     # Zdravý `web` znamená "migrace doběhly a server odpovídá" – worker se na to
     # níž váže, aby nestartoval do databáze bez tabulek.
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/ || exit 1']
+      # `/api/health` sáhne do databáze a při jejím výpadku vrátí 503.
+      # Dřív se testovalo `/`, což je Server Component: bez databáze se
+      # vyrenderovala chybová hranice a wget dostal obyčejnou 200. Kontejner
+      # tak hlásil „healthy" s rozbitou databází a worker do ní nastartoval.
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/api/health || exit 1']
       interval: 5s
       timeout: 5s
       retries: 20

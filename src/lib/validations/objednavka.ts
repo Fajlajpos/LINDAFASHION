@@ -42,8 +42,19 @@ export const objednavkaSchema = z.object({
   vydejniMistoId: z.string().max(120).optional().nullable(),
   vydejniMistoNazev: z.string().max(300).optional().nullable(),
 
-  // Dobírka se schválně nenabízí vůbec (sekce 8). GoPay se přidá, až budou klíče.
-  zpusobPlatby: z.enum(['bankovni_prevod', 'gopay'], {
+  /*
+   * Dobírka se schválně nenabízí vůbec (sekce 8).
+   *
+   * `gopay` tu záměrně **není**, dokud brána není zapojená. Formulář tu volbu
+   * sice zakazuje, ale validace je poslední slovo – ručně sestavený požadavek
+   * by jinak založil objednávku, která odečte sklad, nikdy nebude zaplacená
+   * a na potvrzení nedostane ani platební údaje (QR se zobrazuje jen
+   * u převodu). Až budou v `.env` klíče, přidá se hodnota zpátky sem.
+   *
+   * Objednávky se způsobem `gopay` z dřívějška zůstávají čitelné – popisky
+   * v `objednavka-popisky.ts` a na faktuře tu hodnotu dál znají.
+   */
+  zpusobPlatby: z.enum(['bankovni_prevod'], {
     errorMap: () => ({ message: 'Vyberte způsob platby.' }),
   }),
 

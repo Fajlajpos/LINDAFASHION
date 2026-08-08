@@ -19,7 +19,14 @@ export default async function MujUcetPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <MujUcet email={uzivatel.email} jmeno={uzivatel.jmeno} />
+      <MujUcet
+        uzivatel={{
+          email: uzivatel.email,
+          jmeno: uzivatel.jmeno,
+          telefon: uzivatel.telefon,
+          newsletterSouhlas: uzivatel.newsletterSouhlas,
+        }}
+      />
     </div>
   );
 }

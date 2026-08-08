@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, Heart, User, Menu, X, Search, Sparkles } from 'lucide-react';
+import { ShoppingBag, Heart, User, LayoutDashboard, Menu, X, Search, Sparkles } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 
 interface HeaderProps {
-  user?: { jmeno?: string | null; email: string } | null;
+  user?: { jmeno?: string | null; email: string; role?: string | null } | null;
   vacationMode?: { active: boolean; message?: string | null };
 }
 
@@ -57,6 +57,11 @@ export const Header: React.FC<HeaderProps> = ({
   // Cart & Favorites Context
   const { totalItemCount: cartCount } = useCart();
   const { favoritesCount } = useFavorites();
+
+  /* Zkratka do administrace. Do téhle chvíle se na `/admin` dalo dostat jedině
+     ručním přepsáním adresy – po přihlášení tam sice míří přesměrování, ale
+     kdo se pak proklikal do obchodu, cestu zpátky už neměl. */
+  const jeAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     let frame = 0;
@@ -249,6 +254,22 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </Link>
 
+            {/* Administrace – jen pro majitelku.
+                Vyvýšená pilulka v krémové liště: je to jediný prvek hlavičky,
+                který má vystoupit, takže reliéf nese význam. Pod `lg` se
+                schovává, tam už čtyři dotykové cíle po 44 px zabírají skoro
+                celou šířku – na malých displejích vede do administrace
+                položka v rozbalovacím menu. */}
+            {jeAdmin && (
+              <Link
+                href="/admin"
+                className="hidden min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm lg:flex"
+              >
+                <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Administrace
+              </Link>
+            )}
+
             {/* Account / Admin */}
             <Link
               href={user ? '/muj-ucet' : '/prihlaseni'}
@@ -323,6 +344,19 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Mobilní navigace"
           className="animate-fadeIn bg-linda-cream px-6 pb-6 pt-2 text-center text-xs font-medium uppercase tracking-wider text-linda-espresso shadow-neuBarRaised lg:hidden"
         >
+          {/* Administrace nahoře a oddělená – není to část nabídky obchodu,
+              ale vstup jinam. V liště se pilulka pod `lg` nevejde. */}
+          {jeAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="mb-2 flex min-h-touch items-center justify-center gap-2 rounded-full bg-linda-cream font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 active:shadow-neuInsetSm"
+            >
+              <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Administrace
+            </Link>
+          )}
+
           {NAV_LINKS.map(({ href, label, accent }) => (
             <Link
               key={href}

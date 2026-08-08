@@ -86,6 +86,24 @@ export async function PUT(request: Request, { params }: Kontext) {
           });
 
     const poslane = vstup.varianty.filter((v) => v.id).map((v) => v.id as string);
+
+    /*
+     * Každé poslané `id` musí patřit tomuhle produktu.
+     *
+     * Níž se varianty aktualizují podle `id` samotného; podvržená hodnota
+     * z formuláře by tak přepsala velikost a sklad varianty úplně jiného
+     * produktu. Varianta pod produkt jednou zapsaná se nepřesouvá, takže
+     * kontrola tady je definitivní a nemůže ji předběhnout souběžný zápis.
+     */
+    const znameVarianty = new Set(stavajici.variants.map((v) => v.id));
+    const cizi = poslane.filter((id) => !znameVarianty.has(id));
+
+    if (cizi.length > 0) {
+      return odpovedChyba('Zkontrolujte prosím vyplněné údaje.', 422, {
+        varianty: 'Některá varianta k tomuto produktu nepatří. Načtěte prosím formulář znovu.',
+      });
+    }
+
     const kSmazani = stavajici.variants.filter((v) => !poslane.includes(v.id)).map((v) => v.id);
 
     // Varianta, která je v nějaké objednávce, se smazat nesmí – rozbila by

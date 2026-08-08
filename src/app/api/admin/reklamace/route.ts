@@ -83,6 +83,24 @@ export async function POST(request: Request) {
       });
     }
 
+    /*
+     * Položka musí patřit k téhle objednávce. `orderItemId` je jinak jen cizí
+     * klíč na OrderItem a nic ho k `orderId` neváže – uznané vrácení by pak
+     * vrátilo na sklad zboží z docela jiného nákupu.
+     */
+    if (vstup.orderItemId) {
+      const polozka = await db.orderItem.findFirst({
+        where: { id: vstup.orderItemId, orderId: vstup.orderId },
+        select: { id: true },
+      });
+
+      if (!polozka) {
+        return odpovedChyba('Zkontrolujte prosím vyplněné údaje.', 422, {
+          orderItemId: 'Tato položka k vybrané objednávce nepatří.',
+        });
+      }
+    }
+
     const reklamace = await db.reklamace.create({
       data: {
         orderId: vstup.orderId,

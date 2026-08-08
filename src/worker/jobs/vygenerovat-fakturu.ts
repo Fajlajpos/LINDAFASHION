@@ -21,7 +21,6 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
     where: { id: data.orderId },
     include: {
       user: { select: { email: true } },
-      discountCode: { select: { procentoSlevy: true } },
       items: { include: { variant: { include: { product: true } } } },
     },
   });
@@ -39,16 +38,19 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
     cenaZaKusHaleru: czkNaHalere(i.cenaVDobeNakupu),
   }));
 
-  const soucetPolozek = polozky.reduce((s, p) => s + p.cenaZaKusHaleru * p.mnozstvi, 0);
+  /*
+   * Rozpis se čte z objednávky, nedopočítává se.
+   *
+   * Dřív se sleva odvozovala z *aktuálního* `procentoSlevy` slevového kódu
+   * a doprava byla zbytek do celkové ceny. Stačilo, aby majitelka u kódu
+   * procento upravila, a faktura pro dávno uzavřenou objednávku vyšla jinak –
+   * rozdíl se přitom tiše schoval do dopravy, protože ta se počítala jako
+   * `celkem - (položky - sleva)`. Doklad se zpětně měnit nesmí.
+   */
   const celkem = czkNaHalere(objednavka.celkovaCena);
   const zPoukazu = objednavka.castkaZGiftCard === null ? 0 : czkNaHalere(objednavka.castkaZGiftCard);
-
-  // Sleva i doprava se dopočítají z uložených částek – v objednávce se
-  // neukládají zvlášť, ale rozdíl mezi součtem položek a celkem je znám.
-  const sleva = objednavka.discountCode
-    ? Math.floor((soucetPolozek * objednavka.discountCode.procentoSlevy) / 100)
-    : 0;
-  const doprava = Math.max(0, celkem - (soucetPolozek - sleva));
+  const sleva = czkNaHalere(objednavka.slevaCastka);
+  const doprava = czkNaHalere(objednavka.cenaDopravy);
 
   const pdf = await vytvoritFakturuPdf({
     cisloObjednavky: objednavka.cisloObjednavky,

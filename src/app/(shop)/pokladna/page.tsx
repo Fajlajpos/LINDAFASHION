@@ -1,7 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { PokladnaFormular, type MoznostDopravy } from '@/components/shop/PokladnaFormular';
-import { getSession } from '@/lib/auth';
+import { overitUzivatele } from '@/lib/auth';
+import { nacistAdresy } from '@/lib/adresy';
 import { nacistNastaveni, popisDph, zpravaODovolene } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,17 @@ const POPISY: Record<string, { nazev: string; popis: string; vyzadujeVydejniMist
 };
 
 export default async function PokladnaPage() {
-  const [session, nastaveni] = await Promise.all([getSession(), nacistNastaveni()]);
+  /*
+   * Ověření proti databázi, ne jen podle tokenu: z účtu se tu předvyplňuje
+   * doručovací adresa, takže nesmí jít o účet, který mezitím zmizel nebo byl
+   * odhlášen ze všech zařízení.
+   */
+  const [uzivatel, nastaveni] = await Promise.all([overitUzivatele(), nacistNastaveni()]);
+
+  // Výchozí doručovací adresa z účtu (sekce 7). Do téhle chvíle se pokladna
+  // ptala na adresu při každém nákupu znovu, přestože ji zákaznice měla uloženou.
+  const adresy = uzivatel ? await nacistAdresy(uzivatel.id) : [];
+  const vychoziAdresa = adresy.find((a) => a.typ === 'DODACI' && a.jeVychozi) ?? null;
 
   // Nabídneme jen dopravce, kterým majitelka nastavila cenu. Bez ceny
   // nemůžeme objednávku spočítat, takže metoda do pokladny nepatří.
@@ -54,7 +65,12 @@ export default async function PokladnaPage() {
       <PokladnaFormular
         dopravy={dopravy}
         prahDopravaZdarma={nastaveni.prahDopravaZdarma}
-        uzivatel={session ? { email: session.email, jmeno: session.jmeno } : null}
+        uzivatel={
+          uzivatel
+            ? { email: uzivatel.email, jmeno: uzivatel.jmeno, telefon: uzivatel.telefon }
+            : null
+        }
+        vychoziAdresa={vychoziAdresa}
         objednavaniZablokovano={nastaveni.rezimDovolene && nastaveni.zablokovatObjednavky}
         zpravaODovolene={zpravaODovolene(nastaveni)}
         popisDph={popisDph(nastaveni)}

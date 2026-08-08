@@ -78,14 +78,31 @@ export function vynulovatLimit(klic: string) {
  * Klíč pro limit. Za reverzní proxy (Caddy) je skutečná IP v X-Forwarded-For –
  * `request.ip` by vracelo adresu proxy, tedy stejnou pro všechny.
  *
- * Hlavičku si ovšem odesílatel může vymyslet. Spoléhá se proto na to, že se
- * na `web` nedá zvenčí dosáhnout jinak než přes proxy: `docker-compose.yml`
- * publikuje port 3000 jen na localhost. Kdo to přebije přes `WEB_BIND`,
- * zároveň otevře obcházení téhle brzdy.
+ * **Bere se poslední položka, ne první.** Proxy k příchozí hlavičce svoji
+ * představu o klientovi *připojuje na konec*, nepřepisuje ji. Když si tedy
+ * útočník do požadavku sám vloží `X-Forwarded-For: 1.2.3.4`, dorazí sem
+ * `1.2.3.4, <skutečná IP>` – a čtení první položky by znamenalo, že si klíč
+ * limitu vybírá sám a při každém pokusu jiný. Brzda na přihlašování tím šla
+ * obejít i za správně nasazenou proxy.
+ *
+ * Poslední položku zapsala nejbližší proxy, tedy ta naše. Platí to za
+ * předpokladu, že před `web` stojí právě jedna – což `docker-compose.yml`
+ * zajišťuje tím, že port 3000 publikuje jen na localhost (viz `WEB_BIND`).
+ * Caddyfile navíc hlavičku přepisuje na `{remote_host}`, takže se sem
+ * podvržená hodnota nedostane vůbec; tohle je druhá vrstva.
  */
 export function klientskaIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
+
+  if (forwarded) {
+    const polozky = forwarded
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    const posledni = polozky[polozky.length - 1];
+    if (posledni) return posledni;
+  }
 
   return request.headers.get('x-real-ip')?.trim() || 'neznama';
 }

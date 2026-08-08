@@ -109,7 +109,13 @@ export async function overitPrihlaseni(email: string, heslo: string) {
 
 /**
  * Zneplatní všechna dosud vydaná přihlášení daného uživatele.
- * Volá se při změně a resetu hesla a při odebrání administrátorských práv.
+ * Volá se při odebrání administrátorských práv a všude, kde se `tokenVerze`
+ * nemění spolu s něčím jiným.
+ *
+ * Když se zároveň mění heslo nebo se anonymizuje účet, patří
+ * `tokenVerze: { increment: 1 }` **přímo do té transakce**, ne sem – jinak
+ * zůstane mezi zápisem a zneplatněním okno, ve kterém stará relace pořád
+ * platí. U měněného hesla je to přesně ten okamžik, na kterém záleží.
  */
 export async function zneplatnitRelace(userId: string): Promise<void> {
   await db.user.update({

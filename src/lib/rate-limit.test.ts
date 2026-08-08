@@ -85,8 +85,32 @@ describe('klientskaIp', () => {
   const dotaz = (hlavicky: Record<string, string>) =>
     new Request('http://localhost/api/test', { headers: hlavicky });
 
-  it('bere první adresu z X-Forwarded-For', () => {
-    expect(klientskaIp(dotaz({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1' }))).toBe('203.0.113.7');
+  /*
+   * Regrese: dřív se brala **první** položka. Proxy ale svoji představu
+   * o klientovi k hlavičce jen připojuje, takže první položku řídí ten, kdo
+   * požadavek poslal – a mohl si tím při každém pokusu vybrat jiný klíč
+   * limitu. Brzda na přihlašování se tím dala obejít i za správně nasazenou
+   * proxy. Poslední položku zapsala nejbližší proxy, tedy ta naše.
+   */
+  it('bere poslední adresu z X-Forwarded-For, ne první', () => {
+    expect(klientskaIp(dotaz({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1' }))).toBe('10.0.0.1');
+  });
+
+  it('podvržená hlavička nezmění klíč limitu', () => {
+    const podvrzeno = klientskaIp(dotaz({ 'x-forwarded-for': '1.2.3.4, 198.51.100.5' }));
+    const podvrzenoJinak = klientskaIp(dotaz({ 'x-forwarded-for': '9.9.9.9, 198.51.100.5' }));
+
+    expect(podvrzeno).toBe('198.51.100.5');
+    expect(podvrzenoJinak).toBe(podvrzeno);
+  });
+
+  it('jediná adresa se použije tak, jak je', () => {
+    expect(klientskaIp(dotaz({ 'x-forwarded-for': '203.0.113.7' }))).toBe('203.0.113.7');
+  });
+
+  it('prázdné položky v seznamu přeskočí', () => {
+    // Některé proxy zapíšou `a, , b`; prázdný klíč by sloučil volající dohromady.
+    expect(klientskaIp(dotaz({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1, ' }))).toBe('10.0.0.1');
   });
 
   it('spadne na X-Real-IP, když X-Forwarded-For chybí', () => {

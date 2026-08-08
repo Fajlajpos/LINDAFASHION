@@ -19,5 +19,18 @@ lindafashion.cz, www.lindafashion.cz {
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
-	reverse_proxy web:3000
+	reverse_proxy web:3000 {
+		# X-Forwarded-For se schválně PŘEPISUJE, ne doplňuje.
+		#
+		# Caddy ve výchozím nastavení k hlavičce, kterou poslal klient, svoji
+		# hodnotu jen připojí. Kdo si tedy do požadavku vloží vlastní
+		# `X-Forwarded-For`, řídí začátek seznamu – a aplikace, která z něj
+		# čte IP, dostane hodnotu od útočníka. Limity na přihlašování,
+		# newsletter i kontaktní formulář se tím daly obcházet.
+		#
+		# `{remote_host}` je adresa, ze které spojení opravdu přišlo. Cokoliv
+		# si klient vymyslel, se sem nedostane.
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+	}
 }

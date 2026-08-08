@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { hashPassword, prihlasit, zneplatnitRelace } from '@/lib/auth';
+import { hashPassword, prihlasit } from '@/lib/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { overitResetToken } from '@/lib/reset-hesla';
@@ -54,9 +54,16 @@ export async function POST(request: Request) {
     const hash = await hashPassword(vstup.heslo);
 
     await db.$transaction([
+      /*
+       * Nové heslo a zneplatnění dosavadních relací patří do jedné transakce.
+       * Dřív se `tokenVerze` zvyšovala až samostatným dotazem za ní – kdyby
+       * proces mezi tím spadl, bylo by heslo změněné, ale útočníkova relace
+       * by běžela dál až do vypršení tokenu, tedy 30 dní. Právě tomu má
+       * zvýšení verze zabránit.
+       */
       db.user.update({
         where: { id: reset.userId },
-        data: { passwordHash: hash },
+        data: { passwordHash: hash, tokenVerze: { increment: 1 } },
       }),
       // Token je jednorázový – označíme ho za použitý ve stejné transakci,
       // aby ho nešlo uplatnit dvakrát.
@@ -65,8 +72,6 @@ export async function POST(request: Request) {
         data: { pouzitoAt: new Date() },
       }),
     ]);
-
-    await zneplatnitRelace(reset.userId);
 
     // Rovnou přihlásíme – zákaznice právě prokázala přístup k e-mailu i heslu.
     const user = await db.user.findUnique({

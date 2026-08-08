@@ -72,8 +72,21 @@ export function zpracovatChybu(err: unknown) {
  *
  * Session cookie je SameSite=Lax, takže cizí web ji na POST vůbec nepřipojí –
  * tohle je druhá vrstva pro případ, že by se nastavení cookie někdy změnilo.
+ *
+ * První v pořadí je `Sec-Fetch-Site`, protože ho doplňuje sám prohlížeč
+ * a stránka ho nemůže přepsat. `Origin` je až záloha pro klienty, které
+ * hlavičku neposílají: kontrola nad ním stojí na porovnání s `APP_URL`,
+ * což je jediná hodnota, kterou volající neovlivní.
  */
 export function jeStejnyPuvod(request: Request): boolean {
+  const site = request.headers.get('sec-fetch-site');
+
+  if (site) {
+    // `none` = zadáno rovnou do adresního řádku, `same-origin` = náš vlastní
+    // skript. `cross-site` i `same-site` (jiná subdoména) sem nepatří.
+    return site === 'same-origin' || site === 'none';
+  }
+
   const origin = request.headers.get('origin');
   if (!origin) return true; // stejný původ / non-browser klient origin neposílá
 

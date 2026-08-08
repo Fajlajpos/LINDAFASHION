@@ -17,7 +17,8 @@ export type TypEmailu =
   | 'opusteny-kosik'
   | 'dochazejici-sklad'
   | 'skladem-znovu'
-  | 'nova-zprava-z-formulare';
+  | 'nova-zprava-z-formulare'
+  | 'nova-reklamace';
 
 export interface UlohaEmail {
   typ: TypEmailu;

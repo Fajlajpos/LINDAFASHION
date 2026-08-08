@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { odhlasit, overitUzivatele, zneplatnitRelace } from '@/lib/auth';
+import { odhlasit, overitUzivatele } from '@/lib/auth';
 import { verifyPassword } from '@/lib/hesla';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 
@@ -67,9 +67,16 @@ export async function POST(request: Request) {
       db.address.deleteMany({ where: { userId: ucet.id } }),
       db.passwordReset.deleteMany({ where: { userId: ucet.id } }),
 
-      // Osobní údaje na účtu se přepíšou. Objednávky zůstávají – nesou vlastní
-      // snímek doručovací adresy (sekce 7), takže účetně jsou dál v pořádku,
-      // ale odkaz na žijící osobu už z účtu nevede.
+      /*
+       * Osobní údaje na účtu se přepíšou. Objednávky zůstávají – nesou vlastní
+       * snímek doručovací adresy (sekce 7), takže účetně jsou dál v pořádku,
+       * ale odkaz na žijící osobu už z účtu nevede.
+       *
+       * `tokenVerze` se zvyšuje **tady**, ne až po transakci. Dřív to byl
+       * samostatný dotaz za ní: kdyby proces mezi tím spadl, byl by účet
+       * anonymizovaný, ale dosud vydané přihlášení by platilo dál. To je
+       * přesně ten stav, kvůli kterému `tokenVerze` existuje.
+       */
       db.user.update({
         where: { id: ucet.id },
         data: {
@@ -80,20 +87,30 @@ export async function POST(request: Request) {
           anonymizovanoAt: new Date(),
           // Náhodný hash: do účtu se nedá přihlásit ani znát původní heslo.
           passwordHash: `anonymizovano-${crypto.randomUUID()}`,
+          tokenVerze: { increment: 1 },
         },
       }),
 
       // Odběr newsletteru vedený mimo účet.
       db.newsletterSubscriber.deleteMany({ where: { email: uzivatel.email } }),
+
+      /*
+       * Hlídání dostupnosti a zprávy z kontaktního formuláře se klíčují
+       * e-mailem, ne `userId` – anonymizace účtu je proto míjela a adresa
+       * zákaznice v databázi zůstávala. Ani jedno není účetní doklad, takže
+       * na jejich uchování není po žádosti o výmaz žádný právní důvod.
+       */
+      db.stockNotification.deleteMany({ where: { email: uzivatel.email } }),
+      db.contactMessage.deleteMany({ where: { email: uzivatel.email } }),
     ]);
 
-    await zneplatnitRelace(ucet.id);
     odhlasit();
 
     return odpovedOk({
       zprava:
-        'Váš účet byl smazán a osobní údaje anonymizovány. Dokončené objednávky musíme podle zákona ' +
-        'uchovat jako účetní doklad, ale už nejsou spojené s vaší osobou.',
+        'Váš účet byl smazán a osobní údaje anonymizovány. Smazali jsme i hlídané velikosti, ' +
+        'odběr novinek a vaše zprávy z kontaktního formuláře. Dokončené objednávky musíme podle ' +
+        'zákona uchovat jako účetní doklad, ale už nejsou spojené s vaší osobou.',
       presmerovat: '/',
     });
   } catch (err) {

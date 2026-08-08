@@ -208,6 +208,20 @@ model Order {
   /// použít nedá – jde po sobě, takže by šlo cizí objednávky procházet.
   verejnyToken        String        @unique @default(cuid())
   stav                OrderStatus   @default(NOVA)
+
+  /// Rozpis objednávky tak, jak platil v okamžiku nákupu.
+  ///
+  /// Dřív se na faktuře dopočítával zpětně z `procentoSlevy` slevového kódu
+  /// a ze zbytku do `celkovaCena`. Jakmile ale majitelka u kódu procento
+  /// změnila, vyšla faktura pro starou objednávku jinak a rozdíl se tiše
+  /// schoval do dopravy. Rozpis je součást účetního dokladu – musí být
+  /// zmrazený stejně jako doručovací adresa a `cenaVDobeNakupu`.
+  mezisoucet          Decimal       @default(0)
+  slevaCastka         Decimal       @default(0)
+  cenaDopravy         Decimal       @default(0)
+
+  /// Součet zboží po slevě + doprava, tedy hodnota objednávky **před**
+  /// uplatněním dárkového poukazu. Co zbývá doplatit = `celkovaCena - castkaZGiftCard`.
   celkovaCena         Decimal
   discountCodeId      String?
   discountCode        DiscountCode? @relation(fields: [discountCodeId], references: [id])
@@ -327,6 +341,12 @@ model NewsletterSubscriber {
   /// Odkud přihlášení přišlo – "hero", "paticka". Kvůli měření, ne kvůli funkci.
   zdroj     String?
   odhlasenAt DateTime?
+
+  /// Klíč do odhlašovacího odkazu (a později do potvrzení double opt-inu).
+  /// E-mail se do odkazu dát nesmí: kdokoliv by pak odhlásil kohokoliv,
+  /// komu uhodne adresu. Token je náhodný a váže se na jediný záznam.
+  token     String   @unique @default(cuid())
+
   createdAt DateTime @default(now())
 }
 
@@ -371,6 +391,11 @@ model Reklamace {
   poznamkaAdmina String?
   datumPrijeti   DateTime      @default(now())
   datumVyrizeni  DateTime?
+
+  // Zákaznice si v účtu vypisuje reklamace ke svým objednávkám; admin je
+  // řadí podle stavu. Bez indexu na `orderId` je první z toho sekvenční sken.
+  @@index([orderId])
+  @@index([stav, datumPrijeti])
 }
 
 enum ReklamaceTyp {
