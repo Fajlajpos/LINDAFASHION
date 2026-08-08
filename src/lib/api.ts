@@ -44,6 +44,15 @@ export function zpracovatChybu(err: unknown) {
     return odpovedChyba('Zkontrolujte prosím vyplněné údaje.', 422, zodNaPole(err));
   }
 
+  /*
+   * Rozbité tělo požadavku je chyba volajícího, ne serveru. `request.json()`
+   * na nevalidním JSONu hází SyntaxError, který dřív propadl až do větve 500 –
+   * odpověď pak tvrdila „něco se pokazilo na naší straně“ a zbytečně plnila log.
+   */
+  if (err instanceof SyntaxError) {
+    return odpovedChyba('Neplatný formát požadavku.', 400);
+  }
+
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
       const cil = (err.meta?.target as string[] | undefined)?.join(', ') ?? 'hodnota';

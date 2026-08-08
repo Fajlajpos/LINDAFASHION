@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Package, Truck } from 'lucide-react';
 import { db } from '@/lib/db';
 import { STAV_OBJEDNAVKY, STAV_PLATBY, formatDatum } from '@/lib/objednavka-popisky';
+import { Strankovani, cisloStranky } from '@/components/ui/Strankovani';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -20,12 +21,16 @@ const FILTRY = [
   { klic: 'ZRUSENA', popisek: 'Zrušené' },
 ];
 
+/** Dřív se vypisovalo prvních 100 a na zbytek se nedalo dostat vůbec. */
+const NA_STRANKU = 25;
+
 interface Props {
-  searchParams: { stav?: string };
+  searchParams: { stav?: string; stranka?: string };
 }
 
 export default async function AdminObjednavkyPage({ searchParams }: Props) {
   const stav = searchParams.stav && searchParams.stav !== 'vse' ? searchParams.stav : null;
+  const stranka = cisloStranky(searchParams.stranka);
 
   const kde: Prisma.OrderWhereInput = stav ? { stav: stav as Prisma.EnumOrderStatusFilter['equals'] } : {};
 
@@ -33,7 +38,8 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
     db.order.findMany({
       where: kde,
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      skip: (stranka - 1) * NA_STRANKU,
+      take: NA_STRANKU,
       include: {
         items: { select: { mnozstvi: true } },
         _count: { select: { reklamace: true } },
@@ -44,6 +50,19 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
 
   const pocetPodleStavu = new Map(pocty.map((p) => [String(p.stav), p._count]));
   const celkem = pocty.reduce((s, p) => s + p._count, 0);
+
+  // Počet ve filtru už máme z `groupBy`, další dotaz do databáze není potřeba.
+  const celkemVeFiltru = stav ? (pocetPodleStavu.get(stav) ?? 0) : celkem;
+  const stranek = Math.ceil(celkemVeFiltru / NA_STRANKU);
+
+  const odkazStranky = (cislo: number) => {
+    const parametry = new URLSearchParams();
+    if (stav) parametry.set('stav', stav);
+    if (cislo > 1) parametry.set('stranka', String(cislo));
+
+    const dotaz = parametry.toString();
+    return `/admin/objednavky${dotaz ? `?${dotaz}` : ''}`;
+  };
 
   return (
     <div className="space-y-8">
@@ -84,8 +103,17 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
         <div className="space-y-2 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
           <Package className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
           <p className="text-xs text-linda-espresso/75">
-            {stav ? 'V tomto stavu není žádná objednávka.' : 'Zatím sem nedorazila žádná objednávka.'}
+            {celkemVeFiltru > 0
+              ? 'Na této stránce už nic není.'
+              : stav
+                ? 'V tomto stavu není žádná objednávka.'
+                : 'Zatím sem nedorazila žádná objednávka.'}
           </p>
+          {celkemVeFiltru > 0 && (
+            <Link href={odkazStranky(1)} className="text-xs font-semibold text-linda-cognac underline">
+              Zpět na první stránku
+            </Link>
+          )}
         </div>
       ) : (
         <ul className="space-y-3">
@@ -137,6 +165,13 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
           })}
         </ul>
       )}
+
+      <Strankovani
+        stranka={stranka}
+        stranek={stranek}
+        odkaz={odkazStranky}
+        popisek="Stránkování objednávek"
+      />
     </div>
   );
 }

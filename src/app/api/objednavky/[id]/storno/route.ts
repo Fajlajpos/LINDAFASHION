@@ -37,11 +37,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
       );
     }
 
-    await db.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: objednavka.id },
+    const zruseno = await db.$transaction(async (tx) => {
+      /*
+       * Přepnutí stavu je zároveň zámek: podmínka `stav: 'NOVA'` je součástí
+       * UPDATE, ne jen kontroly nad ním. Dvojklik na tlačítko jinak poslal dva
+       * požadavky, oba prošly kontrolou výš a zboží se vrátilo na sklad dvakrát –
+       * a dvakrát se připsal i zůstatek dárkového poukazu.
+       */
+      const zmeneno = await tx.order.updateMany({
+        where: { id: objednavka.id, stav: 'NOVA' },
         data: { stav: 'ZRUSENA', zrusil: 'ZAKAZNICE' },
       });
+
+      if (zmeneno.count !== 1) return false;
 
       for (const polozka of objednavka.items) {
         await tx.productVariant.update({
@@ -67,7 +75,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
           },
         });
       }
+
+      return true;
     });
+
+    if (!zruseno) {
+      return odpovedChyba('Tuto objednávku už někdo mezitím zrušil.', 409);
+    }
 
     return odpovedOk({ zprava: 'Objednávka byla zrušena a zboží vráceno do nabídky.' });
   } catch (err) {

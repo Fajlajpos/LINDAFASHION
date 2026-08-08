@@ -52,6 +52,9 @@ export async function GET() {
 
     const kody = await db.discountCode.findMany({
       orderBy: { id: 'desc' },
+      // Kódy se přidávají a nikdy nemažou, takže bez limitu by odpověď rostla
+      // navždy. Nejnovější jsou první, ty staré nikoho nezajímají.
+      take: 200,
       include: { _count: { select: { orders: true } } },
     });
 

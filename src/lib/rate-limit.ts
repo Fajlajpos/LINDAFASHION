@@ -10,22 +10,29 @@
 
 interface Okno {
   pokusy: number[];
+  /**
+   * Okamžik, po kterém záznam určitě nikoho neomezuje.
+   *
+   * Bez něj úklid mazal všechno starší deseti minut – jenže limity na
+   * newsletter a kontaktní formulář mají okno hodinové. Hodinový limit se tím
+   * fakticky smrskl na deset minut a stačilo počkat, aby se pět pokusů
+   * obnovilo.
+   */
+  platiDo: number;
 }
 
 const okna = new Map<string, Okno>();
 
-/** Ať mapa neroste donekonečna u dlouho běžícího procesu. */
-const UKLID_PO_MS = 10 * 60 * 1000;
+/** Jak často se mapa protřepe, ať u dlouho běžícího procesu neroste. */
+const INTERVAL_UKLIDU_MS = 10 * 60 * 1000;
 let posledniUklid = 0;
 
 function uklidit(ted: number) {
-  if (ted - posledniUklid < UKLID_PO_MS) return;
+  if (ted - posledniUklid < INTERVAL_UKLIDU_MS) return;
   posledniUklid = ted;
 
   for (const [klic, okno] of okna) {
-    if (okno.pokusy.every((t) => ted - t > UKLID_PO_MS)) {
-      okna.delete(klic);
-    }
+    if (ted > okno.platiDo) okna.delete(klic);
   }
 }
 
@@ -39,12 +46,16 @@ export function zkontrolovatLimit(klic: string, maxPokusu: number, oknoMs: numbe
   const ted = Date.now();
   uklidit(ted);
 
-  const okno = okna.get(klic) ?? { pokusy: [] };
-  const cerstve = okno.pokusy.filter((t) => ted - t < oknoMs);
+  const okno = okna.get(klic);
+  const cerstve = (okno?.pokusy ?? []).filter((t) => ted - t < oknoMs);
+
+  /* Stejný klíč může chodit z víc endpointů s různě dlouhým oknem, proto
+     platnost jen prodlužujeme, nikdy nezkracujeme. */
+  const platiDo = Math.max(okno?.platiDo ?? 0, ted + oknoMs);
 
   if (cerstve.length >= maxPokusu) {
     const nejstarsi = Math.min(...cerstve);
-    okna.set(klic, { pokusy: cerstve });
+    okna.set(klic, { pokusy: cerstve, platiDo });
 
     return {
       povoleno: false,
@@ -53,7 +64,7 @@ export function zkontrolovatLimit(klic: string, maxPokusu: number, oknoMs: numbe
   }
 
   cerstve.push(ted);
-  okna.set(klic, { pokusy: cerstve });
+  okna.set(klic, { pokusy: cerstve, platiDo });
 
   return { povoleno: true, zkusitZaSekund: 0 };
 }
@@ -66,6 +77,11 @@ export function vynulovatLimit(klic: string) {
 /**
  * Klíč pro limit. Za reverzní proxy (Caddy) je skutečná IP v X-Forwarded-For –
  * `request.ip` by vracelo adresu proxy, tedy stejnou pro všechny.
+ *
+ * Hlavičku si ovšem odesílatel může vymyslet. Spoléhá se proto na to, že se
+ * na `web` nedá zvenčí dosáhnout jinak než přes proxy: `docker-compose.yml`
+ * publikuje port 3000 jen na localhost. Kdo to přebije přes `WEB_BIND`,
+ * zároveň otevře obcházení téhle brzdy.
  */
 export function klientskaIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');

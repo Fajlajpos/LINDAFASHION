@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { AlertCircle, Gift, ImageOff, Loader2, Plus, Sparkles } from 'lucide-react';
 import { db } from '@/lib/db';
+import { Strankovani, cisloStranky } from '@/components/ui/Strankovani';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,18 +10,39 @@ export const metadata = {
   title: 'Správa produktů | Administrace LINDA FASHION',
 };
 
-export default async function AdminProduktyPage() {
-  const produkty = await db.product.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      category: { select: { nazev: true } },
-      variants: { select: { skladem: true } },
-      images: {
-        orderBy: { poradi: 'asc' },
-        select: { urlThumb: true, altText: true, jeHlavni: true, stavZpracovani: true },
+/**
+ * Dotaz sem tahá i varianty a fotky každého produktu. Bez limitu (dřív tu
+ * žádný nebyl) by se s rostoucím katalogem načítalo všechno naráz.
+ */
+const NA_STRANKU = 25;
+
+interface Props {
+  searchParams: { stranka?: string };
+}
+
+export default async function AdminProduktyPage({ searchParams }: Props) {
+  const stranka = cisloStranky(searchParams.stranka);
+
+  const [produkty, celkem] = await Promise.all([
+    db.product.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: (stranka - 1) * NA_STRANKU,
+      take: NA_STRANKU,
+      include: {
+        category: { select: { nazev: true } },
+        variants: { select: { skladem: true } },
+        images: {
+          orderBy: { poradi: 'asc' },
+          select: { urlThumb: true, altText: true, jeHlavni: true, stavZpracovani: true },
+        },
       },
-    },
-  });
+    }),
+    db.product.count(),
+  ]);
+
+  const stranek = Math.ceil(celkem / NA_STRANKU);
+  const odkazStranky = (cislo: number) =>
+    cislo > 1 ? `/admin/produkty?stranka=${cislo}` : '/admin/produkty';
 
   return (
     <div className="space-y-8">
@@ -28,9 +50,10 @@ export default async function AdminProduktyPage() {
         <div>
           <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Správa produktů</h1>
           <p className="mt-1 text-xs text-linda-espresso/70">
-            {produkty.length === 0
+            {/* Počet z databáze, ne délka vypsané stránky. */}
+            {celkem === 0
               ? 'Zatím tu není žádný produkt'
-              : `${produkty.length} ${produkty.length === 1 ? 'produkt' : produkty.length < 5 ? 'produkty' : 'produktů'} v katalogu`}
+              : `${celkem} ${celkem === 1 ? 'produkt' : celkem < 5 ? 'produkty' : 'produktů'} v katalogu`}
           </p>
         </div>
 
@@ -43,7 +66,16 @@ export default async function AdminProduktyPage() {
         </Link>
       </div>
 
-      {produkty.length === 0 ? (
+      {produkty.length === 0 && celkem > 0 ? (
+        <div className="rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
+          <p className="text-xs text-linda-espresso/75">
+            Na této stránce už nic není.{' '}
+            <Link href={odkazStranky(1)} className="font-semibold text-linda-cognac underline">
+              Zpět na první stránku
+            </Link>
+          </p>
+        </div>
+      ) : produkty.length === 0 ? (
         <div className="space-y-3 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
           <Sparkles className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
           <h2 className="font-serif text-xl text-linda-espresso">Katalog je zatím prázdný</h2>
@@ -137,6 +169,13 @@ export default async function AdminProduktyPage() {
           })}
         </ul>
       )}
+
+      <Strankovani
+        stranka={stranka}
+        stranek={stranek}
+        odkaz={odkazStranky}
+        popisek="Stránkování produktů"
+      />
     </div>
   );
 }

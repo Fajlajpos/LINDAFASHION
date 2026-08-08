@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Filter, SlidersHorizontal } from 'lucide-react';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { RazeniKatalogu } from '@/components/shop/RazeniKatalogu';
+import { Strankovani } from '@/components/ui/Strankovani';
 import { nacistKategorie, nacistProdukty, type Razeni } from '@/lib/katalog';
 
 interface Props {
@@ -129,24 +130,14 @@ export async function KatalogVypis({
               ))}
             </div>
 
-            {stranek > 1 && (
-              <nav aria-label="Stránkování katalogu" className="flex flex-wrap justify-center gap-2 pt-4">
-                {Array.from({ length: stranek }, (_, i) => i + 1).map((cislo) => (
-                  <Link
-                    key={cislo}
-                    href={odkazStranky(cislo)}
-                    aria-current={cislo === stranka ? 'page' : undefined}
-                    className={`flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-lg px-3 text-xs font-semibold transition-all duration-200 ${
-                      cislo === stranka
-                        ? 'bg-linda-cognac text-white shadow-neuOnDarkInset'
-                        : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:shadow-neu active:shadow-neuInsetSm'
-                    }`}
-                  >
-                    {cislo}
-                  </Link>
-                ))}
-              </nav>
-            )}
+            {/* Dřív se vypisovalo každé číslo stránky – při stovce stran je to
+                sto odkazů, kterými se odečítač obrazovky musí prokousat. */}
+            <Strankovani
+              stranka={stranka}
+              stranek={stranek}
+              odkaz={odkazStranky}
+              popisek="Stránkování katalogu"
+            />
           </>
         ) : (
           <div className="space-y-4 rounded-2xl bg-linda-cream p-8 py-16 text-center shadow-neu">

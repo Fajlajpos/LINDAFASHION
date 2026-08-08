@@ -48,11 +48,19 @@ jako reverzní proxy s automatickým HTTPS.
 
 ```bash
 cp .env.example .env      # vyplnit produkčními hodnotami
-docker compose up -d --build
 
-# s HTTPS (nejdřív přepiš doménu v Caddyfile):
+# s HTTPS (nejdřív přepiš doménu v Caddyfile) – doporučená varianta:
 docker compose --profile proxy up -d --build
+
+# bez proxy (web pak musí být vystavený napřímo, viz WEB_BIND níž):
+docker compose up -d --build
 ```
+
+> **`web` je ve výchozím stavu jen na `127.0.0.1:3000`.** Caddy na něj sahá po interní
+> síti Dockeru, zvenčí se na něj nedá. Je to schválně: brzda proti hádání hesel se řídí
+> hlavičkou `X-Forwarded-For`, kterou si při přímém přístupu může kdokoliv vymyslet
+> a limit tím obejít. Pokud proxy nechceš, nastav v `.env` `WEB_BIND=0.0.0.0`
+> a počítej s tím, že tahle ochrana padá.
 
 Migrace se aplikují samy při startu kontejneru `web` (`prisma migrate deploy`),
 takže nasazení nevyžaduje ruční krok v databázi. Prvotní admin účet se založí
@@ -77,7 +85,7 @@ spouštěcím příkazem.
 | `npm run db:seed` | ukázková data |
 | `npm run db:studio` | Prisma Studio – prohlížeč databáze |
 | `npm run admin:reset-heslo -- <email> <heslo>` | reset hesla administrátorky |
-| `npm test` | testy (peníze, slugy, validace uploadu) |
+| `npm test` | testy (peníze, slugy, validace uploadu, limity požadavků) |
 
 ---
 

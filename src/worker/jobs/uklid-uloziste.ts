@@ -137,6 +137,10 @@ async function smazatOsireleOriginaly(): Promise<void> {
 
   // Chráníme jen originály, které ještě čekají na zpracování. Fotky v HOTOVO
   // mají `originalSoubor` vynulovaný, fotky v CHYBA jim ho vzal `uklidPoChybach`.
+  //
+  // Dotaz schválně nemá `take`: seznam musí být úplný. Ořízlý by znamenal, že
+  // se za nepoužívaný prohlásí soubor, na který ještě čeká rozpracovaná úloha,
+  // a úklid by ho smazal.
   const pouzivane = new Set(
     (
       await db.productImage.findMany({

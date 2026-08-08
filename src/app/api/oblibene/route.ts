@@ -66,8 +66,18 @@ export async function POST(request: Request) {
     const uzivatel = await overitUzivatele();
     if (!uzivatel) return odpovedChyba('Nejste přihlášeni.', 401);
 
-    const telo = await request.json();
-    const slugy = 'slugy' in telo ? slouceniSchema.parse(telo).slugy : [slugSchema.parse(telo).slug];
+    /*
+     * Operátor `in` na čemkoliv jiném než objektu hodí TypeError – tělo
+     * `null`, `"ahoj"` nebo `5` tady dřív skončilo jako chyba 500 místo
+     * srozumitelné validační hlášky. `request.json()` navíc `null` klidně vrátí.
+     */
+    const telo: unknown = await request.json();
+    if (telo === null || typeof telo !== 'object') {
+      return odpovedChyba('Neplatný formát požadavku.', 400);
+    }
+
+    const slugy =
+      'slugy' in telo ? slouceniSchema.parse(telo).slugy : [slugSchema.parse(telo).slug];
 
     if (slugy.length > 0) {
       const produkty = await db.product.findMany({

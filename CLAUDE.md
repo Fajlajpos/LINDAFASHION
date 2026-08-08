@@ -37,7 +37,15 @@ Consequences worth remembering:
 - Image processing runs **only in the worker**. Never call
   [sharp-image.ts](src/lib/sharp-image.ts) from a route handler.
 - API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
-  offending field — see [api.ts](src/lib/api.ts).
+  offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
+  400: a broken request body is the caller's fault, and it used to surface as a 500 that
+  blamed the server and filled the log.
+- **Never `in`-test a parsed request body without checking it is an object first.**
+  `request.json()` happily returns `null`, a number or a string, and `'x' in 5` throws.
+- Admin lists are paginated through [Strankovani.tsx](src/components/ui/Strankovani.tsx)
+  (`?stranka=`, windowed page numbers). Counts in the headings come from `count()`, not
+  from the length of the rendered page — that used to report "200 registrovaných účtů"
+  no matter how many there really were.
 - `binaryTargets` in [schema.prisma](prisma/schema.prisma) must keep
   `linux-musl-openssl-3.0.x`. Without it the Docker image **builds fine and then dies on
   the first query** with `Error loading shared library libssl.so.1.1` — Prisma guesses the
@@ -140,7 +148,13 @@ What is still missing:
   worse than leaving it empty.
 - Rate limiting ([rate-limit.ts](src/lib/rate-limit.ts)) counts in process memory — fine for
   the single-container deployment, but it resets on restart and would not be shared if the
-  app ever scaled to several `web` instances.
+  app ever scaled to several `web` instances. Each entry carries `platiDo`; the sweeper
+  keys off that, **never off a fixed age** — a fixed 10-minute sweep silently turned the
+  hour-long windows (newsletter, contact form) into ten-minute ones. Covered by
+  [rate-limit.test.ts](src/lib/rate-limit.test.ts).
+- The limiter keys off `X-Forwarded-For`, which the sender controls. It is only trustworthy
+  because `docker-compose.yml` publishes `web` on `127.0.0.1` — reachable through Caddy, not
+  from outside. Overriding `WEB_BIND=0.0.0.0` re-opens brute-force on login.
 - The Docker build uses `npm install`, not `npm ci`: `package-lock.json` is generated on
   Windows and omits the Linux platform binaries (`@img/sharp-linuxmusl-x64` and friends),
   so `npm ci` fails inside the image. Fully reproducible builds would need the lock file
@@ -155,7 +169,12 @@ data, now Product/Offer/Breadcrumb/Organization/LocalBusiness · sitemap and pro
 generated from the database instead of invented rows · `/kosik` rendered two hardcoded
 products instead of the real cart · confirmation page was readable by anyone who counted
 up the order number · stock could go negative under concurrency · newsletter, contact form
-and "Upozornit, až bude skladem" had no endpoint and only faked success · contact details
+and "Upozornit, až bude skladem" had no endpoint and only faked success · admin lists
+silently truncated at 100–200 rows with no way to reach the rest (and `/admin/produkty`
+had no limit at all) · hour-long rate-limit windows were swept away after ten minutes ·
+double-clicking cancel reversed stock and gift-card balance twice · malformed JSON bodies
+returned 500 · guest orders got no status e-mail because only `user.email` was read ·
+contact details
 on `/kontakt` were hardcoded instead of read from `Settings` · the `jePlatceDph` switch
 reached the invoice but never the shop · cookie banner pre-ticked the
 optional categories (GDPR breach) and the consent controlled nothing, now
@@ -177,6 +196,10 @@ discount-code and gift-card handling.
 - Cancelling (customer or admin) **reverses all three** — stock back up, code counter down,
   gift-card balance restored and reactivated. Same for an approved return, which also flips
   the order to `VRACENA`.
+- **The cancel also puts its state check inside the UPDATE** (`updateMany` on
+  `{ id, stav }`, then assert `count === 1`). A double-click otherwise ran the reversal
+  twice: stock came back doubled and the gift-card balance was credited twice — the
+  cancel hands out money, so this is the expensive direction of the same race.
 - Gift cards bought as goods are issued **only once payment is marked `ZAPLACENO`**, and one
   code per piece ([vygenerovat-poukazy.ts](src/worker/jobs/vygenerovat-poukazy.ts)).
   `castkaZVarianty` deliberately requires the whole variant name to be an amount — matching

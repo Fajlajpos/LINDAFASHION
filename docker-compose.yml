@@ -38,8 +38,13 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-linda}:${POSTGRES_PASSWORD:-lindapassword}@postgres:5432/${POSTGRES_DB:-linda_fashion}?schema=public
+    # Ve výchozím nastavení jen na localhost. Caddy sahá na `web` po interní
+    # síti Dockeru, takže mu to nevadí – a limity požadavků se opírají
+    # o hlavičku `X-Forwarded-For`, kterou si při přímém přístupu zvenčí může
+    # kdokoliv vymyslet a obejít tím brzdu na přihlašování.
+    # Bez proxy nastav v `.env` `WEB_BIND=0.0.0.0` a počítej s tím.
     ports:
-      - '3000:3000'
+      - '${WEB_BIND:-127.0.0.1}:3000:3000'
     depends_on:
       postgres:
         condition: service_healthy

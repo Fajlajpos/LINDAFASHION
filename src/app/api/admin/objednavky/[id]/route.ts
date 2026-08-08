@@ -51,9 +51,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       );
     }
 
-    await db.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: params.id },
+    const zpracovano = await db.$transaction(async (tx) => {
+      /*
+       * Když se ruší, je podmínka na dosavadní stav součástí UPDATE. Dvojklik
+       * jinak spustil vracení dvakrát: zboží se vrátilo na sklad dvojnásobně
+       * a dvakrát se připsal i zůstatek dárkového poukazu.
+       */
+      const zmeneno = await tx.order.updateMany({
+        where: rusi ? { id: params.id, stav: objednavka.stav } : { id: params.id },
         data: {
           ...(vstup.stav ? { stav: vstup.stav } : {}),
           ...(vstup.stavPlatby ? { stavPlatby: vstup.stavPlatby } : {}),
@@ -62,6 +67,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           ...(rusi ? { zrusil: 'ADMIN' as const } : {}),
         },
       });
+
+      if (zmeneno.count !== 1) return false;
 
       if (rusi) {
         for (const polozka of objednavka.items) {
@@ -85,14 +92,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           });
         }
       }
+
+      return true;
     });
+
+    if (!zpracovano) {
+      return odpovedChyba('Stav objednávky se mezitím změnil. Načtěte prosím stránku znovu.', 409);
+    }
 
     // Zákaznici dáme vědět o změně stavu (sekce 6.4). Bez SMTP se zpráva
     // zatím jen zaloguje.
-    if (vstup.stav && objednavka.user?.email) {
+    //
+    // `objednavka.email` je první v pořadí – objednávka bez registrace nemá
+    // `user`, takže jí do téhle chvíle žádná zpráva o stavu nechodila vůbec.
+    const kontakt = objednavka.email ?? objednavka.user?.email ?? null;
+
+    if (vstup.stav && kontakt) {
       await publishJob(FRONTY.ODESLAT_EMAIL, {
         typ: 'zmena-stavu-objednavky',
-        to: objednavka.user.email,
+        to: kontakt,
         subject: `Objednávka ${objednavka.cisloObjednavky} – změna stavu`,
         data: { cisloObjednavky: objednavka.cisloObjednavky, stav: vstup.stav, cisloZasilky: vstup.cisloZasilky },
       });

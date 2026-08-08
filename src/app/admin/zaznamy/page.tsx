@@ -1,6 +1,8 @@
 import React from 'react';
+import Link from 'next/link';
 import { History, ShieldCheck } from 'lucide-react';
 import { db } from '@/lib/db';
+import { Strankovani, cisloStranky } from '@/components/ui/Strankovani';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,27 +56,55 @@ function detail(podrobnosti: unknown): string | null {
   return null;
 }
 
-export default async function AdminZaznamyPage() {
-  const zaznamy = await db.auditLog.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  });
+const NA_STRANKU = 50;
+
+interface Props {
+  searchParams: { stranka?: string };
+}
+
+export default async function AdminZaznamyPage({ searchParams }: Props) {
+  const stranka = cisloStranky(searchParams.stranka);
+
+  const [zaznamy, celkem] = await Promise.all([
+    db.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: (stranka - 1) * NA_STRANKU,
+      take: NA_STRANKU,
+    }),
+    db.auditLog.count(),
+  ]);
+
+  const stranek = Math.ceil(celkem / NA_STRANKU);
+  const odkazStranky = (cislo: number) =>
+    cislo > 1 ? `/admin/zaznamy?stranka=${cislo}` : '/admin/zaznamy';
 
   return (
     <div className="max-w-4xl space-y-8">
       <div className="border-b border-linda-sand pb-6">
         <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Záznam změn</h1>
         <p className="mt-1 text-xs text-linda-espresso/70">
-          Posledních 200 akcí provedených v administraci
+          {celkem === 0
+            ? 'Zatím žádná akce'
+            : `${celkem} akcí provedených v administraci`}
         </p>
       </div>
 
       {zaznamy.length === 0 ? (
         <div className="space-y-2 rounded-2xl bg-linda-cream p-10 text-center shadow-neu">
           <ShieldCheck className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
-          <p className="text-xs text-linda-espresso/75">
-            Zatím tu nic není. Jakmile začnete upravovat produkty nebo nastavení, akce se objeví tady.
-          </p>
+          {celkem > 0 ? (
+            <p className="text-xs text-linda-espresso/75">
+              Na této stránce už nic není.{' '}
+              <Link href={odkazStranky(1)} className="font-semibold text-linda-cognac underline">
+                Zpět na první stránku
+              </Link>
+            </p>
+          ) : (
+            <p className="text-xs text-linda-espresso/75">
+              Zatím tu nic není. Jakmile začnete upravovat produkty nebo nastavení, akce se objeví
+              tady.
+            </p>
+          )}
         </div>
       ) : (
         <ul className="space-y-2">
@@ -104,6 +134,13 @@ export default async function AdminZaznamyPage() {
           })}
         </ul>
       )}
+
+      <Strankovani
+        stranka={stranka}
+        stranek={stranek}
+        odkaz={odkazStranky}
+        popisek="Stránkování záznamů"
+      />
     </div>
   );
 }

@@ -12,22 +12,36 @@ const vytvoreniSchema = z.object({
   duvod: z.string().max(2000).optional().nullable(),
 });
 
+/**
+ * Kolik reklamací vydáme naráz.
+ *
+ * Řazení podle stavu drží nevyřízené nahoře, takže se ořízne vždycky ten
+ * nejméně důležitý konec. Bez limitu (dřív tu žádný nebyl) by odpověď rostla
+ * s každou vyřízenou reklamací navždy.
+ */
+const LIMIT = 200;
+
 /** GET – seznam reklamací a vrácení (sekce 6.10). */
 export async function GET() {
   try {
     if (!(await overitAdmina())) return odpovedNeautorizovano();
 
-    const reklamace = await db.reklamace.findMany({
-      orderBy: [{ stav: 'asc' }, { datumPrijeti: 'desc' }],
-      include: {
-        order: { select: { id: true, cisloObjednavky: true, dodaciJmenoPrijmeni: true } },
-        orderItem: {
-          include: { variant: { include: { product: { select: { nazev: true } } } } },
+    const [reklamace, celkem] = await Promise.all([
+      db.reklamace.findMany({
+        orderBy: [{ stav: 'asc' }, { datumPrijeti: 'desc' }],
+        take: LIMIT,
+        include: {
+          order: { select: { id: true, cisloObjednavky: true, dodaciJmenoPrijmeni: true } },
+          orderItem: {
+            include: { variant: { include: { product: { select: { nazev: true } } } } },
+          },
         },
-      },
-    });
+      }),
+      db.reklamace.count(),
+    ]);
 
     return odpovedOk({
+      celkem,
       reklamace: reklamace.map((r) => ({
         id: r.id,
         typ: r.typ,

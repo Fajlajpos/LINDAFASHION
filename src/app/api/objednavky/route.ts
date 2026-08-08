@@ -66,6 +66,9 @@ export async function GET() {
     const objednavky = await db.order.findMany({
       where: { userId: uzivatel.id },
       orderBy: { createdAt: 'desc' },
+      // Účet vypisuje historii nákupů; sto posledních pokryje i věrnou
+      // zákaznici a odpověď nemůže růst donekonečna.
+      take: 100,
       include: {
         items: {
           include: {

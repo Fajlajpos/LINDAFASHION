@@ -30,16 +30,24 @@ const STAVY = ['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA', 'VYRIZENA_ZAMITNUTA'];
  */
 export default function AdminReklamacePage() {
   const [reklamace, setReklamace] = useState<Reklamace[]>([]);
+  /** Kolik jich je celkem – server posílá nejvýš 200 nevyřízených napřed. */
+  const [celkem, setCelkem] = useState(0);
   const [nacitam, setNacitam] = useState(true);
   const [chyba, setChyba] = useState<string | null>(null);
   const [meniId, setMeniId] = useState<string | null>(null);
   const [hlaska, setHlaska] = useState<string | null>(null);
 
   const nacistData = useCallback(async () => {
-    const vysledek = await nacist<{ reklamace: Reklamace[] }>('/api/admin/reklamace');
+    const vysledek = await nacist<{ reklamace: Reklamace[]; celkem: number }>(
+      '/api/admin/reklamace'
+    );
 
-    if (vysledek.ok) setReklamace(vysledek.data.reklamace);
-    else setChyba(vysledek.chyba);
+    if (vysledek.ok) {
+      setReklamace(vysledek.data.reklamace);
+      setCelkem(vysledek.data.celkem);
+    } else {
+      setChyba(vysledek.chyba);
+    }
 
     setNacitam(false);
   }, []);
@@ -118,6 +126,13 @@ export default function AdminReklamacePage() {
         </div>
       ) : (
         <ul className="space-y-3">
+          {celkem > reklamace.length && (
+            <li className="rounded-xl bg-linda-sandLight p-3 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
+              Zobrazeno {reklamace.length} z {celkem}. Nevyřízené jsou vždy nahoře, ořízl se tedy
+              jen nejstarší vyřízený konec seznamu.
+            </li>
+          )}
+
           {reklamace.map((r) => {
             const popis = STAV_REKLAMACE[r.stav] ?? { text: r.stav, tridy: 'bg-linda-sandLight' };
 
