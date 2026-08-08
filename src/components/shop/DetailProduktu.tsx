@@ -214,13 +214,18 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
                   const vyprodano = v.skladem === 0;
                   const vybrana = v.id === varianta?.id;
 
+                  const dochazi = v.skladem > 0 && v.skladem <= 2;
+
                   return (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => setVybranaId(v.id)}
                       aria-pressed={vybrana}
-                      className={`min-h-touch cursor-pointer rounded-xl px-2 py-3 text-center text-xs font-medium transition-all duration-200 ${
+                      /* `justify-center` drží jednořádkové dlaždice na střed
+                         proti dvouřádkové – mřížka je natahuje na stejnou výšku
+                         a bez toho seděl text nahoře. */
+                      className={`flex min-h-touch cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-center text-xs font-medium transition-all duration-200 ${
                         vybrana
                           ? 'bg-linda-cognac text-white shadow-neuOnDarkInset'
                           : vyprodano
@@ -228,10 +233,19 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
                             : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:shadow-neu'
                       }`}
                     >
-                      {v.velikost}
-                      {v.skladem > 0 && v.skladem <= 2 && (
-                        <span className="block text-[9px] font-normal text-linda-cognac">
-                          Poslední kousky!
+                      <span>{v.velikost}</span>
+
+                      {dochazi && (
+                        /* Na zvolené dlaždici musí být upozornění světlé –
+                           `text-linda-cognac` na koňakovém podkladu splynulo
+                           s pozadím, takže hláška mizela přesně ve chvíli, kdy
+                           si zákaznice tu velikost vybrala. */
+                        <span
+                          className={`text-[11px] font-normal leading-tight ${
+                            vybrana ? 'text-white/90' : 'text-linda-cognac'
+                          }`}
+                        >
+                          Poslední kousky
                         </span>
                       )}
                     </button>

@@ -235,7 +235,10 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
                         </span>
                       )}
                     </div>
-                    {polozka.skladem <= 3 && (
+                    {/* Stejná hranice jako na detailu produktu a ve workeru
+                        (`skladem <= 2`) – tři různá čísla pro „dochází“ by
+                        znamenala, že si košík a detail odporují. */}
+                    {polozka.skladem <= 2 && (
                       <p className="text-[11px] font-medium text-linda-cognac">
                         Skladem poslední {polozka.skladem} ks
                       </p>
@@ -451,9 +454,11 @@ const PoleKodu: React.FC<{
     </p>
 
     {uplatneno ? (
-      <p className="flex items-center justify-between gap-2 rounded-xl bg-linda-sageLight p-3 text-xs font-medium text-linda-espresso">
+      /* Stejný zápis jako uplatněný kód v pokladně – jinak by se tentýž stav
+         na dvou obrazovkách hlásil dvěma různými barvami. */
+      <p className="flex items-center justify-between gap-2 rounded-xl bg-linda-sageLight p-3 text-xs font-medium text-linda-sage">
         <span className="flex items-center gap-1.5">
-          <Check className="h-3.5 w-3.5 shrink-0 text-linda-sage" aria-hidden="true" />
+          <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {uplatneno}
         </span>
         <button
@@ -489,11 +494,14 @@ const PoleKodu: React.FC<{
             onClick={odeslat}
             disabled={overuje}
             aria-busy={overuje}
-            className={`min-h-touch shrink-0 cursor-pointer rounded-xl px-4 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex min-h-touch shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60 ${
               tmave ? 'bg-linda-espresso hover:bg-linda-cognac' : 'bg-linda-cognac hover:bg-linda-cognacHover'
             }`}
           >
-            {overuje ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Použít'}
+            {/* Spinner se přidává vedle popisku, nenahrazuje ho – jinak
+                tlačítko během ověřování poskočí na jinou šířku. */}
+            {overuje && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+            Použít
           </button>
         </div>
 

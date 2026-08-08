@@ -77,8 +77,20 @@ export function HlidaniSkladu({ variantId, velikost }: Props) {
     );
   }
 
+  /*
+   * Formulář je vyvýšená karta, ne další prohlubeň.
+   *
+   * Panel „vyprodáno“, ve kterém tohle sedí, je sám zapuštěný (`sandLight` +
+   * `neuInsetSm`). Kdyby bylo pole taky prohlubeň, žlábek by ležel ve žlábku –
+   * a sedm úrovní reliéfu na to nemá zásobu. Karta se proto zvedne na `cream`
+   * a pole je prohlubeň až v ní, tedy zpátky ve správném pořadí:
+   * zem → vyvýšená karta → zapuštěné pole.
+   */
   return (
-    <form onSubmit={(e) => void odeslat(e)} className="space-y-2 text-left">
+    <form
+      onSubmit={(e) => void odeslat(e)}
+      className="space-y-2 rounded-xl bg-linda-cream p-3 text-left shadow-neuSm"
+    >
       <label htmlFor="hlidani-email" className="block text-xs font-semibold text-linda-espresso">
         Váš e-mail
       </label>
@@ -96,19 +108,18 @@ export function HlidaniSkladu({ variantId, velikost }: Props) {
           disabled={odesila}
           aria-invalid={chyba ? true : undefined}
           aria-describedby={chyba ? 'hlidani-chyba' : undefined}
-          className="min-h-touch flex-1 rounded-full bg-linda-cream px-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60"
+          className="min-h-touch flex-1 rounded-full bg-linda-sandLight px-4 text-xs text-linda-espresso shadow-neuInsetSm transition-shadow placeholder:text-linda-espresso/60 disabled:opacity-60"
         />
+        {/* Popisek zůstává i při odesílání – kdyby ho nahradil spinner,
+            tlačítko by se pod prstem zúžilo. */}
         <button
           type="submit"
           disabled={odesila}
           aria-busy={odesila}
           className="flex min-h-touch shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-linda-espresso px-5 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognac active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {odesila ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            'Hlídat'
-          )}
+          {odesila && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+          Hlídat
         </button>
       </div>
 
@@ -123,7 +134,7 @@ export function HlidaniSkladu({ variantId, velikost }: Props) {
         </p>
       )}
 
-      <p className="text-[10px] text-linda-espresso/70">
+      <p className="text-[11px] text-linda-espresso/70">
         E-mail použijeme jen na tohle jedno upozornění.
       </p>
     </form>

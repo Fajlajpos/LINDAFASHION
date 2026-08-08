@@ -99,6 +99,14 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
     variable alpha, so 0.05 yields a 4/255 spread (invisible) and 0.15 yields ~12. It is
     `fixed` on purpose: grain that scrolls reads as wallpaper, grain that stays reads as
     the paper the page is printed on.
+  - **Never nest a recess in a recess.** A groove inside a groove has nowhere to go in the
+    seven-level budget. Put a raised `cream` card in between first, then the
+    `sandLight` groove inside it — ground → raised → recessed, in that order.
+    (The "notify me when back in stock" form sat directly in the recessed sold-out panel.)
+  - **A label inside a stateful element must change colour with the state.** The
+    "Poslední kousky" hint was `text-linda-cognac` regardless of selection, so on the
+    selected cognac tile it was cognac-on-cognac — the warning vanished exactly when the
+    customer picked that size. Same trap for anything on `espresso`/`cognac`/`chocolate`.
   - **Rules:** a raised surface must match its background colour — never lighten it.
     (Exception, and the only one: the page ground itself is `paper`, one step *below*
     `cream`. Without that step the white component of every `neu*` token has nothing to
