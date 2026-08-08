@@ -40,6 +40,16 @@ Consequences worth remembering:
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
   400: a broken request body is the caller's fault, and it used to surface as a 500 that
   blamed the server and filled the log.
+- **Error boundaries:** [(shop)/error.tsx](<src/app/(shop)/error.tsx>) keeps the header and
+  footer so the customer can navigate away; [app/error.tsx](src/app/error.tsx) is the
+  fallback for admin/auth; [global-error.tsx](src/app/global-error.tsx) catches a failure in
+  the root layout itself and therefore carries its own `html`/`body` and inline colours —
+  the one place raw hex is allowed, because `next/font` and the token stylesheet are exactly
+  what has failed. All three surface only `error.digest`, never the exception message: it
+  can carry a table name or a host. An unreachable database is the usual trigger — every
+  `findMany` in a Server Component throws and takes the page with it.
+  **Testing them needs a browser and a production build**: `next start` sends an empty shell
+  and renders the boundary on the client, so `curl` sees only scripts.
 - **Never `in`-test a parsed request body without checking it is an object first.**
   `request.json()` happily returns `null`, a number or a string, and `'x' in 5` throws.
 - Admin lists are paginated through [Strankovani.tsx](src/components/ui/Strankovani.tsx)
