@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { overitUzivatele } from '@/lib/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { objednavkaSchema } from '@/lib/validations/objednavka';
@@ -28,9 +28,13 @@ export async function POST(request: Request) {
     }
 
     const vstup = objednavkaSchema.parse(await request.json());
-    const session = await getSession();
 
-    const vysledek = await vytvoritObjednavku(vstup, session?.userId ?? null);
+    // Ověření proti databázi, ne jen platný token: objednávka se připojuje
+    // k účtu, takže se nesmí zavěsit na účet, který mezitím zmizel nebo byl
+    // odhlášen ze všech zařízení.
+    const uzivatel = await overitUzivatele();
+
+    const vysledek = await vytvoritObjednavku(vstup, uzivatel?.id ?? null);
 
     if (!vysledek.ok) {
       return odpovedChyba(vysledek.chyba.zprava, vysledek.chyba.status, vysledek.chyba.pole);
@@ -56,11 +60,11 @@ export async function POST(request: Request) {
 /** GET – objednávky přihlášené zákaznice (pro `/muj-ucet`). */
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session) return odpovedChyba('Nejste přihlášeni.', 401);
+    const uzivatel = await overitUzivatele();
+    if (!uzivatel) return odpovedChyba('Nejste přihlášeni.', 401);
 
     const objednavky = await db.order.findMany({
-      where: { userId: session.userId },
+      where: { userId: uzivatel.id },
       orderBy: { createdAt: 'desc' },
       include: {
         items: {
@@ -75,6 +79,8 @@ export async function GET() {
       objednavky: objednavky.map((o) => ({
         id: o.id,
         cisloObjednavky: o.cisloObjednavky,
+        // Klíč k dokladu v PDF – účet ho potřebuje pro odkaz na `/api/faktura`.
+        verejnyToken: o.verejnyToken,
         stav: o.stav,
         stavPlatby: o.stavPlatby,
         celkovaCena: Number(o.celkovaCena),

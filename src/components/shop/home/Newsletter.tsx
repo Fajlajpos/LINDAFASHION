@@ -3,30 +3,40 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { MediaFrame } from './MediaFrame';
+import { poslatJson } from '@/lib/api-klient';
 
 type StavOdeslani = 'klid' | 'odesilam' | 'hotovo';
 
 /**
  * Sekce s přihlášením k newsletteru: vlevo fotografie, vpravo formulář.
  *
- * Endpoint pro newsletter zatím v aplikaci není, formulář proto nic neodesílá –
- * jen potvrdí, že jsme přihlášku přijali. Text je schválně opatrný, ať uživateli
- * netvrdíme odběr, který nikde nevznikl.
+ * Formulář dřív odběr jen předstíral – potvrdil přijetí a nikam nic nezapsal.
+ * Teď se přihláška ukládá přes `POST /api/newsletter`.
  */
 export const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<StavOdeslani>('klid');
+  const [chyba, setChyba] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (stav === 'odesilam') return;
 
-    // TODO: Před spuštěním napojit na skutečný endpoint (POST /api/newsletter)
-    // – včetně ošetření chyby a duplicitního e-mailu. Zatím jen lokální stav.
     setStav('odesilam');
-    window.setTimeout(() => {
+    setChyba(null);
+
+    const vysledek = await poslatJson<{ zprava: string }>('/api/newsletter', {
+      email,
+      zdroj: 'hero',
+    });
+
+    if (vysledek.ok) {
       setStav('hotovo');
       setEmail('');
-    }, 400);
+    } else {
+      setChyba(vysledek.pole?.email ?? vysledek.chyba);
+      setStav('klid');
+    }
   };
 
   const odesilam = stav === 'odesilam';
@@ -58,7 +68,7 @@ export const Newsletter: React.FC = () => {
             Odhlásit se můžete kdykoli.
           </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-2">
             {/* Viditelný popisek – placeholder je jen doplněk, ne náhrada labelu. */}
             <label
               htmlFor="newsletter-email"
@@ -76,7 +86,9 @@ export const Newsletter: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vas@email.cz"
-                aria-describedby="newsletter-souhlas"
+                disabled={odesilam}
+                aria-invalid={chyba ? true : undefined}
+                aria-describedby={chyba ? 'newsletter-chyba' : 'newsletter-souhlas'}
                 /* Pole je prohlubeň ve stejné barvě jako panel – tvar sám říká
                    „sem se píše“, rámeček by ho jen zdvojil. Placeholder je
                    zesvětlený jen na /55; /40 by na písku spadl pod 4,5:1.
@@ -94,9 +106,17 @@ export const Newsletter: React.FC = () => {
             </div>
           </form>
 
+          {/* Chyba patří k poli, ne jen do souhrnu – proto `newsletter-chyba`
+              visí přímo na inputu přes `aria-describedby`. */}
+          {chyba && (
+            <p id="newsletter-chyba" role="alert" className="text-sm font-medium text-red-800">
+              {chyba}
+            </p>
+          )}
+
           {/* Potvrzení čte i odečítač obrazovky, formulář kvůli němu nemizí. */}
           <p aria-live="polite" className="min-h-[1.25rem] text-sm text-linda-cognac">
-            {stav === 'hotovo' ? 'Děkujeme, přihlášku jsme přijali. Ozveme se s první novinkou.' : ''}
+            {stav === 'hotovo' ? 'Děkujeme, přihlášku jsme zaevidovali. Ozveme se s první novinkou.' : ''}
           </p>
 
           <p id="newsletter-souhlas" className="text-xs text-linda-espresso/70">

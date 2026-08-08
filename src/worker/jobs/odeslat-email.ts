@@ -16,7 +16,8 @@ export type TypEmailu =
   | 'zmena-stavu-objednavky'
   | 'opusteny-kosik'
   | 'dochazejici-sklad'
-  | 'skladem-znovu';
+  | 'skladem-znovu'
+  | 'nova-zprava-z-formulare';
 
 export interface UlohaEmail {
   typ: TypEmailu;
@@ -29,23 +30,36 @@ function jeSmtpNastavene(): boolean {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.EMAIL_FROM);
 }
 
-export async function odeslatEmailUloha(uloha: UlohaEmail): Promise<void> {
+/**
+ * Zpráva do logu – jediné „doručení“, které dnes umíme.
+ *
+ * Vypisuje se stejně, ať už SMTP nastavené je, nebo není. Dřív se při
+ * nastaveném SMTP vypsalo jen varování bez obsahu, takže vyplnění `.env`
+ * stav zhoršilo: e-mail se pořád neodeslal, ale zmizel i odkaz na obnovu
+ * hesla, který byl do té doby v logu k dispozici.
+ */
+function zapsatDoLogu(uloha: UlohaEmail, duvod: string): void {
   const { typ, to, subject, data } = uloha;
 
+  console.log(`[e-mail] ${typ} → ${to} se NEODESLAL (${duvod}).`);
+  console.log(`         Předmět: ${subject}`);
+
+  // Odkaz na obnovu hesla v logu je bezpečnostní díra – v produkci nikdy.
+  if (typ === 'obnova-hesla' && process.env.NODE_ENV !== 'production' && data?.odkaz) {
+    console.log(`         Odkaz pro obnovu (jen ve vývoji): ${String(data.odkaz)}`);
+  }
+}
+
+export async function odeslatEmailUloha(uloha: UlohaEmail): Promise<void> {
   if (!jeSmtpNastavene()) {
-    console.log(`[e-mail] SMTP není nastavené – ${typ} pro ${to} se neodeslal.`);
-    console.log(`         Předmět: ${subject}`);
-
-    // U obnovy hesla vypíšeme odkaz, aby šel reset vyzkoušet i bez e-mailu.
-    // Jen ve vývoji – v produkci by odkaz v logu byl bezpečnostní díra.
-    if (typ === 'obnova-hesla' && process.env.NODE_ENV !== 'production' && data?.odkaz) {
-      console.log(`         Odkaz pro obnovu (jen ve vývoji): ${String(data.odkaz)}`);
-    }
-
+    zapsatDoLogu(uloha, 'SMTP není nastavené');
     return;
   }
 
   // TODO(SMTP): až budou přístupy, odeslat přes nodemailer/Resend.
   // Šablony patří do samostatného souboru, ať tahle úloha zůstane jen doručovací.
-  console.warn(`[e-mail] SMTP je nastavené, ale odesílání ještě není zapojené (${typ} → ${to}).`);
+  //
+  // Do té doby se vyplněné SMTP chová stejně jako prázdné – včetně výpisu
+  // obsahu. Tichý propad by byl horší než zjevná mezera.
+  zapsatDoLogu(uloha, 'SMTP je nastavené, ale odesílání ještě není zapojené');
 }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
+import { HlidaniSkladu } from './HlidaniSkladu';
 import type { ProduktDetail } from '@/lib/katalog';
 
 /** Popisky měr – klíče z Json pole na čitelný český text. */
@@ -31,9 +32,11 @@ interface Props {
   produkt: ProduktDetail;
   /** Objednávání je vypnuté režimem dovolené (sekce 6.7). */
   objednavaniZablokovano?: boolean;
+  /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
+  popisDph: string;
 }
 
-export function DetailProduktu({ produkt, objednavaniZablokovano = false }: Props) {
+export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisDph }: Props) {
   // Předvybereme první variantu, která je skladem – zákaznice tak nezačíná
   // na vyprodané velikosti s neaktivním tlačítkem.
   const vychoziVarianta = produkt.varianty.find((v) => v.skladem > 0) ?? produkt.varianty[0];
@@ -174,6 +177,10 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false }: Prop
                 </span>
               )}
             </div>
+
+            {/* Neplátce DPH ji uvádět nesmí, plátce musí – text řídí přepínač
+                v administraci, ne pevná věta v komponentě. */}
+            <p className="mt-1 text-[11px] text-linda-espresso/70">{popisDph}</p>
           </div>
 
           <p className="whitespace-pre-line text-sm font-light leading-relaxed text-linda-espresso/85">
@@ -292,15 +299,9 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false }: Prop
                   <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   Tato velikost je momentálně vyprodaná
                 </p>
-                {/* TODO: napojit na `POST /api/hlidani-skladu` (StockNotification). */}
-                <button
-                  type="button"
-                  disabled
-                  title="Hlídání dostupnosti připravujeme"
-                  className="min-h-touch cursor-not-allowed rounded-full bg-linda-espresso px-4 text-xs font-medium text-white opacity-60 shadow-neuDark"
-                >
-                  Upozornit, až bude skladem
-                </button>
+                {varianta && (
+                  <HlidaniSkladu variantId={varianta.id} velikost={varianta.velikost} />
+                )}
               </div>
             )}
 

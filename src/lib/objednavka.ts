@@ -23,6 +23,8 @@ export interface ChybaObjednavky {
 export interface VysledekObjednavky {
   id: string;
   cisloObjednavky: string;
+  /** Klíč do odkazů, které musí fungovat i bez přihlášení. */
+  verejnyToken: string;
   celkovaCenaKc: number;
   kUhradeKc: number;
   zpusobPlatby: string;
@@ -45,18 +47,33 @@ async function cenaDopravy(zpusob: string): Promise<Halere | null> {
 /**
  * Číslo objednávky ve tvaru `2026-00042`.
  *
- * Počítá se z počtu objednávek v daném roce. Při souběhu dvou objednávek
- * ve stejnou chvíli může vzniknout stejné číslo – proto se zápis opakuje,
- * unikátní index v databázi hlídá, že se dvě stejná nikdy neuloží.
+ * Počítá se z počtu objednávek v daném roce. Při souběhu dvou objednávek ve
+ * stejnou chvíli může vzniknout stejné číslo; unikátní index v databázi to
+ * odmítne a `vytvoritObjednavku` celou transakci zopakuje (viz `POKUSY_O_CISLO`).
+ *
+ * `posun` slouží právě k tomu opakování – bez něj by druhý pokus spočítal
+ * stejné číslo a narazil znovu.
  */
-async function dalsiCisloObjednavky(tx: Prisma.TransactionClient): Promise<string> {
+async function dalsiCisloObjednavky(tx: Prisma.TransactionClient, posun = 0): Promise<string> {
   const rok = new Date().getFullYear();
 
   const pocet = await tx.order.count({
     where: { createdAt: { gte: new Date(rok, 0, 1) } },
   });
 
-  return `${rok}-${String(pocet + 1).padStart(5, '0')}`;
+  return `${rok}-${String(pocet + 1 + posun).padStart(5, '0')}`;
+}
+
+/** Kolikrát se zkusí najít volné číslo objednávky, než to vzdáme. */
+const POKUSY_O_CISLO = 5;
+
+/** Kolize unikátního indexu – v Prismě chyba P2002. */
+function jeKolizeCisla(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === 'P2002' &&
+    String(err.meta?.target ?? '').includes('cisloObjednavky')
+  );
 }
 
 export async function vytvoritObjednavku(
@@ -99,8 +116,9 @@ export async function vytvoritObjednavku(
     };
   }
 
-  try {
-    const vysledek = await db.$transaction(async (tx) => {
+  /** Jeden pokus o zápis; `posun` posouvá pořadové číslo po kolizi. */
+  const zapsat = (posun: number) =>
+    db.$transaction(async (tx) => {
       // --- 1. Zboží a sklad ------------------------------------------------
       const varianty = await tx.productVariant.findMany({
         where: { id: { in: vstup.polozky.map((p) => p.variantId) } },
@@ -197,12 +215,13 @@ export async function vytvoritObjednavku(
       });
 
       // --- 5. Zápis --------------------------------------------------------
-      const cisloObjednavky = await dalsiCisloObjednavky(tx);
+      const cisloObjednavky = await dalsiCisloObjednavky(tx, posun);
 
       const objednavka = await tx.order.create({
         data: {
           cisloObjednavky,
           userId,
+          email: vstup.email.trim().toLowerCase(),
           stav: 'NOVA',
           celkovaCena: new Prisma.Decimal(halereNaCzk(rozpis.celkem)),
           discountCodeId,
@@ -233,16 +252,32 @@ export async function vytvoritObjednavku(
             })),
           },
         },
-        select: { id: true, cisloObjednavky: true },
+        select: { id: true, cisloObjednavky: true, verejnyToken: true },
       });
 
-      // Sklad dolů. `decrement` pracuje atomicky přímo v databázi, takže
-      // dva souběžné nákupy posledního kusu nemůžou skončit na −1.
+      /*
+       * Sklad dolů.
+       *
+       * Podmínka `skladem >= mnozstvi` je součástí UPDATE, ne samostatné
+       * kontroly před ním. Kontrola v kroku 1 slouží jen k hezké hlášce –
+       * mezi ní a zápisem je mezera, do které se vejde souběžná objednávka,
+       * a samotný `decrement` by pak sklad poslal do minusu. Když podmínka
+       * neprojde, řádek se nezmění a celá transakce se zruší.
+       */
       for (const p of polozky) {
-        await tx.productVariant.update({
-          where: { id: p.variantId },
+        const zmeneno = await tx.productVariant.updateMany({
+          where: { id: p.variantId, skladem: { gte: p.mnozstvi } },
           data: { skladem: { decrement: p.mnozstvi } },
         });
+
+        if (zmeneno.count !== 1) {
+          const varianta = podleId.get(p.variantId);
+          throw new ChybaZbozi(
+            varianta
+              ? `„${varianta.product.nazev} (${varianta.velikost})" nám mezitím někdo vykoupil. Upravte prosím množství v košíku.`
+              : 'Některý produkt v košíku mezitím došel. Zkontrolujte prosím košík.'
+          );
+        }
       }
 
       if (discountCodeId) {
@@ -272,11 +307,32 @@ export async function vytvoritObjednavku(
       return {
         id: objednavka.id,
         cisloObjednavky: objednavka.cisloObjednavky,
+        verejnyToken: objednavka.verejnyToken,
         celkovaCenaKc: halereNaCzk(rozpis.celkem),
         kUhradeKc: halereNaCzk(rozpis.kUhrade),
         zpusobPlatby: vstup.zpusobPlatby,
       };
     });
+
+  try {
+    let vysledek: VysledekObjednavky | null = null;
+
+    // Dvě objednávky odeslané ve stejnou vteřinu spočítají stejné pořadové
+    // číslo; unikátní index druhou odmítne. Bez opakování by zákaznici vyskočila
+    // nesrozumitelná hláška o obsazené hodnotě a nákup by propadl.
+    for (let pokus = 0; pokus < POKUSY_O_CISLO; pokus++) {
+      try {
+        vysledek = await zapsat(pokus);
+        break;
+      } catch (err) {
+        if (!jeKolizeCisla(err) || pokus === POKUSY_O_CISLO - 1) throw err;
+      }
+    }
+
+    if (!vysledek) {
+      // Sem se dostaneme jen kdyby smyčka doběhla bez výsledku i bez výjimky.
+      throw new Error('Nepodařilo se přidělit číslo objednávky.');
+    }
 
     return { ok: true, data: vysledek };
   } catch (err) {

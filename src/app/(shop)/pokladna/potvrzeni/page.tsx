@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { CheckCircle, Package, QrCode, Truck } from 'lucide-react';
+import { CheckCircle, FileText, Package, QrCode, Truck } from 'lucide-react';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { generateQrPaymentString, getQrPaymentImageUrl } from '@/lib/qr-code';
@@ -22,22 +22,26 @@ const NAZVY_DOPRAVY: Record<string, string> = {
 };
 
 interface Props {
-  searchParams: { cislo?: string };
+  searchParams: { t?: string };
 }
 
 /**
  * Poděkování a platební údaje.
  *
- * Data se čtou z databáze podle čísla objednávky, ne z query parametrů –
- * dřív se sem částka i číslo objednávky předávaly v URL, takže si je šlo
- * libovolně přepsat.
+ * Data se čtou z databáze, ne z query parametrů – dřív se sem částka i číslo
+ * objednávky předávaly v URL, takže si je šlo libovolně přepsat.
+ *
+ * Objednávka se hledá podle náhodného `verejnyToken`, ne podle čísla. Čísla
+ * jdou po sobě (`2026-00001`, `-00002`, …), takže s nimi v adrese šlo procházet
+ * cizí objednávky – včetně jména, adresy a nákupu. Token musí projít i bez
+ * přihlášení, protože nakupovat lze bez registrace.
  */
 export default async function PotvrzeniPage({ searchParams }: Props) {
-  const cislo = searchParams.cislo?.trim();
-  if (!cislo) notFound();
+  const token = searchParams.t?.trim();
+  if (!token) notFound();
 
   const objednavka = await db.order.findUnique({
-    where: { cisloObjednavky: cislo },
+    where: { verejnyToken: token },
     include: {
       items: { include: { variant: { include: { product: { select: { nazev: true } } } } } },
     },
@@ -210,6 +214,15 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
       </p>
 
       <div className="flex flex-wrap justify-center gap-3">
+        {/* Doklad vzniká ve workeru na pozadí – odkaz vrátí 404 jen v těch
+            pár vteřinách, než se PDF stihne vygenerovat. */}
+        <a
+          href={`/api/faktura/${objednavka.verejnyToken}`}
+          className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+        >
+          <FileText className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+          Stáhnout doklad (PDF)
+        </a>
         <Link
           href="/produkty"
           className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"

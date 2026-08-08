@@ -6,7 +6,7 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { DetailProduktu } from '@/components/shop/DetailProduktu';
 import { JsonLd } from '@/components/shop/JsonLd';
 import { nacistPodobne, nacistProdukt } from '@/lib/katalog';
-import { nacistNastaveni } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDph } from '@/lib/nastaveni';
 import { drobeckyLd, produktLd } from '@/lib/strukturovana-data';
 
 export const dynamic = 'force-dynamic';
@@ -82,6 +82,7 @@ export default async function DetailProduktPage({ params }: Props) {
       <DetailProduktu
         produkt={produkt}
         objednavaniZablokovano={nastaveni.rezimDovolene && nastaveni.zablokovatObjednavky}
+        popisDph={popisDph(nastaveni)}
       />
 
       {podobne.length > 0 && (

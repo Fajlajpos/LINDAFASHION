@@ -199,6 +199,14 @@ model Order {
   userId              String?
   user                User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   cisloObjednavky     String        @unique
+  /// Kontaktní e-mail objednávky. Nepovinný jen kvůli řádkům založeným dřív,
+  /// než sloupec existoval – nová objednávka ho má vždy. Bez něj neměla
+  /// objednávka bez registrace na faktuře žádný kontakt.
+  email               String?
+  /// Náhodný klíč pro odkazy, které musí fungovat i bez přihlášení
+  /// (potvrzení objednávky, stažení faktury). Číslo objednávky se k tomu
+  /// použít nedá – jde po sobě, takže by šlo cizí objednávky procházet.
+  verejnyToken        String        @unique @default(cuid())
   stav                OrderStatus   @default(NOVA)
   celkovaCena         Decimal
   discountCodeId      String?
@@ -316,6 +324,9 @@ model NewsletterSubscriber {
   id        String   @id @default(cuid())
   email     String   @unique
   potvrzeno Boolean  @default(false)
+  /// Odkud přihlášení přišlo – "hero", "paticka". Kvůli měření, ne kvůli funkci.
+  zdroj     String?
+  odhlasenAt DateTime?
   createdAt DateTime @default(now())
 }
 
@@ -326,6 +337,26 @@ model StockNotification {
   variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   vyrizeno  Boolean        @default(false)
   createdAt DateTime       @default(now())
+
+  // Jeden e-mail hlídá jednu velikost jednou – bez toho by opakované kliknutí
+  // založilo hlídání znovu a zákaznici přišlo několik stejných zpráv.
+  @@unique([variantId, email])
+  @@index([vyrizeno])
+}
+
+/// Zprávy z kontaktního formuláře (sekce 12).
+/// Ukládají se do databáze, ne jen odesílají e-mailem: dokud nejsou SMTP
+/// přístupy, byla by odeslaná zpráva nenávratně ztracená.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  jmeno     String
+  email     String
+  predmet   String?
+  zprava    String
+  vyrizeno  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([vyrizeno, createdAt])
 }
 
 model Reklamace {

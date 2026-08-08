@@ -94,6 +94,17 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
 });
 
 /**
+ * Věta o DPH u ceny (sekce 11).
+ *
+ * Přepínač „plátce DPH" v administraci se do téhle chvíle propisoval jen na
+ * fakturu – na webu se ceny popisovaly stejně v obou případech. Neplátce
+ * přitom DPH uvádět nesmí a plátce ji u ceny uvést musí.
+ */
+export function popisDph(nastaveni: NastaveniWebu): string {
+  return nastaveni.jePlatceDph ? 'Ceny jsou uvedené včetně DPH.' : 'Nejsme plátci DPH.';
+}
+
+/**
  * Text banneru dovolené s doplněným datem návratu.
  * Zástupný symbol `{datum}` je popsaný v zadání (sekce 6.7).
  */

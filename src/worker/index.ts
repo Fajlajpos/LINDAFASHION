@@ -9,7 +9,13 @@
  * Naplánovaná úloha proto musí mít vedle sebe i `work()` se stejným názvem,
  * jinak se do fronty jen zapisuje a nikdo ji nevyzvedne.
  */
-import { getQueueBoss, zastavitFrontu, FRONTY, type UlohaZpracovatObrazek } from '../lib/queue';
+import {
+  getQueueBoss,
+  publishJob,
+  zastavitFrontu,
+  FRONTY,
+  type UlohaZpracovatObrazek,
+} from '../lib/queue';
 import { zajistitSlozky } from '../lib/uloziste';
 import { zalozitAdminaPokudChybi } from '../lib/admin-bootstrap';
 import { db } from '../lib/db';
@@ -23,6 +29,7 @@ import { uklidResetTokenu } from '../lib/reset-hesla';
 const FRONTA_UKLID = 'uklid-uloziste';
 const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
 const FRONTA_NIZKY_SKLAD = 'nizky-sklad-upozorneni';
+const FRONTA_HLIDANI_SKLADU = 'hlidani-skladu';
 
 async function spustitWorker() {
   console.log('🚀 Spouštím worker LINDA FASHION…');
@@ -144,6 +151,41 @@ async function spustitWorker() {
   });
   await boss.schedule(FRONTA_NIZKY_SKLAD, '0 */2 * * *');
 
+  // --- Hlídání dostupnosti (sekce 14) -------------------------------------
+  // Zákaznice si u vyprodané velikosti nechala poslat zprávu, až bude zpátky.
+  await boss.work(FRONTA_HLIDANI_SKLADU, async () => {
+    const hlidani = await db.stockNotification.findMany({
+      where: { vyrizeno: false, variant: { skladem: { gt: 0 }, product: { aktivni: true } } },
+      include: {
+        variant: { include: { product: { select: { nazev: true, slug: true } } } },
+      },
+      take: 500,
+    });
+
+    for (const zaznam of hlidani) {
+      const nazev = `${zaznam.variant.product.nazev} (${zaznam.variant.velikost})`;
+
+      await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'skladem-znovu',
+        to: zaznam.email,
+        subject: `${nazev} je zase skladem – LINDA FASHION`,
+        data: { slug: zaznam.variant.product.slug, nazev },
+      });
+
+      // Označíme hned po zařazení do fronty. Případné opakované odeslání
+      // řeší pg-boss sám; přeposlat zprávu dvakrát je horší než neposlat.
+      await db.stockNotification.update({
+        where: { id: zaznam.id },
+        data: { vyrizeno: true },
+      });
+    }
+
+    if (hlidani.length > 0) {
+      console.log(`[sklad] Odesláno ${hlidani.length} upozornění na naskladnění.`);
+    }
+  });
+  await boss.schedule(FRONTA_HLIDANI_SKLADU, '*/30 * * * *');
+
   // Jedno kolo úklidu hned po startu – posbírá, co zbylo z minulého běhu.
   await uklidUlozisteUloha();
 
@@ -155,6 +197,7 @@ async function spustitWorker() {
   console.log(`   • ${FRONTA_UKLID} (každých 15 minut)`);
   console.log(`   • ${FRONTA_OPUSTENE_KOSIKY} (každé 4 hodiny)`);
   console.log(`   • ${FRONTA_NIZKY_SKLAD} (každé 2 hodiny)`);
+  console.log(`   • ${FRONTA_HLIDANI_SKLADU} (každých 30 minut)`);
 }
 
 async function ukoncit(signal: string) {

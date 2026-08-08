@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { KatalogVypis, jeRazeni } from '@/components/shop/KatalogVypis';
-import { nacistKategorie, nacistKategorii } from '@/lib/katalog';
+import { nacistKategorii } from '@/lib/katalog';
 
 export const dynamic = 'force-dynamic';
 

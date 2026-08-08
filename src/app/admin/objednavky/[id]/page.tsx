@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MapPin, User } from 'lucide-react';
+import { ArrowLeft, FileText, MapPin, User } from 'lucide-react';
 import { db } from '@/lib/db';
 import { SpravaObjednavky } from '@/components/admin/SpravaObjednavky';
 import {
@@ -63,9 +63,20 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
           </p>
         </div>
 
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${stavPopis.tridy}`}>
-          {stavPopis.text}
-        </span>
+        <div className="flex items-center gap-3">
+          {/* Doklad leží ve `storage/faktury/`, mimo `public/` – servíruje ho API. */}
+          <a
+            href={`/api/faktura/${objednavka.verejnyToken}`}
+            className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm"
+          >
+            <FileText className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
+            Doklad (PDF)
+          </a>
+
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${stavPopis.tridy}`}>
+            {stavPopis.text}
+          </span>
+        </div>
       </div>
 
       {/* Zákaznice a doručení */}
@@ -84,7 +95,17 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
               {objednavka.user.email}
             </Link>
           ) : (
-            <p className="text-xs text-linda-espresso/70">Objednávka bez registrace</p>
+            <>
+              {objednavka.email && (
+                <a
+                  href={`mailto:${objednavka.email}`}
+                  className="block text-xs text-linda-cognac underline"
+                >
+                  {objednavka.email}
+                </a>
+              )}
+              <p className="text-xs text-linda-espresso/70">Objednávka bez registrace</p>
+            </>
           )}
           {objednavka.dodaciTelefon && (
             <p className="text-xs text-linda-espresso/70">{objednavka.dodaciTelefon}</p>

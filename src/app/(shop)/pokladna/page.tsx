@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { PokladnaFormular, type MoznostDopravy } from '@/components/shop/PokladnaFormular';
 import { getSession } from '@/lib/auth';
-import { nacistNastaveni, zpravaODovolene } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDph, zpravaODovolene } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +57,7 @@ export default async function PokladnaPage() {
         uzivatel={session ? { email: session.email, jmeno: session.jmeno } : null}
         objednavaniZablokovano={nastaveni.rezimDovolene && nastaveni.zablokovatObjednavky}
         zpravaODovolene={zpravaODovolene(nastaveni)}
+        popisDph={popisDph(nastaveni)}
       />
     </div>
   );

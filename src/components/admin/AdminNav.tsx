@@ -12,6 +12,7 @@ import {
   Tag,
   AlertTriangle,
   History,
+  Inbox,
   Settings,
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const POLOZKY = [
   { nazev: 'Zákazníci', href: '/admin/zakaznici', Ikona: Users },
   { nazev: 'Slevové kódy', href: '/admin/slevove-kody', Ikona: Tag },
   { nazev: 'Reklamace a vrácení', href: '/admin/reklamace', Ikona: AlertTriangle },
+  { nazev: 'Zprávy z webu', href: '/admin/zpravy', Ikona: Inbox },
   { nazev: 'Záznam změn', href: '/admin/zaznamy', Ikona: History },
   { nazev: 'Nastavení webu', href: '/admin/nastaveni', Ikona: Settings },
 ];

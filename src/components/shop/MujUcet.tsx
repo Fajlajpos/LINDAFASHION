@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   CheckCircle,
+  FileText,
   Loader2,
   LogOut,
   Package,
@@ -18,6 +19,8 @@ import { NAZEV_DOPRAVY, STAV_OBJEDNAVKY, STAV_PLATBY, formatDatum } from '@/lib/
 interface Objednavka {
   id: string;
   cisloObjednavky: string;
+  /** Klíč k dokladu v PDF – faktura leží mimo `public/`, servíruje ji API. */
+  verejnyToken: string;
   stav: string;
   stavPlatby: string;
   celkovaCena: number;
@@ -218,6 +221,14 @@ export function MujUcet({ email, jmeno }: { email: string; jmeno: string | null 
                       <span className="text-sm font-semibold text-linda-espresso">
                         {o.celkovaCena.toLocaleString('cs-CZ')} Kč
                       </span>
+
+                      <a
+                        href={`/api/faktura/${o.verejnyToken}`}
+                        className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
+                        Doklad
+                      </a>
 
                       {/* Storno jde jen dokud objednávka leží ve stavu Nová (sekce 5). */}
                       {o.lzeStornovat && (

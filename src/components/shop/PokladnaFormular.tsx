@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle, CreditCard, Loader2, MapPin, QrCode, Tag } fr
 import { useCart } from '@/lib/cart-context';
 import { poslatJson } from '@/lib/api-klient';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
+import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
 
 /* ------------------------------------------------------------------ */
 /* Stavební prvky pokladny – tvar nese stav, ne jen barva              */
@@ -122,6 +123,8 @@ interface Props {
   uzivatel: { email: string; jmeno: string | null } | null;
   objednavaniZablokovano: boolean;
   zpravaODovolene: string | null;
+  /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
+  popisDph: string;
 }
 
 interface UplatnenySleva {
@@ -140,6 +143,7 @@ export function PokladnaFormular({
   uzivatel,
   objednavaniZablokovano,
   zpravaODovolene,
+  popisDph,
 }: Props) {
   const router = useRouter();
   const { cart, totalCartValue, clearCart } = useCart();
@@ -170,6 +174,18 @@ export function PokladnaFormular({
   const [odesila, setOdesila] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
+
+  // Kód uplatněný už v košíku se sem přenese, ať ho zákaznice nezadává dvakrát.
+  // Autorita to není – server obojí ověřuje znovu při zakládání objednávky.
+  useEffect(() => {
+    const ulozene = nacistKody();
+    setSleva(ulozene.sleva);
+    setPoukaz(ulozene.poukaz);
+  }, []);
+
+  useEffect(() => {
+    ulozitKody({ sleva, poukaz });
+  }, [sleva, poukaz]);
 
   const vybranaDoprava = dopravy.find((d) => d.id === zpusobDopravy) ?? null;
 
@@ -241,7 +257,7 @@ export function PokladnaFormular({
     setChyba(null);
     setChybyPoli({});
 
-    const vysledek = await poslatJson<{ cisloObjednavky: string }>('/api/objednavky', {
+    const vysledek = await poslatJson<{ cisloObjednavky: string; verejnyToken: string }>('/api/objednavky', {
       polozky: cart.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
       email: form.email,
       dodaciJmenoPrijmeni: form.dodaciJmenoPrijmeni,
@@ -268,7 +284,9 @@ export function PokladnaFormular({
     }
 
     clearCart();
-    router.push(`/pokladna/potvrzeni?cislo=${encodeURIComponent(vysledek.data.cisloObjednavky)}`);
+    // V odkazu je náhodný token, ne číslo objednávky – to jde po sobě, takže
+    // by přepisováním čísla v adrese šlo číst cizí objednávky.
+    router.push(`/pokladna/potvrzeni?t=${encodeURIComponent(vysledek.data.verejnyToken)}`);
   };
 
   if (cart.length === 0) {
@@ -655,6 +673,8 @@ export function PokladnaFormular({
               <dd>{halereNaCzk(rozpis.kUhrade).toLocaleString('cs-CZ')} Kč</dd>
             </div>
           </dl>
+
+          <p className="text-[11px] text-linda-espresso/70">{popisDph}</p>
 
           {prahDopravaZdarma !== null && !dopravaZdarma && (
             <p className="rounded-xl bg-linda-sandLight p-3 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">

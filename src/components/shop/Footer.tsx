@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Facebook, Instagram } from 'lucide-react';
+import { poslatJson } from '@/lib/api-klient';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
@@ -86,16 +87,27 @@ export const Footer: React.FC<FooterProps> = ({
 
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');
+  const [chyba, setChyba] = useState<string | null>(null);
 
-  // TODO: napojit na `POST /api/newsletter` (vč. ošetření chyb a duplicit).
-  // Do té doby jen potvrdíme přijetí – nikde se nic neukládá, takže nesmíme
-  // tvrdit, že odběr už vznikl.
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || stav === 'odesilam') return;
+
     setStav('odesilam');
-    setStav('hotovo');
-    setEmail('');
+    setChyba(null);
+
+    const vysledek = await poslatJson<{ zprava: string }>('/api/newsletter', {
+      email,
+      zdroj: 'paticka',
+    });
+
+    if (vysledek.ok) {
+      setStav('hotovo');
+      setEmail('');
+    } else {
+      setChyba(vysledek.pole?.email ?? vysledek.chyba);
+      setStav('klid');
+    }
   };
 
   return (
@@ -156,10 +168,10 @@ export const Footer: React.FC<FooterProps> = ({
                 role="status"
                 className="mt-2 rounded-xl bg-linda-cognac/30 px-3 py-2 text-xs text-linda-cream shadow-neuOnDarkInset"
               >
-                Děkujeme, přihlášku jsme přijali.
+                Děkujeme, přihlášku jsme zaevidovali.
               </p>
             ) : (
-              <form onSubmit={handleSubscribe} className="mt-2">
+              <form onSubmit={(e) => void handleSubscribe(e)} className="mt-2">
                 <div className="flex items-center gap-2">
                   <input
                     id="newsletter-paticka"
@@ -168,8 +180,12 @@ export const Footer: React.FC<FooterProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={stav === 'odesilam'}
                     aria-labelledby="newsletter-paticka-nadpis"
-                    aria-describedby="newsletter-paticka-info"
+                    aria-invalid={chyba ? true : undefined}
+                    aria-describedby={
+                      chyba ? 'newsletter-paticka-chyba' : 'newsletter-paticka-info'
+                    }
                     placeholder="vas@email.cz"
                     /* Prohlubeň i na tmavém: čokoládu vytvaruje černý stín,
                        přísvit je jen 5% bílé – víc by na hnědé bylo mléko.
@@ -185,6 +201,18 @@ export const Footer: React.FC<FooterProps> = ({
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
+
+                {chyba && (
+                  <p
+                    id="newsletter-paticka-chyba"
+                    role="alert"
+                    /* Na čokoládě je červená nečitelná – písek s tučným řezem
+                       drží kontrast i význam. */
+                    className="mt-1.5 text-[11px] font-semibold text-linda-sand"
+                  >
+                    {chyba}
+                  </p>
+                )}
 
                 <p id="newsletter-paticka-info" className="mt-1.5 text-[11px] text-linda-cream/60">
                   Bez spamu.{' '}

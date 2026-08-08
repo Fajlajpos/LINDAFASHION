@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { CartItemType } from './types';
 import { nacist, poslatJson } from './api-klient';
+import { zapomenoutKody } from './ulozene-kody';
 
 /**
  * Košík.
@@ -111,7 +112,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
     setSynchronizuje(false);
   }, []);
 
+  /**
+   * Přepočet košíku, který je jen v prohlížeči.
+   *
+   * Bez tohohle si nepřihlášená zákaznice nesla ceny a skladovost z chvíle
+   * vložení – klidně týden starou – a o vyprodání se dozvěděla až v pokladně.
+   */
+  const overitUServeru = useCallback(async (mistni: CartItemType[]) => {
+    if (mistni.length === 0) {
+      setSynchronizuje(false);
+      return;
+    }
+
+    const vysledek = await poslatJson<OdpovedKosiku>('/api/kosik/overit', {
+      polozky: mistni.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
+    });
+
+    if (!vysledek.ok) {
+      // Nedostupný server není důvod zákaznici vyprázdnit košík.
+      setSynchronizuje(false);
+      return;
+    }
+
+    setCart(vysledek.data.polozky);
+    setOdebranePolozky(vysledek.data.odebrano ?? []);
+    setSynchronizuje(false);
+  }, []);
+
   const uzSlouceno = useRef(false);
+  const uzOvereno = useRef(false);
 
   useEffect(() => {
     if (!nacteno) return;
@@ -120,7 +149,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
       // Odhlášení: košík zůstává v prohlížeči, jen zapomeneme, že už proběhlo
       // sloučení – po dalším přihlášení se má provést znovu.
       uzSlouceno.current = false;
-      setSynchronizuje(false);
+
+      if (uzOvereno.current) return;
+      uzOvereno.current = true;
+      setSynchronizuje(true);
+
+      void overitUServeru(cart);
       return;
     }
 
@@ -129,10 +163,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
     setSynchronizuje(true);
 
     void sloucitSeServerem(cart);
-    // `cart` schválně není v závislostech – sloučení se má spustit jednou
-    // po přihlášení, ne při každé změně košíku.
+    // `cart` schválně není v závislostech – sloučení i ověření se má spustit
+    // jednou po načtení, ne při každé změně košíku.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prihlasen, nacteno, sloucitSeServerem]);
+  }, [prihlasen, nacteno, sloucitSeServerem, overitUServeru]);
 
   /** Změna množství na serveru; u nepřihlášené zákaznice se neděje nic. */
   const synchronizovatPolozku = useCallback(
@@ -189,6 +223,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
 
   const clearCart = () => {
     setCart([]);
+    // S košíkem padají i uplatněné kódy – patřily k tomuhle nákupu.
+    zapomenoutKody();
     if (prihlasen) void poslatJson('/api/kosik', undefined, 'DELETE');
   };
 

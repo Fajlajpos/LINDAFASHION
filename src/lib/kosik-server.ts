@@ -136,6 +136,93 @@ export interface VstupniPolozka {
 }
 
 /**
+ * Ověření košíku, který žije jen v prohlížeči (nepřihlášená zákaznice).
+ *
+ * Dělá totéž co `nacistKosik`, jen se nic nezapisuje – zdrojem je seznam
+ * poslaný z prohlížeče. Bez tohohle si košík držel cenu a skladovost z chvíle
+ * vložení a zákaznice se o vyprodání dozvěděla až v pokladně.
+ */
+export async function overitDostupnost(polozky: VstupniPolozka[]): Promise<NactenyKosik> {
+  const idcka = [...new Set(polozky.map((p) => p.variantId).filter(Boolean))];
+  if (idcka.length === 0) return { polozky: [], odebrano: [], mezisoucetHaleru: 0 };
+
+  const varianty = await db.productVariant.findMany({
+    where: { id: { in: idcka } },
+    include: {
+      product: {
+        include: {
+          images: {
+            where: { stavZpracovani: 'HOTOVO' },
+            orderBy: [{ jeHlavni: 'desc' }, { poradi: 'asc' }],
+            take: 1,
+            select: { urlThumb: true },
+          },
+        },
+      },
+    },
+  });
+
+  const podleId = new Map(varianty.map((v) => [v.id, v]));
+  const vysledek: PolozkaKosikuServer[] = [];
+  const odebrano: NactenyKosik['odebrano'] = [];
+
+  for (const vstup of polozky) {
+    const varianta = podleId.get(vstup.variantId);
+
+    // Variantu, kterou v databázi vůbec nenajdeme, hlásit jménem nejde –
+    // z košíku ale musí pryč.
+    if (!varianta) {
+      odebrano.push({ nazev: 'Neznámá položka', duvod: 'Tento produkt už není v nabídce.' });
+      continue;
+    }
+
+    const produkt = varianta.product;
+
+    if (!produkt.aktivni) {
+      odebrano.push({ nazev: produkt.nazev, duvod: 'Tento produkt už není v nabídce.' });
+      continue;
+    }
+
+    if (varianta.skladem === 0) {
+      odebrano.push({
+        nazev: `${produkt.nazev} (${varianta.velikost})`,
+        duvod: 'Tato velikost je vyprodaná.',
+      });
+      continue;
+    }
+
+    const mnozstvi = Math.max(1, Math.min(vstup.mnozstvi, varianta.skladem));
+    if (mnozstvi !== vstup.mnozstvi) {
+      odebrano.push({
+        nazev: `${produkt.nazev} (${varianta.velikost})`,
+        duvod: `Skladem zbývá jen ${varianta.skladem} ks, množství jsme upravili.`,
+      });
+    }
+
+    vysledek.push({
+      variantId: varianta.id,
+      productId: produkt.id,
+      nazev: produkt.nazev,
+      slug: produkt.slug,
+      velikost: varianta.velikost,
+      barva: varianta.barva,
+      cena: Number(produkt.cena),
+      cenaPoSleve: produkt.cenaPoSleve === null ? null : Number(produkt.cenaPoSleve),
+      mnozstvi,
+      obrazekUrl: produkt.images[0]?.urlThumb ?? null,
+      skladem: varianta.skladem,
+    });
+  }
+
+  const mezisoucetHaleru = vysledek.reduce(
+    (soucet, p) => soucet + czkNaHalere(p.cenaPoSleve ?? p.cena) * p.mnozstvi,
+    0
+  );
+
+  return { polozky: vysledek, odebrano, mezisoucetHaleru };
+}
+
+/**
  * Sloučí košík z prohlížeče s tím uloženým u účtu.
  * Volá se po přihlášení i při běžné synchronizaci.
  */

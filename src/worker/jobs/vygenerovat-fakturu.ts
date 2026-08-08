@@ -66,7 +66,8 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
       ulice: objednavka.dodaciUlice,
       mesto: objednavka.dodaciMesto,
       psc: objednavka.dodaciPsc,
-      email: objednavka.user?.email ?? null,
+      // Objednávka bez registrace nemá `user` – kontakt drží sama objednávka.
+      email: objednavka.email ?? objednavka.user?.email ?? null,
     },
     polozky,
     dopravaHaleru: doprava,

@@ -203,7 +203,10 @@ sníží počítadlo slevového kódu a vrátí částku na dárkový poukaz. To
 uznané vrácení, které navíc přepne objednávku na „Vrácena".
 
 **Faktury jsou v `storage/faktury/`, ne v `public/`** – obsahují osobní údaje, takže
-nesmí být dostupné komukoli, kdo uhodne název souboru.
+nesmí být dostupné komukoli, kdo uhodne název souboru. Ven je vydává jen
+`/api/faktura/[token]`, kde token je náhodný klíč objednávky. Odkaz najdete na
+potvrzení objednávky, v účtu zákaznice i na detailu objednávky v administraci –
+funguje i bez registrace, protože nakupovat lze bez účtu.
 
 ---
 
@@ -215,6 +218,7 @@ E-shop běží i bez nich; klíče se doplní do `.env`, bez zásahu do kódu.
 |---|---|
 | GoPay | rozhraní připravené, čeká na `GOPAY_*` |
 | Zásilkovna / PPL / Česká pošta | rozhraní připravené, ceny se zatím zadávají ručně v nastavení |
-| E-maily (SMTP) | worker má úlohu připravenou, zatím jen loguje |
+| E-maily (SMTP) | worker má úlohu připravenou, zatím jen loguje – včetně obsahu zprávy |
+| Newsletter (double opt-in) | přihlášky se ukládají, potvrzovací e-mail čeká na SMTP |
 | Cloudflare Turnstile | čeká na `TURNSTILE_*` |
 | GA4 / Meta Pixel | čeká na `NEXT_PUBLIC_*`, spustí se až po souhlasu s cookies |

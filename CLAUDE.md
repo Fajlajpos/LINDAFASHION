@@ -117,29 +117,27 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 ## Known gaps — worth fixing when touching these files
 
-### Still mockups — read from hardcoded data, no backend
+### Still incomplete
 
-The shop now runs end to end: catalog → cart → checkout → order → invoice → admin.
+The shop runs end to end: catalog → cart → checkout → order → invoice → admin.
 What is still missing:
 
-- **Newsletter form** (hero, footer) and the **contact form** have **no endpoint** — they
-  only confirm receipt locally. `TODO` markers sit in the components.
-- **"Upozornit, až bude skladem"** on the product detail is disabled — `StockNotification`
-  has no endpoint yet.
 - **`oblibene/`** page renders from the context, which works, but was never rewritten to
   use the server data shape returned by [api/oblibene](src/app/api/oblibene/route.ts).
 - **Saved addresses** in `muj-ucet` — the `Address` model exists and the admin shows them,
   but the customer cannot add or edit one; checkout always asks for the address again.
-- **Invoices are generated but not delivered.** The PDF lands in `storage/faktury/`; there
-  is no route that serves it to the customer or the admin (it holds personal data, so it
-  must not go into `public/`).
 - **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
+- **Newsletter has no double opt-in.** `POST /api/newsletter` stores the address with
+  `potvrzeno = false`; the confirmation e-mail cannot be sent until SMTP exists, so the list
+  is a record of interest, not consent to send.
 
 ### Other gaps
 
 - Transactional e-mail is queued but never sent — [odeslat-email.ts](src/worker/jobs/odeslat-email.ts)
   logs instead, until SMTP credentials exist. The password-reset link is printed to the
-  worker log in development only.
+  worker log in development only. **Both branches log the same way on purpose**: filling in
+  `SMTP_*` used to silence the output entirely, so configuring e-mail made the situation
+  worse than leaving it empty.
 - Rate limiting ([rate-limit.ts](src/lib/rate-limit.ts)) counts in process memory — fine for
   the single-container deployment, but it resets on restart and would not be shared if the
   app ever scaled to several `web` instances.
@@ -154,7 +152,12 @@ configured · wildcard remote image host narrowed · `/admin` gated by
 [middleware.ts](src/middleware.ts) **plus a database role check in every admin endpoint** ·
 `/produkty/[kategorie]` existed only in sitemap.xml, now a real route · zero structured
 data, now Product/Offer/Breadcrumb/Organization/LocalBusiness · sitemap and product feed
-generated from the database instead of invented rows · cookie banner pre-ticked the
+generated from the database instead of invented rows · `/kosik` rendered two hardcoded
+products instead of the real cart · confirmation page was readable by anyone who counted
+up the order number · stock could go negative under concurrency · newsletter, contact form
+and "Upozornit, až bude skladem" had no endpoint and only faked success · contact details
+on `/kontakt` were hardcoded instead of read from `Settings` · the `jePlatceDph` switch
+reached the invoice but never the shop · cookie banner pre-ticked the
 optional categories (GDPR breach) and the consent controlled nothing, now
 [souhlas-cookies.ts](src/lib/souhlas-cookies.ts) gates GA4 and Meta Pixel ·
 `/zapomenute-heslo` 404'd, now a full reset flow with hashed one-time tokens · money was
@@ -179,6 +182,19 @@ discount-code and gift-card handling.
   `castkaZVarianty` deliberately requires the whole variant name to be an amount — matching
   "the first number in the string" would mint a 38 Kč card from the clothing size "M (38)".
 - Order numbers (`2026-00001`) are derived from a per-year count; the unique index is the
-  real guard against a collision under concurrency.
+  real guard against a collision under concurrency, and `vytvoritObjednavku` retries the
+  whole transaction (up to 5×, each with a higher offset) when it hits one. Without the
+  retry the second customer got "Tato hodnota už je obsazená." and lost the order.
+- **Stock is decremented with the check inside the UPDATE** —
+  `updateMany({ where: { id, skladem: { gte: n } } })`, then assert `count === 1`. The
+  friendly "zbývá jen N ks" check earlier in the transaction is for the message only; there
+  is a gap between it and the write that a concurrent order fits into. Verified: six
+  simultaneous orders for the last piece → one 201, five 409, stock lands on 0.
+- **Links that must work without a login use `Order.verejnyToken`**, never the order number.
+  Numbers are sequential, so `?cislo=2026-00002` let anyone page through other people's
+  name, address and purchase. This covers the confirmation page and `/api/faktura/[token]`,
+  which serves the PDF out of `storage/faktury/` (`Cache-Control: private, no-store`).
+- `Order.email` holds the contact address. Guest checkout has no `User`, so before this
+  column the invoice for every unregistered order carried no e-mail at all.
 - PDF invoices embed **DejaVu Sans** from `assets/fonts/`. The PDF standard fonts have no
   Czech diacritics — without the embedded font the invoice shows `?` instead of ř/š/ž.
