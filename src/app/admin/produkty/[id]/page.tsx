@@ -58,6 +58,8 @@ export default async function DetailProduktuPage({ params }: { params: { id: str
     jeHlavni: o.jeHlavni,
     stavZpracovani: o.stavZpracovani,
     chybaDuvod: o.chybaDuvod,
+    createdAt: o.createdAt.toISOString(),
+    zpracovaniOd: o.zpracovaniOd?.toISOString() ?? null,
   }));
 
   return (

@@ -38,6 +38,11 @@ export async function GET(request: Request) {
         jeHlavni: true,
         stavZpracovani: true,
         chybaDuvod: true,
+        // Podle stáří pozná administrace fotku, kterou si nikdo nevyzvedl –
+        // typicky proto, že neběží worker. Bez toho by u ní točila spinner
+        // donekonečna a tvrdila, že se zpracovává.
+        createdAt: true,
+        zpracovaniOd: true,
       },
     });
 
