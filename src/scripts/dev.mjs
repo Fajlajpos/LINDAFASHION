@@ -72,12 +72,34 @@ for (const { nazev, skript, barva } of PROCESY) {
   dite.on('exit', (kod, signal) => {
     if (ukoncujeme) return;
 
-    // Když jeden spadne, druhý nemá smysl držet – jinak by zůstal běžet web
-    // bez workera, což je přesně ten stav, kterému se tenhle skript vyhýbá.
+    /*
+     * Pád jednoho procesu **neshazuje** druhý.
+     *
+     * Původně to tak bylo, jenže nejčastější příčina pádu workera je
+     * nedostupná databáze – a tehdy zhasl i web, takže z celého vývojového
+     * prostředí zbyla jen stěna Prisma stack trace a nešlo se ani podívat na
+     * chybovou stránku. Zůstat běžet a nahlas říct, co spadlo a proč, je
+     * použitelnější než zhasnout všechno.
+     */
+    const duvod = signal ?? `kód ${kod}`;
+
     process.stderr.write(
-      `\n${barva}${nazev}${RESET} ${SEDA}│${RESET} skončil (${signal ?? `kód ${kod}`}), ukončuji i zbytek.\n`
+      `\n${barva}${'═'.repeat(60)}${RESET}\n` +
+        `${barva}  Proces „${nazev.trim()}" skončil (${duvod}).${RESET}\n` +
+        (nazev.trim() === 'worker'
+          ? `${SEDA}  Nahrané fotky se do jeho spuštění nezpracují – zůstanou\n` +
+            `  ve frontě a administrace na ně upozorní.\n` +
+            `  Nejčastější příčina: neběží databáze.\n` +
+            `  Spusť: docker compose -f docker-compose.dev.yml up -d\n` +
+            `  Pak worker znovu: npm run worker${RESET}\n`
+          : `${SEDA}  Zbylé procesy běží dál. Ukonči je Ctrl+C.${RESET}\n`) +
+        `${barva}${'═'.repeat(60)}${RESET}\n\n`
     );
-    ukoncit(kod ?? 1);
+
+    // Když skončí všechno, nemá smysl držet skript naživu.
+    if (deti.every((d) => d.exitCode !== null || d.signalCode !== null)) {
+      process.exitCode = kod ?? 1;
+    }
   });
 
   deti.push(dite);
