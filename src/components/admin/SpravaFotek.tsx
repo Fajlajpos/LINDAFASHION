@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { AlertCircle, Check, Clock, Loader2, Star, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Clock, Loader2, Star, Trash2, Upload } from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
 
 export interface AdminFotka {
@@ -136,6 +136,39 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
     }
   };
 
+  /**
+   * Posun fotky v pořadí.
+   *
+   * Pořadí drží sloupec `poradi`, takže se prohodí u obou dotčených fotek.
+   * Zobrazení měníme rovnou a na server posíláme až potom – přerovnání je
+   * drobnost a čekat u něj na odpověď by rušilo. Kdyby zápis selhal, načteme
+   * skutečný stav zpátky, ať seznam neukazuje něco jiného než databáze.
+   */
+  const presunout = async (index: number, smer: -1 | 1) => {
+    const cil = index + smer;
+    if (cil < 0 || cil >= fotky.length) return;
+
+    const prerovnane = [...fotky];
+    [prerovnane[index], prerovnane[cil]] = [prerovnane[cil], prerovnane[index]];
+    setFotky(prerovnane.map((f, i) => ({ ...f, poradi: i })));
+    setChyba(null);
+
+    const zapisy = await Promise.all(
+      [index, cil].map((poziceVNovem) =>
+        poslatJson(
+          `/api/admin/obrazky/${prerovnane[poziceVNovem].id}`,
+          { poradi: poziceVNovem },
+          'PATCH'
+        )
+      )
+    );
+
+    if (zapisy.some((v) => !v.ok)) {
+      setChyba('Nové pořadí se nepodařilo uložit.');
+      await nacistStav();
+    }
+  };
+
   const smazatFotku = async (id: string) => {
     if (!window.confirm('Opravdu smazat tuto fotku? Akce je nevratná.')) return;
 
@@ -233,10 +266,27 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
           Zatím tu není žádná fotka. Do té doby se produkt zobrazí s grafickým zástupným symbolem.
         </p>
       ) : (
+        <>
+          {fotky.length > 1 && (
+            <p className="text-[11px] text-linda-espresso/75">
+              Hlavní fotka se zobrazí v katalogu, v košíku i na sociálních sítích. Šipkami změníte
+              pořadí, v jakém se fotky ukážou na detailu produktu.
+            </p>
+          )}
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {fotky.map((fotka) => (
+          {fotky.map((fotka, index) => (
             <li key={fotka.id} className="space-y-2 rounded-xl bg-linda-cream p-3 shadow-neuSm">
               <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-linda-sandLight shadow-neuInsetSm">
+                {/* Pořadové číslo – aby „která první, která druhá“ šlo přečíst
+                    z dlaždice, ne odvozovat z pozice v mřížce. */}
+                {fotky.length > 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-linda-cream text-[10px] font-bold text-linda-espresso shadow-neuSm"
+                  >
+                    {index + 1}
+                  </span>
+                )}
                 {fotka.stavZpracovani === 'HOTOVO' && fotka.urlMedium ? (
                   <Image
                     src={fotka.urlMedium}
@@ -281,43 +331,65 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
                 </p>
               )}
 
+              <button
+                type="button"
+                onClick={() => void nastavitHlavni(fotka.id)}
+                disabled={fotka.jeHlavni || fotka.stavZpracovani !== 'HOTOVO'}
+                aria-label={fotka.jeHlavni ? 'Toto je hlavní fotka' : 'Nastavit jako hlavní fotku'}
+                title={
+                  fotka.stavZpracovani !== 'HOTOVO'
+                    ? 'Hlavní fotku lze vybrat, až bude zpracovaná.'
+                    : undefined
+                }
+                /* Vybraná je zapuštěná – tvar sám říká, která je stisknutá,
+                   takže význam nenese jen barva. */
+                className={`flex min-h-touch w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg text-[10px] font-semibold transition-all duration-200 disabled:cursor-default ${
+                  fotka.jeHlavni
+                    ? 'bg-linda-sandLight text-linda-sage shadow-neuInsetSm'
+                    : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:shadow-neu active:shadow-neuInsetSm disabled:opacity-50 disabled:shadow-none'
+                }`}
+              >
+                <Star
+                  className={`h-3.5 w-3.5 ${fotka.jeHlavni ? 'fill-linda-sage text-linda-sage' : 'text-linda-cognac'}`}
+                  aria-hidden="true"
+                />
+                {fotka.jeHlavni ? 'Hlavní fotka' : 'Nastavit hlavní'}
+              </button>
+
               <div className="flex items-center justify-between gap-1">
                 <button
                   type="button"
-                  onClick={() => void nastavitHlavni(fotka.id)}
-                  disabled={fotka.jeHlavni || fotka.stavZpracovani !== 'HOTOVO'}
-                  aria-label={fotka.jeHlavni ? 'Toto je hlavní fotka' : 'Nastavit jako hlavní fotku'}
-                  className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg text-[10px] font-semibold text-linda-espresso transition-all duration-200 disabled:cursor-default"
+                  onClick={() => void presunout(index, -1)}
+                  disabled={index === 0}
+                  aria-label="Posunout fotku dopředu"
+                  className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-default disabled:opacity-40 disabled:shadow-none"
                 >
-                  <Star
-                    className={`h-3.5 w-3.5 ${fotka.jeHlavni ? 'fill-linda-cognac text-linda-cognac' : 'text-linda-espresso/60'}`}
-                    aria-hidden="true"
-                  />
-                  {fotka.jeHlavni ? 'Hlavní' : 'Nastavit hlavní'}
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </button>
 
-                {fotka.stavZpracovani === 'HOTOVO' && (
-                  <span
-                    className="flex items-center gap-1 text-[10px] font-semibold text-linda-sage"
-                    title={fotka.sirka && fotka.vyska ? `${fotka.sirka} × ${fotka.vyska} px` : undefined}
-                  >
-                    <Check className="h-3 w-3" aria-hidden="true" />
-                    WebP
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => void presunout(index, 1)}
+                  disabled={index === fotky.length - 1}
+                  aria-label="Posunout fotku dozadu"
+                  className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-default disabled:opacity-40 disabled:shadow-none"
+                >
+                  <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                </button>
 
                 <button
                   type="button"
                   onClick={() => void smazatFotku(fotka.id)}
                   aria-label="Smazat fotku"
-                  className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-800 active:shadow-neuInsetSm"
+                  className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-red-800 hover:shadow-neu active:shadow-neuInsetSm"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </>
       )}
     </section>
   );

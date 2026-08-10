@@ -599,6 +599,15 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                           Hlavní
                         </span>
                       )}
+
+                      {/* Pořadové číslo – aby „která první, která druhá“ šlo
+                          přečíst z dlaždice, ne odvozovat z pozice v mřížce. */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-linda-cream text-[10px] font-bold text-linda-espresso shadow-neuSm"
+                      >
+                        {index + 1}
+                      </span>
                     </div>
 
                     <p className="truncate text-[10px] text-linda-espresso/70" title={fotka.puvodniNazev}>
