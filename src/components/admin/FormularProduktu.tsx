@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Check, ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, Star, Trash2, Upload } from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
 
 /**
@@ -49,10 +50,25 @@ export interface PocatecniProdukt {
   varianty: VariantaFormular[];
 }
 
+/** Odpověď endpointu `/api/admin/upload`. */
 interface NahranaFotka {
   token: string;
   puvodniNazev: string;
   velikostBajtu: number;
+}
+
+/**
+ * Fotka v rozdělaném formuláři.
+ *
+ * `nahled` je `blob:` odkaz na soubor z disku. Hotové WebP varianty totiž
+ * vzniknou až po uložení produktu (zpracuje je worker), takže do té doby není
+ * co ze serveru zobrazit – a vybírat hlavní fotku podle názvu souboru je
+ * hádání. Odkaz se po odebrání fotky i po odchodu z formuláře uvolňuje,
+ * jinak by si prohlížeč držel celý soubor v paměti.
+ */
+interface FotkaVeFormulari extends NahranaFotka {
+  nahled: string | null;
+  jeHlavni: boolean;
 }
 
 interface Props {
@@ -127,7 +143,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     produkt?.varianty.length ? produkt.varianty : [prvniVarianta()]
   );
 
-  const [fotky, setFotky] = useState<NahranaFotka[]>([]);
+  const [fotky, setFotky] = useState<FotkaVeFormulari[]>([]);
   const [nahravam, setNahravam] = useState(false);
   const [odesilam, setOdesilam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -154,6 +170,14 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     };
   }, []);
 
+  /** Odkazy na náhledy, ať je po odchodu z formuláře uvolníme všechny. */
+  const nahledy = useRef<string[]>([]);
+
+  useEffect(() => {
+    const vytvorene = nahledy.current;
+    return () => vytvorene.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
   const nahratFotky = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const vybrane = e.target.files;
     if (!vybrane || vybrane.length === 0) return;
@@ -161,8 +185,9 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     setNahravam(true);
     setChyba(null);
 
+    const soubory = Array.from(vybrane);
     const data = new FormData();
-    for (const soubor of Array.from(vybrane)) data.append('fotky', soubor);
+    for (const soubor of soubory) data.append('fotky', soubor);
 
     const vysledek = await poslatFormData<{
       nahrane: NahranaFotka[];
@@ -170,7 +195,35 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     }>('/api/admin/upload', data);
 
     if (vysledek.ok) {
-      setFotky((p) => [...p, ...vysledek.data.nahrane]);
+      /*
+       * Náhled se páruje podle názvu souboru, ne podle pořadí: server
+       * odmítnuté soubory z odpovědi vynechá, takže by se indexy rozešly
+       * a u fotky by se ukázal náhled jiné. Stejné názvy řeší fronta.
+       */
+      const podleNazvu = new Map<string, File[]>();
+      for (const soubor of soubory) {
+        const fronta = podleNazvu.get(soubor.name) ?? [];
+        fronta.push(soubor);
+        podleNazvu.set(soubor.name, fronta);
+      }
+
+      const nove: FotkaVeFormulari[] = vysledek.data.nahrane.map((nahrana) => {
+        const soubor = podleNazvu.get(nahrana.puvodniNazev)?.shift();
+        const nahled = soubor ? URL.createObjectURL(soubor) : null;
+        if (nahled) nahledy.current.push(nahled);
+
+        return { ...nahrana, nahled, jeHlavni: false };
+      });
+
+      // Bez hlavní fotky by se produkt v katalogu ukázal se zástupným
+      // symbolem, i když fotky má – první nahraná ji tedy přebírá sama.
+      setFotky((p) => {
+        const spojene = [...p, ...nove];
+        return spojene.some((f) => f.jeHlavni)
+          ? spojene
+          : spojene.map((f, i) => ({ ...f, jeHlavni: i === 0 }));
+      });
+
       if (vysledek.data.odmitnute.length > 0) {
         setChyba(vysledek.data.odmitnute.map((o) => `${o.nazev}: ${o.duvod}`).join(' '));
       }
@@ -181,6 +234,36 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     setNahravam(false);
     e.target.value = '';
   };
+
+  const nastavitHlavni = (token: string) =>
+    setFotky((p) => p.map((f) => ({ ...f, jeHlavni: f.token === token })));
+
+  /** Posun v pořadí; pořadí v seznamu určuje, jak se fotky zobrazí na detailu. */
+  const posunout = (index: number, smer: -1 | 1) =>
+    setFotky((p) => {
+      const cil = index + smer;
+      if (cil < 0 || cil >= p.length) return p;
+
+      const zmenene = [...p];
+      [zmenene[index], zmenene[cil]] = [zmenene[cil], zmenene[index]];
+      return zmenene;
+    });
+
+  const odebratFotku = (token: string) =>
+    setFotky((p) => {
+      const odebirana = p.find((f) => f.token === token);
+      if (odebirana?.nahled) {
+        URL.revokeObjectURL(odebirana.nahled);
+        nahledy.current = nahledy.current.filter((url) => url !== odebirana.nahled);
+      }
+
+      const zbytek = p.filter((f) => f.token !== token);
+
+      // Po smazání hlavní fotky roli přebírá první zbylá.
+      return zbytek.some((f) => f.jeHlavni)
+        ? zbytek
+        : zbytek.map((f, i) => ({ ...f, jeHlavni: i === 0 }));
+    });
 
   const ulozit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +299,12 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               delka: v.delka || null,
             },
       })),
-      fotky: fotky.map((f) => ({ token: f.token, puvodniNazev: f.puvodniNazev })),
+      // Pořadí v poli = pořadí fotek na detailu produktu, `jeHlavni` = ta první.
+      fotky: fotky.map((f) => ({
+        token: f.token,
+        puvodniNazev: f.puvodniNazev,
+        jeHlavni: f.jeHlavni,
+      })),
     };
 
     const vysledek = jeEditace
@@ -470,43 +558,107 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             </div>
 
             <p className="text-[10px] text-linda-espresso/70">
-              JPEG, PNG, WebP nebo AVIF, nejvýš 15 MB na fotku. Zmenšení a převod do WebP proběhne
-              na pozadí po uložení produktu – čekat na to nemusíte.
+              JPEG, PNG, WebP nebo AVIF, nejvýš 15 MB na fotku. Můžete jich vybrat víc najednou.
+              Zmenšení a převod do WebP proběhne na pozadí po uložení produktu – čekat na to nemusíte.
             </p>
           </div>
 
           {fotky.length > 0 && (
-            <ul className="space-y-2 pt-2 text-xs">
-              {fotky.map((fotka) => (
-                <li
-                  key={fotka.token}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-linda-cream p-3 shadow-neuSm"
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ImageIcon className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
-                    <span className="truncate font-medium text-linda-espresso">{fotka.puvodniNazev}</span>
-                    <span className="shrink-0 text-linda-espresso/60">
-                      {(fotka.velikostBajtu / 1024 / 1024).toFixed(1)} MB
-                    </span>
-                  </span>
+            <>
+              <p className="text-[11px] text-linda-espresso/75">
+                Hvězdičkou určíte <strong>hlavní fotku</strong> – ta se zobrazí v katalogu, v košíku
+                i na sociálních sítích. Šipkami změníte pořadí, v jakém se fotky ukážou na detailu
+                produktu.
+              </p>
 
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="flex items-center gap-1 rounded-full bg-linda-sageLight px-2.5 py-1 text-[10px] font-semibold text-linda-sage">
-                      <Check className="h-3 w-3" aria-hidden="true" />
-                      Nahráno
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Odebrat fotku ${fotka.puvodniNazev}`}
-                      onClick={() => setFotky((p) => p.filter((f) => f.token !== fotka.token))}
-                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/75 shadow-neuSm transition-all duration-200 hover:text-red-800 active:shadow-neuInsetSm"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {fotky.map((fotka, index) => (
+                  <li key={fotka.token} className="space-y-2 rounded-xl bg-linda-cream p-3 shadow-neuSm">
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-linda-sandLight shadow-neuInsetSm">
+                      {fotka.nahled ? (
+                        /* `unoptimized`: zdrojem je `blob:` odkaz na soubor
+                           z disku, který optimalizační služba Nextu neumí
+                           načíst – hotové varianty vzniknou až po uložení. */
+                        <Image
+                          src={fotka.nahled}
+                          alt={`Náhled ${fotka.puvodniNazev}`}
+                          fill
+                          unoptimized
+                          sizes="(max-width: 640px) 50vw, 200px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full items-center justify-center p-2 text-center text-[10px] text-linda-espresso/70">
+                          {fotka.puvodniNazev}
+                        </span>
+                      )}
+
+                      {fotka.jeHlavni && (
+                        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-linda-sageLight px-2 py-1 text-[10px] font-semibold text-linda-sage">
+                          <Star className="h-3 w-3 fill-linda-sage" aria-hidden="true" />
+                          Hlavní
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="truncate text-[10px] text-linda-espresso/70" title={fotka.puvodniNazev}>
+                      {fotka.puvodniNazev} · {(fotka.velikostBajtu / 1024 / 1024).toFixed(1)} MB
+                    </p>
+
+                    <div className="flex items-center justify-between gap-1">
+                      <button
+                        type="button"
+                        onClick={() => nastavitHlavni(fotka.token)}
+                        disabled={fotka.jeHlavni || odesilam}
+                        aria-label={
+                          fotka.jeHlavni
+                            ? `${fotka.puvodniNazev} je hlavní fotka`
+                            : `Nastavit ${fotka.puvodniNazev} jako hlavní fotku`
+                        }
+                        className={`flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-default disabled:shadow-none ${
+                          fotka.jeHlavni ? 'text-linda-sage' : 'text-linda-espresso/70'
+                        }`}
+                      >
+                        <Star
+                          className={`h-4 w-4 ${fotka.jeHlavni ? 'fill-linda-sage' : ''}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => posunout(index, -1)}
+                        disabled={index === 0 || odesilam}
+                        aria-label={`Posunout ${fotka.puvodniNazev} dopředu`}
+                        className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-default disabled:opacity-40 disabled:shadow-none"
+                      >
+                        <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => posunout(index, 1)}
+                        disabled={index === fotky.length - 1 || odesilam}
+                        aria-label={`Posunout ${fotka.puvodniNazev} dozadu`}
+                        className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-default disabled:opacity-40 disabled:shadow-none"
+                      >
+                        <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => odebratFotku(fotka.token)}
+                        disabled={odesilam}
+                        aria-label={`Odebrat fotku ${fotka.puvodniNazev}`}
+                        className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-linda-cream text-linda-espresso/70 shadow-neuSm transition-all duration-200 hover:text-red-800 hover:shadow-neu active:shadow-neuInsetSm disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       )}

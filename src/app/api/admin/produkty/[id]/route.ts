@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
-import { produktSchema } from '@/lib/validations/produkt';
+import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 import { jePlatnyToken, cestaTmp, smazatTise } from '@/lib/uloziste';
 import { smazatVariantyObrazku } from '@/lib/sharp-image';
@@ -172,6 +172,25 @@ export async function PUT(request: Request, { params }: Kontext) {
       }
 
       const zacatekPoradi = await tx.productImage.count({ where: { productId: params.id } });
+
+      /*
+       * Kterou z přidávaných fotek udělat hlavní.
+       *
+       * Označil-li ji formulář, respektujeme to a hlavní roli ostatním
+       * odebereme – jinak by měl produkt hlavní fotky dvě a v katalogu by se
+       * zobrazovala náhodná. Bez označení přebírá roli první fotka jen tehdy,
+       * když produkt zatím žádnou nemá; do hotové galerie nic nepřepisujeme.
+       */
+      const hlavniZeVstupu = fotky.some((f) => f.jeHlavni);
+      const hlavni = hlavniZeVstupu ? urcitHlavni(fotky) : zacatekPoradi === 0 ? 0 : -1;
+
+      if (hlavniZeVstupu && zacatekPoradi > 0) {
+        await tx.productImage.updateMany({
+          where: { productId: params.id, jeHlavni: true },
+          data: { jeHlavni: false },
+        });
+      }
+
       const vytvorene = [];
 
       for (const [i, f] of fotky.entries()) {
@@ -181,7 +200,7 @@ export async function PUT(request: Request, { params }: Kontext) {
               productId: params.id,
               altText: f.altText?.trim() || `${vstup.nazev.trim()} – fotografie ${zacatekPoradi + i + 1}`,
               poradi: zacatekPoradi + i,
-              jeHlavni: zacatekPoradi === 0 && i === 0,
+              jeHlavni: i === hlavni,
               stavZpracovani: 'CEKA',
               originalSoubor: f.token,
             },

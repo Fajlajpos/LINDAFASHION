@@ -36,6 +36,11 @@ Consequences worth remembering:
   `work(name, handler)` or the job is enqueued and never picked up.
 - Image processing runs **only in the worker**. Never call
   [sharp-image.ts](src/lib/sharp-image.ts) from a route handler.
+  **`npm run dev` therefore starts web *and* worker** ([dev.mjs](src/scripts/dev.mjs));
+  `dev:web` is the escape hatch. Without the worker a photo uploads fine, sits in
+  `CEKA` forever and the admin looks like a broken upload — that happened twice
+  before the launcher existed, and cost a deleted photo. `SpravaFotek` now says so
+  out loud after a minute of waiting instead of spinning a reassuring spinner.
 - API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
   400: a broken request body is the caller's fault, and it used to surface as a 500 that

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
-import { produktSchema } from '@/lib/validations/produkt';
+import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 import { jePlatnyToken } from '@/lib/uloziste';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
@@ -98,6 +98,9 @@ export async function POST(request: Request) {
     // databáze nedostane cesta, kterou by si klient vymyslel.
     const fotky = (vstup.fotky ?? []).filter((f) => jePlatnyToken(f.token));
 
+    // Hlavní je právě jedna, i kdyby jich prohlížeč označil víc nebo žádnou.
+    const hlavni = urcitHlavni(fotky);
+
     const produkt = await db.product.create({
       data: {
         nazev: vstup.nazev.trim(),
@@ -131,7 +134,7 @@ export async function POST(request: Request) {
           create: fotky.map((f, i) => ({
             altText: f.altText?.trim() || `${vstup.nazev.trim()} – fotografie ${i + 1}`,
             poradi: i,
-            jeHlavni: i === 0,
+            jeHlavni: i === hlavni,
             stavZpracovani: 'CEKA' as const,
             originalSoubor: f.token,
           })),

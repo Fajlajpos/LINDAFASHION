@@ -26,9 +26,8 @@ docker compose -f docker-compose.dev.yml up -d
 npx prisma migrate dev
 npm run db:seed
 
-# 5. Web a worker – každý ve svém terminálu
+# 5. Web i worker jedním příkazem
 npm run dev       # http://localhost:3000
-npm run worker    # zpracování fotek na pozadí
 ```
 
 Do administrace se přihlásíš na `/prihlaseni` údaji z `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
@@ -36,8 +35,13 @@ Do administrace se přihlásíš na `/prihlaseni` údaji z `ADMIN_EMAIL` / `ADMI
 > **Proč Postgres na 5433?** Na 5432 často běží nativně nainstalovaný PostgreSQL
 > jako služba a kontejner by se s ním pral. Port se nastavuje v `docker-compose.dev.yml`.
 
-> **Worker musí běžet**, jinak zůstanou nahrané fotky viset ve stavu „zpracovává se“.
-> Nic se ale neztratí – jakmile ho spustíš, worker si nedodělané fotky sám vyzvedne.
+> **`npm run dev` spouští web i worker zároveň** (viz `src/scripts/dev.mjs`), protože
+> bez workera zůstanou nahrané fotky viset ve stavu „zpracovává se“ a vypadá to jako
+> rozbitý upload. Výpis je prefixovaný `web` / `worker`, Ctrl+C ukončí obojí.
+> Chceš-li jen web, je tu `npm run dev:web` a `npm run worker` zvlášť.
+>
+> Nic se neztratí ani tehdy, když worker chvíli neběžel – jakmile ho spustíš,
+> nedodělané fotky si sám vyzvedne a administrace na ně mezitím upozorní.
 
 ---
 
@@ -75,7 +79,8 @@ spouštěcím příkazem.
 
 | Příkaz | Co dělá |
 |---|---|
-| `npm run dev` | vývojový server |
+| `npm run dev` | vývojový server **i worker** zároveň |
+| `npm run dev:web` | jen web, bez workera |
 | `npm run worker` | worker (fotky, úklid, plánované úlohy) |
 | `npm run build` | produkční build webu i workeru |
 | `npm run typecheck` | kontrola typů |

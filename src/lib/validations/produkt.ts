@@ -31,7 +31,28 @@ export const nahranaFotkaSchema = z.object({
   token: z.string().min(1),
   puvodniNazev: z.string().min(1).max(255),
   altText: z.string().max(255).optional().nullable(),
+  /**
+   * Která fotka se má zobrazovat jako první (v katalogu, v košíku, ve feedu).
+   * Pořadí ostatních určuje pořadí v poli.
+   *
+   * Endpoint z toho stejně vybere jedinou – viz `urcitHlavni`. Prohlížeč
+   * o počtu hlavních fotek rozhodovat nesmí: dvě označené by znamenaly, že
+   * se v katalogu zobrazí náhodná.
+   */
+  jeHlavni: z.boolean().optional().default(false),
 });
+
+/**
+ * Index fotky, která bude hlavní.
+ *
+ * Když prohlížeč neoznačil žádnou (starší formulář, ruční požadavek), bere se
+ * první – produkt bez hlavní fotky by se v katalogu zobrazil se zástupným
+ * symbolem, přestože fotky má.
+ */
+export function urcitHlavni(fotky: Array<{ jeHlavni?: boolean }>): number {
+  const oznacena = fotky.findIndex((f) => f.jeHlavni);
+  return oznacena === -1 ? 0 : oznacena;
+}
 
 export const produktSchema = z
   .object({
