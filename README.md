@@ -20,13 +20,14 @@ cp .env.example .env
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 # 3. Databáze v Dockeru (jen Postgres, na portu 5433)
+#    Krok 5 si ji nahodí sám; ručně je potřeba jen pro migrace a seed níž.
 docker compose -f docker-compose.dev.yml up -d
 
 # 4. Schéma + ukázková data
 npx prisma migrate dev
 npm run db:seed
 
-# 5. Web i worker jedním příkazem
+# 5. Databáze, web i worker jedním příkazem
 npm run dev       # http://localhost:3000
 ```
 
@@ -35,10 +36,18 @@ Do administrace se přihlásíš na `/prihlaseni` údaji z `ADMIN_EMAIL` / `ADMI
 > **Proč Postgres na 5433?** Na 5432 často běží nativně nainstalovaný PostgreSQL
 > jako služba a kontejner by se s ním pral. Port se nastavuje v `docker-compose.dev.yml`.
 
-> **`npm run dev` spouští web i worker zároveň** (viz `src/scripts/dev.mjs`), protože
-> bez workera zůstanou nahrané fotky viset ve stavu „zpracovává se“ a vypadá to jako
-> rozbitý upload. Výpis je prefixovaný `web` / `worker`, Ctrl+C ukončí obojí.
-> Chceš-li jen web, je tu `npm run dev:web` a `npm run worker` zvlášť.
+> **`npm run dev` nahodí databázi, web i worker** (viz `src/scripts/dev.mjs`).
+> Každý z těch tří kusů se dá zapomenout spustit a pokaždé to vypadá jako jiná chyba:
+> bez databáze spadne worker, bez workera zůstanou fotky viset ve stavu „zpracovává se“
+> a vypadá to jako rozbitý upload, a dva souběžně spuštěné weby si přepíšou `.next`,
+> takže se stránce rozsypou fonty.
+>
+> Výpis je prefixovaný `web` / `worker`, Ctrl+C ukončí celý strom procesů.
+> Pád jednoho procesu ostatní neshazuje – jen se vypíše, co spadlo a co s tím.
+> Chceš-li kusy zvlášť, je tu `npm run dev:web` a `npm run worker`.
+>
+> **Nespouštěj `npm run dev` dvakrát.** Druhý web skončí na portu 3001 a oba si pak
+> píšou do jedné `.next`. Kontrola: `netstat -ano | findstr :3000`.
 >
 > Nic se neztratí ani tehdy, když worker chvíli neběžel – jakmile ho spustíš,
 > nedodělané fotky si sám vyzvedne a administrace na ně mezitím upozorní.
