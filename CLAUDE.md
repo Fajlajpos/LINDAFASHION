@@ -218,17 +218,20 @@ What is still missing:
 - **Saved addresses** in `muj-ucet` — the `Address` model exists and the admin shows them,
   but the customer cannot add or edit one; checkout always asks for the address again.
 - **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
-- **Newsletter has no double opt-in.** `POST /api/newsletter` stores the address with
-  `potvrzeno = false`; the confirmation e-mail cannot be sent until SMTP exists, so the list
-  is a record of interest, not consent to send.
 
 ### Other gaps
 
-- Transactional e-mail is queued but never sent — [odeslat-email.ts](src/worker/jobs/odeslat-email.ts)
-  logs instead, until SMTP credentials exist. The password-reset link is printed to the
-  worker log in development only. **Both branches log the same way on purpose**: filling in
-  `SMTP_*` used to silence the output entirely, so configuring e-mail made the situation
-  worse than leaving it empty.
+- **Transactional e-mail really sends** through nodemailer once `SMTP_HOST` and `EMAIL_FROM`
+  exist. Without them [odeslat-email.ts](src/worker/jobs/odeslat-email.ts) logs the message
+  and reports success — missing config must never make pg-boss retry something that cannot
+  pass. A genuine SMTP *failure* does throw, so the queue retries it. The content is logged
+  in every branch where the message did not reach the recipient: filling in `SMTP_*` used to
+  silence the output entirely, so configuring e-mail made the situation worse than leaving
+  it empty. Templates are pure `data → { html, text }` functions in
+  [sablony.ts](src/worker/emaily/sablony.ts), testable without SMTP — and the one place
+  **inline hex is correct**, because mail clients drop stylesheets and class names have
+  nothing to bind to. Adding a `TypEmailu` means adding a `case` there; an unknown type is
+  logged, never sent as an empty message.
 - Rate limiting ([rate-limit.ts](src/lib/rate-limit.ts)) counts in process memory — fine for
   the single-container deployment, but it resets on restart and would not be shared if the
   app ever scaled to several `web` instances. Each entry carries `platiDo`; the sweeper
@@ -242,9 +245,39 @@ What is still missing:
   Windows and omits the Linux platform binaries (`@img/sharp-linuxmusl-x64` and friends),
   so `npm ci` fails inside the image. Fully reproducible builds would need the lock file
   generated on Linux.
-- Captcha (Turnstile) is not wired to any form yet, only the `.env` keys exist.
+- **Captcha (Turnstile) turns on with the keys, on both sides at once.**
+  [captcha.ts](src/lib/captcha.ts) passes verification through when
+  `TURNSTILE_SECRET_KEY` is missing, and [Captcha.tsx](src/components/ui/Captcha.tsx)
+  renders nothing without `TURNSTILE_SITE_KEY`. Both halves must stay coupled: server-side
+  checking without a widget would reject every submission the moment `.env` is filled in.
+  A Cloudflare outage is also let through on purpose — a closed contact form costs more
+  than the spam, and the per-IP limiter still applies. Wired into `/api/kontakt`; other
+  public forms take the same two lines (`captcha` in the schema, `overitCaptchu` after
+  `parse`, `<Captcha>` before the submit button).
+- **Payments (GoPay) are wired end to end** and switch on with `GOPAY_*` in `.env` — the
+  `zpusobPlatby` enum checks `jeNastaveno()` at request time rather than listing values, so
+  no code changes when the keys land. Three rules worth keeping:
+  **(1) paid status never comes from the browser** — the notification and the return URL
+  carry only a payment `id`, so [platba.ts](src/lib/platba.ts) asks the gateway
+  server-to-server; **(2) the amount is compared** against what was left to pay after the
+  gift card, and a mismatch is logged and left for manual handling rather than marked paid;
+  **(3) the state check sits inside the `UPDATE`** (`updateMany` on
+  `{ id, stavPlatby: { not: 'ZAPLACENO' } }`) — the gateway repeats notifications and the
+  customer reloads the return page, and two passes would each queue gift-card generation,
+  handing out codes twice. `Order.platbaId` is `@unique` so one payment can never settle two
+  orders. The notification endpoint answers 200 even for unknown ids (the gateway would
+  otherwise retry forever) and must **not** call `jeStejnyPuvod` — it has no browser origin.
+  A gateway outage during checkout does not cancel the order: `platebniUrl` comes back null
+  and the customer pays by transfer from the confirmation page.
 
-Closed: raw hex literals · `focus:outline-none` · `alert()` for form validation · ESLint
+Closed: newsletter had no double opt-in, so `potvrzeno` stayed `false` forever and the list
+was interest rather than consent — now `/api/newsletter/potvrzeni` completes it, and
+**confirming is a POST, never the GET that opens the link**: a mail client's preview robot
+prefetches links, and a GET would manufacture the very consent the double opt-in exists to
+prove (same reason the unsubscribe link is a POST, just with the opposite damage) · the
+abandoned-cart and low-stock jobs marked their rows as notified and only logged, so the
+flag was spent without anyone being told — both now queue a real message ·
+raw hex literals · `focus:outline-none` · `alert()` for form validation · ESLint
 configured · wildcard remote image host narrowed · `/admin` gated by
 [middleware.ts](src/middleware.ts) **plus a database role check in every admin endpoint** ·
 `/produkty/[kategorie]` existed only in sitemap.xml, now a real route · zero structured

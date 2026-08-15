@@ -49,10 +49,30 @@ describe('objednavkaSchema', () => {
    * volbu zakazoval, ale ručně sestavený požadavek prošel – a založil
    * objednávku, která odečetla sklad, nikdy nebyla zaplacená a na potvrzení
    * nedostala ani platební údaje (QR se zobrazuje jen u převodu).
-   * Hodnota se sem vrátí, až budou v `.env` klíče.
+   *
+   * Dnes o tom rozhoduje přítomnost klíčů v `.env`, ne pevný výčet: statický
+   * seznam by se musel při nasazení brány měnit v kódu, a to je krok, na
+   * který se zapomene.
    */
   it('nepustí platbu kartou, dokud brána není zapojená', () => {
     expect(objednavkaSchema.safeParse({ ...zaklad, zpusobPlatby: 'gopay' }).success).toBe(false);
+  });
+
+  it('platbu kartou pustí, jakmile jsou v .env klíče GoPay', () => {
+    const puvodni = { ...process.env };
+
+    process.env.GOPAY_GOID = '8123456789';
+    process.env.GOPAY_CLIENT_ID = 'test-client';
+    process.env.GOPAY_CLIENT_SECRET = 'test-secret';
+
+    try {
+      expect(objednavkaSchema.safeParse({ ...zaklad, zpusobPlatby: 'gopay' }).success).toBe(true);
+
+      // Dobírka zůstává zakázaná i se zapojenou bránou – nenabízí se vůbec.
+      expect(objednavkaSchema.safeParse({ ...zaklad, zpusobPlatby: 'dobirka' }).success).toBe(false);
+    } finally {
+      process.env = puvodni;
+    }
   });
 
   it('odmítne neznámého dopravce', () => {

@@ -5,6 +5,9 @@ import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { objednavkaSchema } from '@/lib/validations/objednavka';
 import { vytvoritObjednavku } from '@/lib/objednavka';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { NAZEV_DOPRAVY, NAZEV_PLATBY } from '@/lib/objednavka-popisky';
+import { zalozitPlatbu } from '@/lib/gopay';
+import { czkNaHalere } from '@/lib/penize';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,10 +55,58 @@ export async function POST(request: Request) {
       typ: 'potvrzeni-objednavky',
       to: vstup.email,
       subject: `Potvrzení objednávky ${vysledek.data.cisloObjednavky} – LINDA FASHION`,
-      data: { orderId: vysledek.data.id, cisloObjednavky: vysledek.data.cisloObjednavky },
+      data: {
+        orderId: vysledek.data.id,
+        cisloObjednavky: vysledek.data.cisloObjednavky,
+        // Odkaz na potvrzení musí fungovat i bez přihlášení (guest checkout),
+        // takže do zprávy patří veřejný token, ne číslo objednávky.
+        verejnyToken: vysledek.data.verejnyToken,
+        celkovaCena: vysledek.data.celkovaCenaKc,
+        zpusobPlatby: NAZEV_PLATBY[vysledek.data.zpusobPlatby] ?? vysledek.data.zpusobPlatby,
+        zpusobDopravy: NAZEV_DOPRAVY[vstup.zpusobDopravy] ?? vstup.zpusobDopravy,
+      },
     });
 
-    return odpovedOk(vysledek.data, 201);
+    /*
+     * Platba kartou: objednávka je založená, teď se k ní připojí platba
+     * u brány a zákaznice se přesměruje na `platebniUrl`.
+     *
+     * Zakládá se **až po** zápisu objednávky, ne před ním. Kdyby to bylo
+     * naopak a zápis pak selhal (vykoupený poslední kus), zůstala by u GoPay
+     * viset platba bez objednávky – a zákaznice by mohla zaplatit za nic.
+     *
+     * Selhání brány objednávku neruší. Zboží je odečtené, doklad vzniká
+     * a zákaznice zaplatí převodem podle údajů na potvrzení; zrušit
+     * objednávku kvůli výpadku brány by bylo horší než ji nechat stát.
+     */
+    let platebniUrl: string | null = null;
+
+    if (vysledek.data.zpusobPlatby === 'gopay' && vysledek.data.kUhradeKc > 0) {
+      try {
+        const zaklad = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
+        const platba = await zalozitPlatbu({
+          cisloObjednavky: vysledek.data.cisloObjednavky,
+          castka: czkNaHalere(vysledek.data.kUhradeKc),
+          email: vstup.email,
+          jmeno: vstup.dodaciJmenoPrijmeni,
+          telefon: vstup.dodaciTelefon,
+          navratovaUrl: `${zaklad}/api/platba/gopay/navrat?t=${encodeURIComponent(vysledek.data.verejnyToken)}`,
+          notifikacniUrl: `${zaklad}/api/platba/gopay/notifikace`,
+        });
+
+        await db.order.update({
+          where: { id: vysledek.data.id },
+          data: { platbaId: platba.id },
+        });
+
+        platebniUrl = platba.gwUrl;
+      } catch (err) {
+        console.error('[gopay] Platbu se nepodařilo založit:', err);
+      }
+    }
+
+    return odpovedOk({ ...vysledek.data, platebniUrl }, 201);
   } catch (err) {
     return zpracovatChybu(err);
   }

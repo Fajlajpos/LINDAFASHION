@@ -13,5 +13,12 @@
     "sourceMap": false,
     "incremental": false
   },
-  "include": ["src/worker/**/*.ts"]
+  "include": ["src/worker/**/*.ts"],
+
+  // Testy do produkčního obrazu nepatří – a nejde jen o pár kilobajtů.
+  // Testovací pomocníci (`src/test/data.ts`) importují validace, ty zase
+  // klienta platební brány, takže se přes jeden `.test.ts` do buildu workeru
+  // vtáhnou moduly, které tam nemají co dělat. Build pak padal na typech
+  // webového `fetch`, přestože se ten kód ve workeru nikdy nespustí.
+  "exclude": ["src/worker/**/*.test.ts"]
 }

@@ -25,6 +25,7 @@ import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
 import { vygenerovatFakturuUloha, type UlohaFaktura } from './jobs/vygenerovat-fakturu';
 import { vygenerovatPoukazyUloha, type UlohaPoukazy } from './jobs/vygenerovat-poukazy';
 import { uklidResetTokenu } from '../lib/reset-hesla';
+import { zavritTransport } from './emaily/transport';
 
 const FRONTA_UKLID = 'uklid-uloziste';
 const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
@@ -79,8 +80,6 @@ async function spustitWorker() {
   await boss.schedule(FRONTA_UKLID, '*/15 * * * *');
 
   // --- Opuštěné košíky (sekce 14) -----------------------------------------
-  // Zatím jen označí košík jako připomenutý; odeslání e-mailu se doplní,
-  // až budou k dispozici SMTP přístupy (sekce 8, 16).
   await boss.work(FRONTA_OPUSTENE_KOSIKY, async () => {
     const hranice = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -97,13 +96,24 @@ async function spustitWorker() {
     for (const kosik of kosiky) {
       if (!kosik.user?.email) continue;
 
-      // TODO(e-mail): až budou SMTP klíče, zařadit sem úlohu ODESLAT_EMAIL.
-      console.log(`[košíky] Připomínka pro ${kosik.user.email} (zatím bez odeslání – chybí SMTP).`);
+      await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'opusteny-kosik',
+        to: kosik.user.email,
+        subject: 'Zapomněli jste u nás košík – LINDA FASHION',
+        data: {},
+      });
 
+      // Značka se zapisuje hned po zařazení do fronty, ne po doručení.
+      // Připomínka poslaná dvakrát je horší než neposlaná, a když odeslání
+      // selže, pg-boss si ho zopakuje sám nad toutéž úlohou.
       await db.cart.update({
         where: { id: kosik.id },
         data: { pripomenutoAt: new Date() },
       });
+    }
+
+    if (kosiky.length > 0) {
+      console.log(`[košíky] Zařazeno ${kosiky.length} připomínek opuštěného košíku.`);
     }
   });
   await boss.schedule(FRONTA_OPUSTENE_KOSIKY, '0 */4 * * *');
@@ -126,10 +136,14 @@ async function spustitWorker() {
       for (const polozka of varianta.cartItems) {
         if (!polozka.cart.user?.email) continue;
 
-        // TODO(e-mail): až budou SMTP klíče, zařadit sem úlohu ODESLAT_EMAIL.
-        console.log(
-          `[sklad] ${varianta.product.nazev} dochází – upozornění pro ${polozka.cart.user.email} (zatím bez odeslání).`
-        );
+        const nazev = `${varianta.product.nazev} (${varianta.velikost})`;
+
+        await publishJob(FRONTY.ODESLAT_EMAIL, {
+          typ: 'dochazejici-sklad',
+          to: polozka.cart.user.email,
+          subject: `${nazev} dochází – LINDA FASHION`,
+          data: { nazev },
+        });
 
         await db.cartItem.update({
           where: { id: polozka.id },
@@ -204,6 +218,7 @@ async function ukoncit(signal: string) {
   console.log(`\n${signal} – ukončuji worker…`);
   try {
     await zastavitFrontu();
+    await zavritTransport();
     await db.$disconnect();
   } finally {
     process.exit(0);

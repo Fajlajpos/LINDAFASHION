@@ -248,6 +248,12 @@ model Order {
   vydejniMistoNazev   String?
   zpusobPlatby        String
   stavPlatby          String
+
+  /// Identifikátor platby u brány (GoPay). Notifikace i návratová adresa
+  /// nesou jen tohle id, takže je to jediná vazba mezi objednávkou a platbou.
+  /// Unikátní schválně: jedna platba nesmí označit za zaplacené dvě objednávky.
+  platbaId            String?       @unique
+
   cisloZasilky        String?
   poznamka            String?
   zrusil              ZrusilKdo?

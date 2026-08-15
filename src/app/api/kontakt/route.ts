@@ -4,6 +4,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { overitCaptchu } from '@/lib/captcha';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ const schema = z.object({
     .transform((v) => v.trim().toLowerCase()),
   predmet: z.string().max(200).optional().transform((v) => v?.trim() || undefined),
   zprava: z.string().min(10, 'Napište prosím alespoň pár vět.').max(5000).transform((v) => v.trim()),
+  /** Token z Turnstile. Bez nastavených klíčů se neověřuje. */
+  captcha: z.string().max(4000).optional().nullable(),
 });
 
 /**
@@ -36,6 +39,13 @@ export async function POST(request: Request) {
     }
 
     const vstup = schema.parse(await request.json());
+
+    // Limit podle IP zdrží člověka, ne botnet – captcha je ta druhá vrstva.
+    // Bez klíčů v `.env` projde, takže formulář funguje i před jejich zadáním.
+    const overeni = await overitCaptchu(vstup.captcha, klientskaIp(request));
+    if (!overeni.ok) {
+      return odpovedChyba(overeni.zprava ?? 'Ověření se nezdařilo.', 400, { captcha: overeni.zprava ?? '' });
+    }
 
     const zprava = await db.contactMessage.create({
       data: {

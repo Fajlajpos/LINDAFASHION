@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
 import { KontaktFormular } from '@/components/shop/KontaktFormular';
+import { siteKey } from '@/lib/captcha';
 import { nacistNastaveni } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
@@ -137,7 +138,7 @@ export default async function KontaktPage() {
             {/* Slib o ochraně Turnstile tu dřív stál, přestože captcha není
                 zapojená – tvrzení o bezpečnosti, které neplatí, je horší než
                 žádné. Formulář zatím chrání limit požadavků na straně serveru. */}
-            <KontaktFormular />
+            <KontaktFormular captchaSiteKey={siteKey()} />
           </div>
         </div>
       </div>

@@ -1,0 +1,116 @@
+import { z } from 'zod';
+import { db } from '@/lib/db';
+import { odpovedChyba, odpovedOk, zpracovatChybu } from '@/lib/api';
+import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Dokončení double opt-inu k odběru novinek.
+ *
+ * Bez tohohle kroku byl `NewsletterSubscriber.potvrzeno` navždy `false`:
+ * seznam byl evidencí zájmu, ne souhlasem s rozesílkou. Rozesílat na
+ * nepotvrzené adresy nelze – jednak to zakazuje GDPR, jednak stačí, aby
+ * někdo do formuláře napsal cizí adresu, a chodily by jí novinky.
+ *
+ * **Potvrzuje až POST, ne otevření odkazu.** Stejný důvod jako u odhlášení,
+ * jen s opačným dopadem: náhledový robot poštovního klienta si odkazy v e-mailu
+ * předběžně načte, a kdyby potvrzoval GET, vznikl by „souhlas", na který
+ * zákaznice nikdy neklikla. Právě ten souhlas má přitom double opt-in doložit,
+ * takže by celé opatření ztratilo smysl.
+ *
+ * Autorizací je token z e-mailu; `jeStejnyPuvod` se proto nevolá, požadavek
+ * přichází z čerstvě otevřené stránky bez vazby na relaci.
+ */
+
+const schema = z.object({
+  token: z.string().min(10, 'Odkaz je neplatný.').max(200),
+});
+
+/** Zakryje adresu na `p***a@seznam.cz` – potvrdí, o čí odběr jde, bez vypsání. */
+function zakrytEmail(email: string): string {
+  const [jmeno, domena] = email.split('@');
+  if (!domena) return '***';
+
+  const viditelne = jmeno.length <= 2 ? jmeno.slice(0, 1) : `${jmeno[0]}***${jmeno[jmeno.length - 1]}`;
+  return `${viditelne}@${domena}`;
+}
+
+/** GET ?token= – ověření odkazu, aby stránka věděla, co zobrazit. */
+export async function GET(request: Request) {
+  try {
+    const token = new URL(request.url).searchParams.get('token')?.trim() ?? '';
+    if (!token) return odpovedOk({ platny: false });
+
+    const limit = zkontrolovatLimit(`newsletter-potvrzeni:${klientskaIp(request)}`, 30, 10 * 60 * 1000);
+    if (!limit.povoleno) {
+      return odpovedChyba('Příliš mnoho požadavků. Zkuste to prosím za chvíli.', 429);
+    }
+
+    const odberatel = await db.newsletterSubscriber.findUnique({
+      where: { token },
+      select: { email: true, potvrzeno: true, odhlasenAt: true },
+    });
+
+    if (!odberatel) return odpovedOk({ platny: false });
+
+    return odpovedOk({
+      platny: true,
+      email: zakrytEmail(odberatel.email),
+      jizPotvrzeno: odberatel.potvrzeno && odberatel.odhlasenAt === null,
+    });
+  } catch (err) {
+    return zpracovatChybu(err);
+  }
+}
+
+/** POST – vlastní potvrzení odběru. */
+export async function POST(request: Request) {
+  try {
+    const limit = zkontrolovatLimit(`newsletter-potvrzeni:${klientskaIp(request)}`, 30, 10 * 60 * 1000);
+    if (!limit.povoleno) {
+      return odpovedChyba('Příliš mnoho požadavků. Zkuste to prosím za chvíli.', 429);
+    }
+
+    const { token } = schema.parse(await request.json());
+
+    /*
+     * `updateMany`, ne `update`: dvojklik ani znovunačtení stránky nesmí
+     * skončit chybou o nenalezeném záznamu. Bez podmínky na `potvrzeno`,
+     * protože potvrzení je idempotentní – druhý průchod jen přepíše totéž.
+     *
+     * `odhlasenAt: null` současně řeší případ, kdy si zákaznice odběr mezitím
+     * odhlásila a pak otevřela starý potvrzovací e-mail: potvrzení odhlášení
+     * nezruší.
+     */
+    const zmeneno = await db.newsletterSubscriber.updateMany({
+      where: { token, odhlasenAt: null },
+      data: { potvrzeno: true },
+    });
+
+    if (zmeneno.count === 0) {
+      const existuje = await db.newsletterSubscriber.findUnique({
+        where: { token },
+        select: { odhlasenAt: true },
+      });
+
+      if (!existuje) {
+        return odpovedChyba(
+          'Tenhle potvrzovací odkaz už neplatí. Přihlaste se prosím k odběru znovu.',
+          404
+        );
+      }
+
+      return odpovedChyba(
+        'Tuhle adresu evidujeme jako odhlášenou z odběru. Přihlaste se prosím znovu formulářem v patičce.',
+        409
+      );
+    }
+
+    return odpovedOk({
+      zprava: 'Hotovo, odběr novinek je potvrzený. První zprávu vám pošleme s nejbližší novinkou.',
+    });
+  } catch (err) {
+    return zpracovatChybu(err);
+  }
+}

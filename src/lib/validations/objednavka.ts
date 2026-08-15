@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { jeNastaveno } from '../gopay';
 
 /** PSČ zapisují lidé s mezerou i bez ní. */
 const psc = z
@@ -45,18 +46,26 @@ export const objednavkaSchema = z.object({
   /*
    * Dobírka se schválně nenabízí vůbec (sekce 8).
    *
-   * `gopay` tu záměrně **není**, dokud brána není zapojená. Formulář tu volbu
-   * sice zakazuje, ale validace je poslední slovo – ručně sestavený požadavek
-   * by jinak založil objednávku, která odečte sklad, nikdy nebude zaplacená
-   * a na potvrzení nedostane ani platební údaje (QR se zobrazuje jen
-   * u převodu). Až budou v `.env` klíče, přidá se hodnota zpátky sem.
+   * `gopay` projde **jen když je brána opravdu zapojená**, tedy když jsou
+   * v `.env` klíče. Formulář tu volbu sám zakáže, ale validace je poslední
+   * slovo: ručně sestavený požadavek by jinak založil objednávku, která
+   * odečte sklad, nikdy nebude zaplacená a na potvrzení nedostane ani
+   * platební údaje (QR se zobrazuje jen u převodu).
+   *
+   * Kontrola je schválně dynamická, ne pevný výčet. Statický seznam by se
+   * musel při nasazení klíčů měnit v kódu – a to je přesně ten krok, na který
+   * se zapomene. Takhle stačí vyplnit `.env` a karta se zapne sama.
    *
    * Objednávky se způsobem `gopay` z dřívějška zůstávají čitelné – popisky
    * v `objednavka-popisky.ts` a na faktuře tu hodnotu dál znají.
    */
-  zpusobPlatby: z.enum(['bankovni_prevod'], {
-    errorMap: () => ({ message: 'Vyberte způsob platby.' }),
-  }),
+  zpusobPlatby: z
+    .enum(['bankovni_prevod', 'gopay'], {
+      errorMap: () => ({ message: 'Vyberte způsob platby.' }),
+    })
+    .refine((v) => v !== 'gopay' || jeNastaveno(), {
+      message: 'Platbu kartou momentálně nenabízíme. Zvolte prosím bankovní převod.',
+    }),
 
   slevovyKod: z
     .string()

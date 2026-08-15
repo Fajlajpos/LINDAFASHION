@@ -138,6 +138,14 @@ interface Props {
   zpravaODovolene: string | null;
   /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
   popisDph: string;
+  /**
+   * Je platební brána zapojená (má `.env` klíče GoPay)?
+   *
+   * Rozhoduje se na serveru: klíče do prohlížeče nepatří a `NEXT_PUBLIC_`
+   * proměnná navíc zamrzne v buildu, takže by se po doplnění klíčů musel
+   * znovu sestavovat celý web.
+   */
+  platbaKartouDostupna: boolean;
 }
 
 interface UplatnenySleva {
@@ -158,6 +166,7 @@ export function PokladnaFormular({
   objednavaniZablokovano,
   zpravaODovolene,
   popisDph,
+  platbaKartouDostupna,
 }: Props) {
   const router = useRouter();
   const { cart, totalCartValue, clearCart } = useCart();
@@ -275,7 +284,12 @@ export function PokladnaFormular({
     setChyba(null);
     setChybyPoli({});
 
-    const vysledek = await poslatJson<{ cisloObjednavky: string; verejnyToken: string }>('/api/objednavky', {
+    const vysledek = await poslatJson<{
+      cisloObjednavky: string;
+      verejnyToken: string;
+      /** Adresa platební brány – vyplněná jen u platby kartou. */
+      platebniUrl: string | null;
+    }>('/api/objednavky', {
       polozky: cart.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
       email: form.email,
       dodaciJmenoPrijmeni: form.dodaciJmenoPrijmeni,
@@ -302,6 +316,21 @@ export function PokladnaFormular({
     }
 
     clearCart();
+
+    /*
+     * Platba kartou pokračuje v bráně. `window.location` schválně, ne
+     * `router.push` – ten umí jen adresy uvnitř aplikace a na cizí doménu
+     * by neskočil vůbec.
+     *
+     * Když se platbu nepodařilo založit (výpadek brány), `platebniUrl` je
+     * null a objednávka existuje dál; zákaznice pokračuje na potvrzení
+     * s údaji k převodu, místo aby uvízla na prázdné stránce.
+     */
+    if (vysledek.data.platebniUrl) {
+      window.location.assign(vysledek.data.platebniUrl);
+      return;
+    }
+
     // V odkazu je náhodný token, ne číslo objednávky – to jde po sobě, takže
     // by přepisováním čísla v adrese šlo číst cizí objednávky.
     router.push(`/pokladna/potvrzeni?t=${encodeURIComponent(vysledek.data.verejnyToken)}`);
@@ -537,21 +566,25 @@ export function PokladnaFormular({
               cena={<span className="text-linda-sage">Zdarma</span>}
             />
 
-            {/* GoPay se zpřístupní, až budou v .env klíče (sekce 8). */}
+            {/* Karta se nabídne, jen když jsou v .env klíče GoPay (sekce 8). */}
             <Volba
               name="platba"
               value="gopay"
-              checked={false}
-              onSelect={() => undefined}
-              disabled
+              checked={platbaKartouDostupna && zpusobPlatby === 'gopay'}
+              onSelect={() => platbaKartouDostupna && setZpusobPlatby('gopay')}
+              disabled={odesila || !platbaKartouDostupna}
               nadpis={
                 <>
                   <CreditCard className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
                   Platba kartou
                 </>
               }
-              popis="Připravujeme – zatím prosím využijte bankovní převod."
-              cena="—"
+              popis={
+                platbaKartouDostupna
+                  ? 'Po odeslání objednávky vás přesměrujeme do zabezpečené brány GoPay.'
+                  : 'Připravujeme – zatím prosím využijte bankovní převod.'
+              }
+              cena={platbaKartouDostupna ? <span className="text-linda-sage">Zdarma</span> : '—'}
             />
           </div>
 

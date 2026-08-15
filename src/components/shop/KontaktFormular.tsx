@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, Loader2, Send } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
+import { Captcha } from '@/components/ui/Captcha';
 
 /**
  * Kontaktní formulář.
@@ -11,12 +12,14 @@ import { poslatJson } from '@/lib/api-klient';
  * uloží do databáze a zařadí notifikaci majitelce – zpráva se tedy neztratí ani
  * dokud nejsou SMTP přístupy.
  */
-export function KontaktFormular() {
+export function KontaktFormular({ captchaSiteKey }: { captchaSiteKey: string | null }) {
   const [form, setForm] = useState({ jmeno: '', email: '', predmet: '', zprava: '' });
   const [odesila, setOdesila] = useState(false);
   const [hotovo, setHotovo] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [resetCaptchy, setResetCaptchy] = useState(0);
 
   const odeslat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,7 @@ export function KontaktFormular() {
       email: form.email,
       predmet: form.predmet || undefined,
       zprava: form.zprava,
+      captcha,
     });
 
     if (vysledek.ok) {
@@ -38,6 +42,8 @@ export function KontaktFormular() {
     } else {
       setChyba(vysledek.chyba);
       setChybyPoli(vysledek.pole ?? {});
+      // Token Turnstile platí jednou – po neúspěchu je potřeba nový.
+      setResetCaptchy((n) => n + 1);
     }
 
     setOdesila(false);
@@ -128,6 +134,8 @@ export function KontaktFormular() {
           </p>
         )}
       </div>
+
+      <Captcha siteKey={captchaSiteKey} onToken={setCaptcha} resetSignal={resetCaptchy} />
 
       <button
         type="submit"
