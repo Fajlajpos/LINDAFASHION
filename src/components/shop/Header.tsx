@@ -166,7 +166,25 @@ export const Header: React.FC<HeaderProps> = ({
               aria-expanded={mobileMenuOpen}
               aria-controls="mobilni-menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
+              {/* Obě ikony leží na sobě a přepínají se pootočením s prolnutím.
+                  Dřív se jedna odmountovala a druhá naskočila skokem – u prvku,
+                  který má oznámit „stav se přepnul“, je ta čtvrtsekunda pohybu
+                  celá informace. Rozměr drží obal, ne ikony, takže se lišta
+                  během přechodu nehne. */}
+              <span className="relative flex h-6 w-6 items-center justify-center">
+                <Menu
+                  className={`absolute h-6 w-6 transition-all duration-200 ease-out ${
+                    mobileMenuOpen ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'
+                  }`}
+                  aria-hidden="true"
+                />
+                <X
+                  className={`absolute h-6 w-6 transition-all duration-200 ease-out ${
+                    mobileMenuOpen ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'
+                  }`}
+                  aria-hidden="true"
+                />
+              </span>
             </button>
 
             {/* Desktop Navigation */}
@@ -178,7 +196,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <Link
                   key={href}
                   href={href}
-                  className={`py-2 rounded-sm hover:text-linda-cognac transition-colors ${
+                  /* Vlasové podtržítko se vysouvá zleva. Kreslí ho `::after`
+                     přes `scaleX`, ne přes rostoucí šířku – šířka nutí
+                     prohlížeč přepočítat rozvržení v každém snímku, kdežto
+                     `transform` odbaví kompozitor. Prvek je vlasový (1 px) a
+                     leží uvnitř `py-2`, takže odkazy nemění výšku. */
+                  className={`relative py-2 rounded-sm transition-colors hover:text-linda-cognac after:absolute after:inset-x-0 after:bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-linda-cognac after:transition-transform after:duration-200 after:ease-out after:content-[''] hover:after:scale-x-100 ${
                     accent ? 'text-linda-cognac font-semibold' : ''
                   }`}
                 >
@@ -231,29 +254,44 @@ export const Header: React.FC<HeaderProps> = ({
               ref={searchToggleRef}
               type="button"
               onClick={() => setSearchOpen(!searchOpen)}
-              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
+              className="group min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
               aria-label={searchOpen ? 'Zavřít vyhledávání' : 'Otevřít vyhledávání'}
               aria-expanded={searchOpen}
               aria-controls="vyhledavani"
             >
-              <Search className="w-5 h-5" aria-hidden="true" />
+              {/* Ikony v liště reagují jednotně: nadechnutí při najetí,
+                  stlačení při stisku. Dotykový cíl (44 px) se nemění, pohyb
+                  má jen kresba uvnitř – jinak by se sousední ikony strkaly. */}
+              <Search
+                className="w-5 h-5 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                aria-hidden="true"
+              />
             </button>
 
             {/* Favorites */}
             <Link
               href="/oblibene"
-              className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors relative"
+              className="group min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors relative"
               aria-label={
                 favoritesCount > 0
                   ? `Oblíbené položky (${favoritesCount})`
                   : 'Oblíbené položky'
               }
             >
-              <Heart className="w-5 h-5" aria-hidden="true" />
+              <Heart
+                className="w-5 h-5 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                aria-hidden="true"
+              />
               {favoritesCount > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-linda-sage text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
+                  /* `key` na počtu je celý smysl: bez něj React jen přepíše
+                     text uvnitř téhož uzlu a animace, která se pouští při
+                     namountování, se podruhé nespustí. S ním odznak při každé
+                     změně počtu znovu naskočí – přidání do oblíbených se dělo
+                     o stránku níž a jinak by o něm lišta mlčela. */
+                  key={favoritesCount}
+                  className="animate-popIn absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-linda-sage text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
                 >
                   {formatBadge(favoritesCount)}
                 </span>
@@ -269,9 +307,12 @@ export const Header: React.FC<HeaderProps> = ({
             {jeAdmin && (
               <Link
                 href="/admin"
-                className="hidden min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm lg:flex"
+                className="group hidden min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm lg:flex"
               >
-                <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <LayoutDashboard
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                  aria-hidden="true"
+                />
                 Administrace
               </Link>
             )}
@@ -279,10 +320,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Account / Admin */}
             <Link
               href={user ? '/muj-ucet' : '/prihlaseni'}
-              className="min-h-touch flex items-center justify-center gap-1.5 px-2 cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
+              className="group min-h-touch flex items-center justify-center gap-1.5 px-2 cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
               aria-label={user ? 'Můj účet' : 'Přihlásit se'}
             >
-              <User className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <User
+                className="w-5 h-5 shrink-0 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                aria-hidden="true"
+              />
               {user && (
                 <span className="hidden md:inline text-xs font-medium max-w-[90px] truncate">
                   {user.jmeno || user.email.split('@')[0]}
@@ -300,11 +344,16 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'Košík je prázdný'
               }
             >
-              <ShoppingBag className="w-5 h-5 group-hover:scale-105 transition-transform" aria-hidden="true" />
+              <ShoppingBag
+                className="w-5 h-5 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                aria-hidden="true"
+              />
               {cartCount > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-linda-cognac text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
+                  // `key` na počtu – viz odznak oblíbených výš.
+                  key={cartCount}
+                  className="animate-popIn absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-linda-cognac text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
                 >
                   {formatBadge(cartCount)}
                 </span>
@@ -333,10 +382,17 @@ export const Header: React.FC<HeaderProps> = ({
               />
               <button
                 type="submit"
-                className="absolute right-1 top-1/2 -translate-y-1/2 min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full text-linda-cognac hover:text-linda-espresso transition-colors"
+                /* Posun na hoveru patří ikoně uvnitř, ne tomuhle tlačítku:
+                   samo se polohuje `-translate-y-1/2` a pravidlo pro
+                   `prefers-reduced-motion` vypíná `transform` celého prvku –
+                   tlačítko by v tu chvíli vyskočilo z osy pole. */
+                className="group absolute right-1 top-1/2 -translate-y-1/2 min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full text-linda-cognac hover:text-linda-espresso transition-colors"
                 aria-label="Vyhledat"
               >
-                <Search className="w-4 h-4" aria-hidden="true" />
+                <Search
+                  className="w-4 h-4 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                  aria-hidden="true"
+                />
               </button>
             </form>
           </div>

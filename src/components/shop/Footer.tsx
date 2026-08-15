@@ -198,9 +198,12 @@ export const Footer: React.FC<FooterProps> = ({
                     type="submit"
                     disabled={stav === 'odesilam'}
                     aria-label="Přihlásit se k odběru novinek"
-                    className="flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cognac text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-none disabled:opacity-60"
+                    className="group flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center rounded-full bg-linda-cognac text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-none disabled:opacity-60"
                   >
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
                   </button>
                 </div>
 
@@ -240,9 +243,15 @@ export const Footer: React.FC<FooterProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${label} – LINDA FASHION`}
-                className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white/[0.04] text-linda-sand shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognac hover:text-white active:shadow-neuOnDarkInset"
+                /* Nadzvednutí o 2 px. Na tmavé patičce nese reliéf hlavně
+                   černý stín, takže samotná změna stínu je při najetí sotva
+                   znát – posun ji doplní o pohyb, který oko zaregistruje. */
+                className="group flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white/[0.04] text-linda-sand shadow-neuOnDark transition-all duration-200 hover:-translate-y-0.5 hover:bg-linda-cognac hover:text-white active:translate-y-0 active:shadow-neuOnDarkInset"
               >
-                <Ikona className="h-4 w-4" aria-hidden="true" />
+                <Ikona
+                  className="h-4 w-4 transition-transform duration-200 ease-out group-hover:scale-110"
+                  aria-hidden="true"
+                />
               </a>
             ))}
             <p className="ml-1 text-left">

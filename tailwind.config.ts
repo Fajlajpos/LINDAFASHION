@@ -120,11 +120,24 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+
+        /* Naskočení počítadla (odznak košíku a oblíbených, potvrzovací hlášky).
+           Mírný přestřel přes 1.0 je tu schválně: číslo se změní bez jakékoli
+           jiné zpětné vazby – kliknutí proběhlo o stránku výš, u karty
+           produktu – a plynulé prolnutí by v periferním vidění zaniklo.
+           Přestřel je to, co oko zachytí, aniž by muselo na odznak koukat.
+           Krátké (220 ms) a jednorázové, takže z toho není poskakující prvek. */
+        popIn: {
+          '0%': { opacity: '0', transform: 'scale(0.55)' },
+          '60%': { opacity: '1', transform: 'scale(1.12)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         // 150–300ms podle UX pravidel; respektuje prefers-reduced-motion v globals.css
         fadeIn: 'fadeIn 200ms ease-out',
         fadeInUp: 'fadeInUp 250ms ease-out',
+        popIn: 'popIn 220ms cubic-bezier(0.34, 1.4, 0.64, 1)',
       },
       minHeight: {
         touch: '44px', // WCAG minimální velikost dotykového cíle

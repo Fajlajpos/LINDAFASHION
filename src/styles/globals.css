@@ -177,10 +177,35 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   }
 
   /* Zvětšování obrázků a ikon při hoveru = pohyb → zrušit,
-     barevná změna u téhož prvku ale zůstává. */
+     barevná změna u téhož prvku ale zůstává.
+     `[class*="hover:-translate"]` chytá i `group-hover:-translate-…`, protože
+     hledáme podřetězec – proto tu variantu se skupinou nevypisujeme dvakrát.
+
+     Pozor při psaní nových tříd: tohle pravidlo vypne `transform` **celého
+     prvku**. Prvek, který se transformem zároveň polohuje (`-translate-y-1/2`
+     u ikony ve vstupním poli), proto nesmí dostat hoverový posun – vyskočil by
+     ze své pozice. Posun patří na vnořenou ikonu, ne na polohovaný obal. */
   [class*="group-hover:scale"],
-  [class*="hover:scale"] {
+  [class*="hover:scale"],
+  [class*="hover:translate"],
+  [class*="hover:-translate"],
+  [class*="hover:rotate"],
+  [class*="hover:-rotate"] {
     transform: none !important;
+  }
+
+  /* Podtržítko, které se u odkazu vysouvá zleva (`after:scale-x-0` →
+     `hover:after:scale-x-100`). Pravidlo výš na pseudoelement nedosáhne a
+     zrušit ho úplně nejde – podtržení nese stav hoveru. Necháme ho tedy
+     naskočit skokem: informace zůstane, pohyb zmizí. */
+  [class*="after:scale-x"]::after {
+    transition: none !important;
+  }
+
+  /* Naskočení odznaků. Bez animace prvek zůstane ve svém koncovém stavu
+     (opacity 1, scale 1), takže se nic neztratí – jen se neroztáhne. */
+  .animate-popIn {
+    animation: none !important;
   }
 
   /* Žádná animace nesmí běžet donekonečna. */

@@ -46,13 +46,18 @@ export function AdminNav() {
             key={href}
             href={href}
             aria-current={jeAktivni ? 'page' : undefined}
-            className={`flex min-h-touch cursor-pointer items-center gap-3 rounded-xl px-4 text-xs font-medium transition-all duration-200 ${
+            className={`group flex min-h-touch cursor-pointer items-center gap-3 rounded-xl px-4 text-xs font-medium transition-all duration-200 ${
               jeAktivni
                 ? 'bg-linda-cognac text-white shadow-neuOnDarkInset'
                 : 'text-linda-cream/80 hover:bg-white/[0.06] hover:text-white hover:shadow-neuOnDark'
             }`}
           >
-            <Ikona className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {/* Pohyb má jen ikona. Posouvat celou položku by rozhýbalo štítek
+                a ten se v deseti řádcích pod sebou čte jako vlnění seznamu. */}
+            <Ikona
+              className="h-4 w-4 shrink-0 transition-transform duration-200 ease-out group-hover:scale-110"
+              aria-hidden="true"
+            />
             <span>{nazev}</span>
           </Link>
         );

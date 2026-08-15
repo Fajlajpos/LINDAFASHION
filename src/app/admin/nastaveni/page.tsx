@@ -64,6 +64,22 @@ const PRAZDNE: Nastaveni = {
 const POLE =
   'w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5 text-xs text-linda-espresso disabled:opacity-60';
 
+/**
+ * Karty se po načtení nasypou po sobě, ne naráz.
+ *
+ * Stránka se dotahuje přes `fetch`, takže než přijdou data, stojí na místě
+ * obsahu spinner – a pak se čtyři velké karty vyklopí v jediném snímku.
+ * Krátké zpoždění po řadě dá oku pořadí, ve kterém se má rozhlédnout, a
+ * skok se změní v příchod. Celé to trvá 250 + 3×70 ms, tedy necelou půl
+ * sekundy; nic se tím nezdrží, pole jsou od prvního snímku plná.
+ *
+ * `animation-fill-mode: backwards` je tu nutnost, ne kosmetika: bez něj
+ * prvek do svého zpoždění vykresluje **koncový** stav, takže by karty
+ * problikly viditelné, zmizely a teprve pak naskočily.
+ */
+const NASYP = 'animate-fadeInUp [animation-fill-mode:backwards]';
+const zpozdeni = (poradi: number) => ({ animationDelay: `${poradi * 70}ms` });
+
 /** `<input type="date">` chce `YYYY-MM-DD`, databáze vrací ISO s časem. */
 function naDatumInput(hodnota: string | null): string {
   return hodnota ? hodnota.slice(0, 10) : '';
@@ -134,10 +150,13 @@ export default function AdminNastaveniPage() {
         </p>
       </div>
 
+      {/* Obě hlášky přicházejí až po odeslání formuláře, tedy do stránky,
+          na kterou se uživatel právě dívá. Bez naskočení se jen tiše objeví
+          nad prvním blokem – přesně tam, kam se v tu chvíli nekouká. */}
       {chyba && (
         <p
           role="alert"
-          className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
+          className="animate-fadeInUp flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
         >
           <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
           {chyba}
@@ -147,16 +166,16 @@ export default function AdminNastaveniPage() {
       {ulozeno && (
         <p
           role="status"
-          className="flex items-center gap-2 rounded-xl bg-linda-sageLight p-3 text-xs font-medium text-linda-sage"
+          className="animate-fadeInUp flex items-center gap-2 rounded-xl bg-linda-sageLight p-3 text-xs font-medium text-linda-sage"
         >
-          <CheckCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <CheckCircle className="animate-popIn h-4 w-4 shrink-0" aria-hidden="true" />
           Nastavení bylo uloženo.
         </p>
       )}
 
       <form onSubmit={ulozit} className="space-y-8">
         {/* Režim dovolené */}
-        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(0)}>
           <div className="flex items-start justify-between gap-4">
             <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
               <Palmtree className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
@@ -172,8 +191,12 @@ export default function AdminNastaveniPage() {
             />
           </div>
 
+          {/* Zaškrtnutím vyroste pod nadpisem tři pole najednou. Bez naskočení
+              to čte jako přeskládání stránky; s ním jako rozbalení. Animujeme
+              průhlednost a posun, ne výšku – výška by strhla přepočet
+              rozvržení celého formuláře v každém snímku. */}
           {n.rezimDovolene && (
-            <div className="space-y-4">
+            <div className="animate-fadeInUp space-y-4">
               <div>
                 <label htmlFor="datumNavratu" className="mb-1 block text-xs font-semibold text-linda-espresso">
                   Datum návratu *
@@ -226,7 +249,7 @@ export default function AdminNastaveniPage() {
         </section>
 
         {/* Firemní údaje */}
-        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(1)}>
           <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
             <Building2 className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
             Firemní a kontaktní údaje
@@ -276,7 +299,7 @@ export default function AdminNastaveniPage() {
         </section>
 
         {/* Sociální sítě */}
-        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(2)}>
           <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
             <Share2 className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
             Sociální sítě
@@ -312,7 +335,7 @@ export default function AdminNastaveniPage() {
         </section>
 
         {/* Doprava */}
-        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(3)}>
           <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
             <Truck className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
             Ceny dopravy
@@ -378,7 +401,7 @@ export default function AdminNastaveniPage() {
             type="submit"
             disabled={ukladam}
             aria-busy={ukladam}
-            className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70"
+            className="group flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70"
           >
             {ukladam ? (
               <>
@@ -387,7 +410,10 @@ export default function AdminNastaveniPage() {
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" aria-hidden="true" />
+                <Save
+                  className="h-4 w-4 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                  aria-hidden="true"
+                />
                 Uložit nastavení
               </>
             )}

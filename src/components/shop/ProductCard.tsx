@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Sparkles, Gift } from 'lucide-react';
+import { ArrowRight, Heart, Sparkles, Gift } from 'lucide-react';
 import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
 import { useFavorites } from '@/lib/favorites-context';
 
@@ -129,8 +129,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             : `Přidat ${nazev} do oblíbených`
         }
       >
+        {/* Srdíčko se při uložení nadechne a při odebrání zase splaskne.
+            Je to jediná zpětná vazba, kterou kliknutí má – karta se jinak
+            nehne a stránka nikam nepřejde. Přechod běží ze stavu do stavu,
+            ne jako animace při namountování: mřížka dvanácti uložených kusů
+            by jinak při každém načtení `/oblibene` naráz poskočila. */}
         <Heart
-          className={`w-4 h-4 ${jeOblibeny ? 'fill-linda-cognac text-linda-cognac' : ''}`}
+          className={`w-4 h-4 transition-transform duration-200 ease-out ${
+            jeOblibeny ? 'scale-110 fill-linda-cognac text-linda-cognac' : 'scale-100'
+          }`}
           aria-hidden="true"
         />
       </button>
@@ -205,11 +212,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           </div>
 
+          {/* Šipka se posune při najetí na celou kartu, ne až na odkaz:
+              hoverovaným cílem je karta (zvětšuje se fotka i reliéf) a odkaz
+              je jen její konec. Posun je 2 px – má naznačit směr, ne upoutat.
+              `shrink-0` na ikoně, ať se v úzkém sloupci nezplacatí. */}
           <Link
             href={`/produkt/${slug}`}
-            className="shrink-0 flex items-center min-h-touch text-xs font-medium text-linda-cognac hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors rounded-sm"
+            className="shrink-0 flex items-center gap-1 min-h-touch text-xs font-medium text-linda-cognac hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors rounded-sm"
           >
             Zobrazit detail<span className="sr-only"> – {nazev}</span>
+            <ArrowRight
+              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </Link>
         </div>
       </div>
