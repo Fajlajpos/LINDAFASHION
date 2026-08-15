@@ -8,6 +8,7 @@
 import { cache } from 'react';
 import { Prisma } from '@prisma/client';
 import { db } from './db';
+import { normalizovat, podminkaHledani, rozlozitDotaz } from './vyhledavani';
 
 export type Razeni = 'nejnovejsi' | 'cena-vzestupne' | 'cena-sestupne' | 'nazev';
 
@@ -114,12 +115,17 @@ export interface VysledekKatalogu {
   celkem: number;
   stranka: number;
   stranek: number;
+  /**
+   * Výsledky pocházejí z uvolněného hledání – na všechna zadaná slova
+   * nesedělo nic, tohle jsou kousky odpovídající aspoň jednomu. Výpis to
+   * musí říct nahlas, jinak se tváří, že přesnou shodu našel.
+   */
+  volnaShoda: boolean;
 }
 
-export async function nacistProdukty(filtry: FiltryKatalogu = {}): Promise<VysledekKatalogu> {
-  const stranka = Math.max(1, filtry.stranka ?? 1);
-
-  const kde: Prisma.ProductWhereInput = {
+/** Filtry mimo hledání – ty platí v přísném i v uvolněném průchodu stejně. */
+function podminkaFiltru(filtry: FiltryKatalogu): Prisma.ProductWhereInput {
+  return {
     ...VEREJNE,
     ...(filtry.kategorie
       ? {
@@ -138,33 +144,193 @@ export async function nacistProdukty(filtry: FiltryKatalogu = {}): Promise<Vysle
           },
         }
       : {}),
-    ...(filtry.hledat
-      ? {
-          OR: [
-            { nazev: { contains: filtry.hledat, mode: 'insensitive' } },
-            { popis: { contains: filtry.hledat, mode: 'insensitive' } },
-            { znacka: { contains: filtry.hledat, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
+  };
+}
+
+/**
+ * Filtr kategorie a hledání se spojují **vnořeně, ne sloučením klíčů**.
+ *
+ * Obě části potřebují `category` (jedna vybranou kategorii, druhá shodu
+ * v jejím názvu) a obě používají `OR`. Rozprostřít je do jednoho objektu
+ * znamená, že druhý klíč přepíše první: na `/produkty/saty?hledat=len` by
+ * se filtr kategorie tiše ztratil a hledalo by se v celém katalogu.
+ * `AND` drží obě podmínky vedle sebe, ať mají uvnitř cokoli.
+ */
+function spojit(
+  zaklad: Prisma.ProductWhereInput,
+  hledani: Prisma.ProductWhereInput | null
+): Prisma.ProductWhereInput {
+  return hledani ? { AND: [zaklad, hledani] } : zaklad;
+}
+
+export async function nacistProdukty(filtry: FiltryKatalogu = {}): Promise<VysledekKatalogu> {
+  const stranka = Math.max(1, filtry.stranka ?? 1);
+  const tokeny = filtry.hledat ? rozlozitDotaz(filtry.hledat) : [];
+  const zaklad = podminkaFiltru(filtry);
+
+  const nacistStranku = async (volne: boolean) => {
+    const kde = spojit(zaklad, podminkaHledani(tokeny, volne));
+
+    const [produkty, celkem] = await Promise.all([
+      db.product.findMany({
+        where: kde,
+        orderBy: razeniNaOrderBy(filtry.razeni),
+        skip: (stranka - 1) * PRODUKTU_NA_STRANKU,
+        take: PRODUKTU_NA_STRANKU,
+        select: VYBER_VYPIS,
+      }),
+      db.product.count({ where: kde }),
+    ]);
+
+    return { produkty, celkem };
   };
 
-  const [produkty, celkem] = await Promise.all([
-    db.product.findMany({
-      where: kde,
-      orderBy: razeniNaOrderBy(filtry.razeni),
-      skip: (stranka - 1) * PRODUKTU_NA_STRANKU,
-      take: PRODUKTU_NA_STRANKU,
-      select: VYBER_VYPIS,
-    }),
-    db.product.count({ where: kde }),
-  ]);
+  let { produkty, celkem } = await nacistStranku(false);
+  let volnaShoda = false;
+
+  /* Druhý pokus jen u víceslovného dotazu, který nenašel nic.
+     Jednoslovný dotaz má obě varianty totožné, takže by šlo o stejný dotaz
+     podruhé; u víceslovného je tohle rozdíl mezi „Nic jsme nenašli" a
+     nabídkou nejbližších kousků. */
+  if (celkem === 0 && tokeny.length > 1) {
+    ({ produkty, celkem } = await nacistStranku(true));
+    volnaShoda = celkem > 0;
+  }
 
   return {
     produkty: produkty.map(naVypis),
     celkem,
     stranka,
     stranek: Math.max(1, Math.ceil(celkem / PRODUKTU_NA_STRANKU)),
+    volnaShoda,
+  };
+}
+
+export interface NavrhProduktu {
+  id: string;
+  nazev: string;
+  slug: string;
+  cena: number;
+  cenaPoSleve: number | null;
+  kategorieNazev: string;
+  obrazekUrl: string | null;
+}
+
+export interface VysledekNaseptavace {
+  produkty: NavrhProduktu[];
+  kategorie: Array<{ nazev: string; slug: string }>;
+  /** Kolik kousků dotazu odpovídá celkem – pro řádek „zobrazit vše". */
+  celkem: number;
+  volnaShoda: boolean;
+}
+
+/** Kolik návrhů se vejde do rozbaleného seznamu, aniž by přerostl obrazovku. */
+const NAVRHU = 6;
+
+/**
+ * Kolik kousků si vytáhnout k seřazení podle relevance.
+ *
+ * Databáze umí jen „obsahuje", ne „obsahuje kde". Vezmeme proto širší hrst
+ * a pořadí dorovnáme v paměti; při této velikosti je to jeden dotaz a pár
+ * porovnání řetězců.
+ */
+const NAVRHU_K_SERAZENI = 24;
+
+/**
+ * Kde se slovo trefilo, tolik váží.
+ *
+ * Bez tohohle rozhodovalo `doporuceny` a stáří, takže dotaz „kašmír" nabídl
+ * jako první vlněný kabát – v jeho popisu stojí „s příměsí kašmíru“, kdežto
+ * „Kašmírový svetr Roma“ to slovo má rovnou v názvu. U našeptávače se přitom
+ * čte hlavně první řádek; špatné pořadí je tam skoro totéž co špatný výsledek.
+ */
+function skoreNavrhu(
+  produkt: { nazev: string; znacka: string | null; category: { nazev: string } },
+  tokeny: string[]
+): number {
+  const nazev = normalizovat(produkt.nazev);
+  const znacka = normalizovat(produkt.znacka ?? '');
+  const kategorie = normalizovat(produkt.category.nazev);
+
+  return tokeny.reduce((soucet, token) => {
+    if (nazev.includes(token)) return soucet + 4;
+    if (znacka.includes(token)) return soucet + 3;
+    if (kategorie.includes(token)) return soucet + 2;
+    // Shoda v popisu nebo materiálu – proto se sem produkt dostal.
+    return soucet + 1;
+  }, 0);
+}
+
+/**
+ * Napovídání při psaní.
+ *
+ * Sdílí `podminkaHledani` s katalogem schválně: seznam, který nabídne kousek,
+ * a stránka, která se otevře po odeslání, musí odpovídat stejnému dotazu.
+ * Dvě samostatné implementace by se sešly u nejhoršího možného výsledku –
+ * našeptávač ukáže šaty, zákaznice stiskne Enter a dostane „Nic jsme
+ * nenašli".
+ */
+export async function nacistNaseptavac(dotaz: string): Promise<VysledekNaseptavace> {
+  const tokeny = rozlozitDotaz(dotaz);
+  if (tokeny.length === 0) {
+    return { produkty: [], kategorie: [], celkem: 0, volnaShoda: false };
+  }
+
+  const najit = async (volne: boolean) => {
+    const kde = spojit(VEREJNE, podminkaHledani(tokeny, volne));
+
+    const [produkty, celkem] = await Promise.all([
+      db.product.findMany({
+        where: kde,
+        // Doporučené napřed; u stejného skóre pak rozhodne tohle pořadí,
+        // protože `sort` v JS je stabilní.
+        orderBy: [{ doporuceny: 'desc' }, { createdAt: 'desc' }],
+        take: NAVRHU_K_SERAZENI,
+        select: VYBER_VYPIS,
+      }),
+      db.product.count({ where: kde }),
+    ]);
+
+    const serazene = [...produkty]
+      .sort((a, b) => skoreNavrhu(b, tokeny) - skoreNavrhu(a, tokeny))
+      .slice(0, NAVRHU);
+
+    return { produkty: serazene, celkem };
+  };
+
+  let { produkty, celkem } = await najit(false);
+  let volnaShoda = false;
+
+  if (celkem === 0 && tokeny.length > 1) {
+    ({ produkty, celkem } = await najit(true));
+    volnaShoda = celkem > 0;
+  }
+
+  /* Kategorie bereme z už načteného (a v rámci požadavku cachovaného) stromu,
+     ne dalším dotazem – je jich pár a filtr nad polem je levnější než další
+     cesta do databáze. */
+  const vsechnyKategorie = await nacistKategorie();
+  const kategorie = vsechnyKategorie
+    .filter((k) => k.pocetProduktu > 0 && tokeny.some((t) => k.hledaciNazev.includes(t)))
+    .slice(0, 3)
+    .map((k) => ({ nazev: k.nazev, slug: k.slug }));
+
+  return {
+    produkty: produkty.map((p) => {
+      const v = naVypis(p);
+      return {
+        id: v.id,
+        nazev: v.nazev,
+        slug: v.slug,
+        cena: v.cena,
+        cenaPoSleve: v.cenaPoSleve,
+        kategorieNazev: v.kategorieNazev,
+        obrazekUrl: v.obrazekUrl,
+      };
+    }),
+    kategorie,
+    celkem,
+    volnaShoda,
   };
 }
 
@@ -272,6 +438,8 @@ export interface KategorieVypis {
   popis: string | null;
   parentSlug: string | null;
   pocetProduktu: number;
+  /** Název bez diakritiky – aby našeptávač nemusel normalizovat znovu. */
+  hledaciNazev: string;
 }
 
 /** Kategorie, ve kterých je aspoň jeden aktivní produkt. */
@@ -291,6 +459,7 @@ export const nacistKategorie = cache(async (): Promise<KategorieVypis[]> => {
     popis: k.popis,
     parentSlug: k.parent?.slug ?? null,
     pocetProduktu: k._count.products,
+    hledaciNazev: k.hledaciNazev,
   }));
 });
 

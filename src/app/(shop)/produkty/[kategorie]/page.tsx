@@ -10,7 +10,13 @@ export const dynamic = 'force-dynamic';
 
 interface Props {
   params: { kategorie: string };
-  searchParams: { razeni?: string; stranka?: string };
+  /**
+   * `hledat` tu dřív nebylo, a byla to tichá chyba: `KatalogVypis` skládá
+   * odkazy na další stránky s `?hledat=`, takže druhá stránka výsledků
+   * uvnitř kategorie filtr zahodila a vrátila celou kategorii. Navíc odsud
+   * vede jediná cesta k hledání v jedné kategorii.
+   */
+  searchParams: { razeni?: string; stranka?: string; hledat?: string };
 }
 
 /**
@@ -49,6 +55,7 @@ export default async function KategoriePage({ params, searchParams }: Props) {
   if (!kategorie) notFound();
 
   const stranka = Math.max(1, Number(searchParams.stranka ?? 1) || 1);
+  const hledat = searchParams.hledat ?? null;
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
@@ -87,6 +94,13 @@ export default async function KategoriePage({ params, searchParams }: Props) {
         {kategorie.popis && (
           <p className="max-w-2xl text-sm leading-relaxed text-linda-espresso/75">{kategorie.popis}</p>
         )}
+
+        {hledat && (
+          <p className="text-sm text-linda-espresso/75">
+            Výsledky vyhledávání pro:{' '}
+            <span className="font-semibold text-linda-cognac">&bdquo;{hledat}&ldquo;</span>
+          </p>
+        )}
       </div>
 
       <Suspense
@@ -94,6 +108,7 @@ export default async function KategoriePage({ params, searchParams }: Props) {
       >
         <KatalogVypis
           kategorie={kategorie.slug}
+          hledat={hledat}
           razeni={jeRazeni(searchParams.razeni)}
           stranka={stranka}
           zakladniCesta={`/produkty/${kategorie.slug}`}

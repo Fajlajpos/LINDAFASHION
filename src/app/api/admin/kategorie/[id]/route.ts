@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { kategorieSchema } from '@/lib/validations/produkt';
+import { hledaciNazevKategorie } from '@/lib/vyhledavani';
 
 interface Kontext {
   params: { id: string };
@@ -51,6 +52,9 @@ export async function PUT(request: Request, { params }: Kontext) {
         popis: vstup.popis?.trim() || null,
         parentId: vstup.parentId || null,
         poradi: vstup.poradi ?? 0,
+        // Přejmenování musí projít i sem – kategorie se hledá podle téhle
+        // kopie, ne podle `nazev`.
+        hledaciNazev: hledaciNazevKategorie({ nazev: vstup.nazev }),
       },
     });
 

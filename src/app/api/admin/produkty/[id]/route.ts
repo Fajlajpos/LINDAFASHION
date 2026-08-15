@@ -3,6 +3,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
+import { hledaciTextProduktu } from '@/lib/vyhledavani';
 import { jePlatnyToken, cestaTmp, smazatTise } from '@/lib/uloziste';
 import { smazatVariantyObrazku } from '@/lib/sharp-image';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
@@ -140,6 +141,16 @@ export async function PUT(request: Request, { params }: Kontext) {
           jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
           metaTitle: vstup.metaTitle?.trim() || null,
           metaDescription: vstup.metaDescription?.trim() || null,
+
+          // Přepočítat i při úpravě: přejmenovaný produkt by se jinak dál
+          // hledal pod starým názvem a pod novým vůbec.
+          hledaciText: hledaciTextProduktu({
+            nazev: vstup.nazev,
+            znacka: vstup.znacka,
+            popis: vstup.popis,
+            sku: vstup.sku,
+            material: vstup.jeDarkovyPoukaz ? null : vstup.material,
+          }),
         },
       });
 

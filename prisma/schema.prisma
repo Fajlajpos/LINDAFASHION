@@ -91,6 +91,10 @@ model Category {
   obrazek  String?
   poradi   Int        @default(0)
   products Product[]
+
+  /// Název bez diakritiky a malými písmeny – aby „saty" našlo „Šaty".
+  /// Plní ho `hledaciNazevKategorie()` při každém zápisu kategorie.
+  hledaciNazev String @default("")
 }
 
 model Product {
@@ -116,6 +120,17 @@ model Product {
   variants        ProductVariant[]
   images          ProductImage[]
   favorites       Favorite[]
+
+  /// Název, značka, popis, SKU a materiál slité do jednoho řetězce bez
+  /// diakritiky a malými písmeny. Plní ho `hledaciTextProduktu()` při každém
+  /// zápisu produktu; hledá se výhradně tady, ne v původních sloupcích.
+  ///
+  /// Index tu vědomě není: `LIKE '%slovo%'` běžný B-strom nepoužije, pomohl by
+  /// až GIN nad `pg_trgm`. Katalog butiku má řádově stovky řádků, sekvenční
+  /// průchod jednoho textového sloupce je na tuhle velikost levnější než
+  /// rozšíření navíc. Až by katalog narostl na desetitisíce, je to první
+  /// místo, kam sáhnout.
+  hledaciText String @default("")
 
   // Katalog filtruje na aktivní a řadí podle novinek; admin listuje po kategoriích.
   @@index([aktivni, createdAt])

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ShoppingBag, Heart, User, LayoutDashboard, Menu, X, Search, Sparkles } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
+import { VyhledavaciPole } from '@/components/shop/VyhledavaciPole';
 
 interface HeaderProps {
   user?: { jmeno?: string | null; email: string; role?: string | null } | null;
@@ -48,7 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
   /* Sbalený tvar drží buď skrol, nebo samotná stránka. Skrolem se pak už jen
@@ -56,7 +56,6 @@ export const Header: React.FC<HeaderProps> = ({
   const pathname = usePathname();
   const isCompact = isScrolled || jeKompaktniStranka(pathname);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
 
@@ -96,31 +95,35 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-  // Escape zavře otevřené vyhledávání i mobilní menu a vrátí fokus na spouštěč
+  /* Escape zavře mobilní menu. Hledání tu schválně **není**: má Escape
+     dvoukrokový (nejdřív nabídka návrhů, pak celé pole) a to rozhodnutí musí
+     dělat jediné místo – `VyhledavaciPole`. Dva posluchače na `document`
+     si navzájem nepřebijí: React v App Routeru hydratuje celý dokument,
+     takže i jeho delegované posluchače sedí na `document` a `stopPropagation`
+     mezi sourozenci na témž uzlu nic nezastaví. */
   useEffect(() => {
-    if (!searchOpen && !mobileMenuOpen) return;
+    if (!mobileMenuOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      if (searchOpen) {
-        setSearchOpen(false);
-        searchToggleRef.current?.focus();
-      }
-      if (mobileMenuOpen) {
-        setMobileMenuOpen(false);
-        menuToggleRef.current?.focus();
-      }
+      setMobileMenuOpen(false);
+      menuToggleRef.current?.focus();
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [searchOpen, mobileMenuOpen]);
+  }, [mobileMenuOpen]);
 
-  // Fokus do pole hned po otevření vyhledávání (nahrazuje autoFocus, který
-  // by se spustil i při prvním vykreslení stránky)
-  useEffect(() => {
-    if (searchOpen) searchInputRef.current?.focus();
-  }, [searchOpen]);
+  /* Fokus do pole si řeší `VyhledavaciPole` samo: montuje se až otevřením,
+     takže „fokus po namountování“ je totéž co „fokus po otevření“ – a hlavička
+     kvůli tomu nemusí držet ref do cizí komponenty.
+     `useCallback`: pole si funkci věší na posluchač Escape, a hlavička se
+     překresluje při každém skrolu – bez stabilní identity by se posluchač
+     přepínal desetkrát za vteřinu. */
+  const zavritHledani = useCallback(() => {
+    setSearchOpen(false);
+    searchToggleRef.current?.focus();
+  }, []);
 
   return (
     <header
@@ -362,41 +365,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Expandable Search Input */}
-        {searchOpen && (
-          <div id="vyhledavani" className="animate-fadeIn py-3">
-            <form action="/produkty" method="GET" role="search" className="relative max-w-md mx-auto">
-              <label htmlFor="hledat" className="sr-only">
-                Hledat v nabídce
-              </label>
-              <input
-                ref={searchInputRef}
-                id="hledat"
-                type="search"
-                name="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Hledat šaty, halenky, materiály..."
-                /* Pole je prohlubeň v liště – rámeček by reliéf jen zdvojil. */
-                className="w-full rounded-full bg-linda-sandLight py-2.5 pl-4 pr-12 text-sm text-linda-espresso shadow-neuInsetSm placeholder:text-linda-espresso/60"
-              />
-              <button
-                type="submit"
-                /* Posun na hoveru patří ikoně uvnitř, ne tomuhle tlačítku:
-                   samo se polohuje `-translate-y-1/2` a pravidlo pro
-                   `prefers-reduced-motion` vypíná `transform` celého prvku –
-                   tlačítko by v tu chvíli vyskočilo z osy pole. */
-                className="group absolute right-1 top-1/2 -translate-y-1/2 min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full text-linda-cognac hover:text-linda-espresso transition-colors"
-                aria-label="Vyhledat"
-              >
-                <Search
-                  className="w-4 h-4 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
-                  aria-hidden="true"
-                />
-              </button>
-            </form>
-          </div>
-        )}
+        {/* Hledání s našeptávačem. Vlastní komponenta, ne dalších sto řádků
+            v hlavičce: drží si prodlevu, rušení předchozího dotazu, ovládání
+            klávesnicí i stavy nabídky. */}
+        {searchOpen && <VyhledavaciPole onZavrit={zavritHledani} />}
       </div>
 
       {/* Mobile drawer menu */}

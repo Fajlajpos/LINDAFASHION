@@ -3,6 +3,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { kategorieSchema } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
+import { hledaciNazevKategorie } from '@/lib/vyhledavani';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
         popis: vstup.popis?.trim() || null,
         parentId: vstup.parentId || null,
         poradi: vstup.poradi ?? 0,
+        // Hledání porovnává proti tomuhle sloupci, ne proti `nazev`.
+        hledaciNazev: hledaciNazevKategorie({ nazev: vstup.nazev }),
       },
     });
 

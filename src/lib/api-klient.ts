@@ -7,7 +7,19 @@
 
 export type Vysledek<T> =
   | { ok: true; data: T }
-  | { ok: false; chyba: string; pole?: Record<string, string> };
+  | {
+      ok: false;
+      chyba: string;
+      pole?: Record<string, string>;
+      /**
+       * Požadavek zrušil volající (`AbortSignal`), server o nic nepřišel.
+       *
+       * Bez téhle informace vypadá zrušení stejně jako výpadek sítě a volající
+       * na něj zareaguje hláškou „Nepodařilo se spojit se serverem". Přesně to
+       * dělá našeptávač při každém stisku klávesy, kdy ruší předchozí dotaz.
+       */
+      zruseno?: boolean;
+    };
 
 async function zpracovat<T>(odpoved: Response): Promise<Vysledek<T>> {
   let telo: unknown = null;
@@ -58,11 +70,15 @@ export async function poslatFormData<T>(url: string, data: FormData): Promise<Vy
   }
 }
 
-export async function nacist<T>(url: string): Promise<Vysledek<T>> {
+export async function nacist<T>(url: string, signal?: AbortSignal): Promise<Vysledek<T>> {
   try {
-    const odpoved = await fetch(url, { cache: 'no-store' });
+    const odpoved = await fetch(url, { cache: 'no-store', signal });
     return zpracovat<T>(odpoved);
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { ok: false, chyba: 'Požadavek byl zrušen.', zruseno: true };
+    }
+
     return { ok: false, chyba: 'Nepodařilo se spojit se serverem. Zkontrolujte připojení.' };
   }
 }

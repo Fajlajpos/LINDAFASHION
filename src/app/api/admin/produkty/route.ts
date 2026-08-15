@@ -3,6 +3,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
+import { hledaciTextProduktu } from '@/lib/vyhledavani';
 import { jePlatnyToken } from '@/lib/uloziste';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
 import { Prisma } from '@prisma/client';
@@ -120,6 +121,17 @@ export async function POST(request: Request) {
         jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
         metaTitle: vstup.metaTitle?.trim() || null,
         metaDescription: vstup.metaDescription?.trim() || null,
+
+        /* Text pro hledání se odvozuje z polí výš, takže musí vzniknout
+           u každého zápisu produktu – jinak nový kousek v katalogu je, ale
+           najít ho nejde. Kategorie tu není schválně, viz vyhledavani.ts. */
+        hledaciText: hledaciTextProduktu({
+          nazev: vstup.nazev,
+          znacka: vstup.znacka,
+          popis: vstup.popis,
+          sku: vstup.sku,
+          material: vstup.jeDarkovyPoukaz ? null : vstup.material,
+        }),
 
         variants: {
           create: vstup.varianty.map((v) => ({

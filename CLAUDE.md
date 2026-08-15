@@ -66,6 +66,23 @@ Consequences worth remembering:
   `findMany` in a Server Component throws and takes the page with it.
   **Testing them needs a browser and a production build**: `next start` sends an empty shell
   and renders the boundary on the client, so `curl` sees only scripts.
+- **Search runs on `Product.hledaciText` / `Category.hledaciNazev`, never on `nazev`.**
+  Both hold the text lowercased and stripped of diacritics, because a customer
+  types "saty" and the product is called "Hedvábné šaty". Every write of a product
+  or category must refill them through
+  [vyhledavani.ts](src/lib/vyhledavani.ts) (`hledaciTextProduktu`,
+  `hledaciNazevKategorie`) — a row saved without them stays in the catalog but
+  cannot be found. The same file tokenizes the query, so both sides of the
+  comparison go through one function; if they ever diverge, search silently stops
+  matching. Normalization doubles as sanitization: nothing but `[a-z0-9]` survives
+  it, so `%` and `_` can never reach the `LIKE` pattern.
+  The column is deliberately unindexed — `LIKE '%x%'` cannot use a B-tree, and a
+  boutique catalog is cheaper to scan than to add `pg_trgm` for.
+- **Combine the search condition with other filters through `AND`, never by
+  spreading keys.** Both the category filter and the search touch `category` and
+  both use `OR`; spreading them into one object makes the second silently
+  overwrite the first, and `/produkty/saty?hledat=len` searches the whole catalog.
+  Covered by [katalog.integration.test.ts](src/lib/katalog.integration.test.ts).
 - **Never `in`-test a parsed request body without checking it is an object first.**
   `request.json()` happily returns `null`, a number or a string, and `'x' in 5` throws.
 - Admin lists are paginated through [Strankovani.tsx](src/components/ui/Strankovani.tsx)
@@ -254,7 +271,13 @@ integration tests over the order transaction, storno and reklamace — including
 concurrency races (six simultaneous orders for the last piece, double-clicked
 cancel) that used to be verified only by hand · checkout created no
 order at all, now writes `Order`/`OrderItem` in one transaction with stock decrement,
-discount-code and gift-card handling.
+discount-code and gift-card handling · search was a single `contains` over the raw
+columns, so it needed the exact substring **with** diacritics ("saty" found nothing);
+now keyword search over normalized columns with a live suggestion dropdown
+([VyhledavaciPole.tsx](src/components/shop/VyhledavaciPole.tsx),
+[api/vyhledavani](src/app/api/vyhledavani/route.ts)) · `/produkty/[kategorie]` never
+read `hledat`, so search inside a category returned the whole category and page two
+of any category search dropped the filter.
 
 ## Orders — rules that are easy to break
 

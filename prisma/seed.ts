@@ -1,5 +1,8 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+// Relativní cesta, ne alias `@/`: seed běží přes ts-node s tsconfig.node.json,
+// které cesty nepřepisuje (stejný důvod jako u kódu workeru).
+import { hledaciNazevKategorie, hledaciTextProduktu } from '../src/lib/vyhledavani';
 
 const prisma = new PrismaClient();
 
@@ -365,7 +368,39 @@ async function main() {
     },
   });
 
+  // 8. Dopočet textu pro vyhledávání
+  //
+  // Jedním průchodem na konci, ne u každého `create` výš. Hodnota se odvozuje
+  // z ostatních polí, takže je jedno, kdy vznikne – a takhle se na ni nedá
+  // zapomenout u produktu, který sem někdo přidá později. Stejná funkce běží
+  // v administraci při každém uložení, takže se seed a provoz nerozejdou.
+  await preindexovatVyhledavani();
+
   console.log('✅ Seedování databáze LINDA FASHION bylo úspěšně dokončeno!');
+}
+
+async function preindexovatVyhledavani() {
+  const produkty = await prisma.product.findMany({
+    select: { id: true, nazev: true, znacka: true, popis: true, sku: true, material: true },
+  });
+
+  for (const p of produkty) {
+    await prisma.product.update({
+      where: { id: p.id },
+      data: { hledaciText: hledaciTextProduktu(p) },
+    });
+  }
+
+  const kategorie = await prisma.category.findMany({ select: { id: true, nazev: true } });
+
+  for (const k of kategorie) {
+    await prisma.category.update({
+      where: { id: k.id },
+      data: { hledaciNazev: hledaciNazevKategorie(k) },
+    });
+  }
+
+  console.log(`🔎 Text pro vyhledávání dopočten: ${produkty.length} produktů, ${kategorie.length} kategorií.`);
 }
 
 main()

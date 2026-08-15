@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Filter, SlidersHorizontal } from 'lucide-react';
+import { Filter, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { RazeniKatalogu } from '@/components/shop/RazeniKatalogu';
 import { Strankovani } from '@/components/ui/Strankovani';
@@ -46,7 +46,7 @@ export async function KatalogVypis({
     nacistKategorie(),
   ]);
 
-  const { produkty, celkem, stranek } = vysledek;
+  const { produkty, celkem, stranek, volnaShoda } = vysledek;
 
   // V bočním panelu ukazujeme jen kategorie, ve kterých něco je – prázdná
   // kategorie vede na prázdnou stránku a jen mate.
@@ -112,6 +112,20 @@ export async function KatalogVypis({
       </aside>
 
       <div className="space-y-6 lg:col-span-3">
+        {/* Uvolněné hledání se musí přiznat.
+            Bez téhle věty vypadá výpis jako běžný výsledek a zákaznice se
+            marně ptá, proč mezi „kašmírovými šaty" leží svetr – přitom sedí
+            na „kašmír". */}
+        {volnaShoda && (
+          <p className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso/80 shadow-neuInsetSm">
+            <Sparkles className="mt-px h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+            <span>
+              Na všechna zadaná slova jsme nic nenašli. Níž jsou kousky, které odpovídají aspoň
+              části dotazu.
+            </span>
+          </p>
+        )}
+
         {/* Informační lišta – ne ovládací prvek, proto prohlubeň místo karty. */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso/75 shadow-neuInsetSm">
           <span>
