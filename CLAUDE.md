@@ -45,6 +45,17 @@ Consequences worth remembering:
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
   400: a broken request body is the caller's fault, and it used to surface as a 500 that
   blamed the server and filled the log.
+- **Every `force-dynamic` route needs a `loading.tsx`**, and practically every route here is
+  `force-dynamic`. Without one the App Router has nothing to show during a transition: the
+  old page just sits there until the server finishes, so a 60 ms navigation still reads as
+  a hang. Worse, `<Link>` prefetch only reaches **as far as the nearest loading boundary** —
+  with no boundary a dynamic route cannot be prefetched at all and every click is a cold
+  round trip. Skeletons live in [Kostra.tsx](src/components/ui/Kostra.tsx) and follow the
+  relief rules: ground → raised `cream` card → `sandLight` grooves inside it.
+  (Prefetch is disabled in `next dev` by design — measure this on `next build && next start`.)
+- **Category links use the path `/produkty/[kategorie]`, never `?kategorie=`.** Both render
+  the same `KatalogVypis`, but prefetch keys off the path: five nav items pointing at
+  `/produkty?kategorie=…` look like one and the same route to the router.
 - **Error boundaries:** [(shop)/error.tsx](<src/app/(shop)/error.tsx>) keeps the header and
   footer so the customer can navigate away; [app/error.tsx](src/app/error.tsx) is the
   fallback for admin/auth; [global-error.tsx](src/app/global-error.tsx) catches a failure in

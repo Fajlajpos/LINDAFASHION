@@ -12,12 +12,14 @@ interface FooterProps {
   socialFacebook?: string | null;
 }
 
+/* Kategorie přes vlastní cestu, ne přes `?kategorie=` – viz komentář
+   u `NAV_LINKS` v Header.tsx (přednačítání `<Link>` jde po cestě). */
 const KOLEKCE_ODKAZY = [
   { href: '/produkty', label: 'Všechny kolekce' },
-  { href: '/produkty?kategorie=saty', label: 'Šaty' },
-  { href: '/produkty?kategorie=halenky-a-kosile', label: 'Halenky' },
-  { href: '/produkty?kategorie=svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty?kategorie=darkove-poukazy', label: 'Poukazy' },
+  { href: '/produkty/saty', label: 'Šaty' },
+  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
+  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
+  { href: '/produkty/darkove-poukazy', label: 'Poukazy' },
   { href: '/o-mne', label: 'O mně' },
 ];
 

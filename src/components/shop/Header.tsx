@@ -12,14 +12,20 @@ interface HeaderProps {
   vacationMode?: { active: boolean; message?: string | null };
 }
 
-/* Katalog filtruje přes query parametr – route `/produkty/[slug]` neexistuje,
-   odkazy typu `/produkty/saty` proto dřív končily na 404. */
+/* Kategorie míří na vlastní cestu `/produkty/[kategorie]`, ne na
+   `?kategorie=` nad `/produkty`. Ta routa už existuje (dřív ne, odtud starý
+   tvar odkazů) a obojí vykresluje tentýž `KatalogVypis`, takže obsah je
+   stejný. Rozdíl je v rychlosti: `<Link>` přednačítá podle cesty, kdežto
+   všechny čtyři odkazy s query parametrem vypadají jako jedna a táž
+   `/produkty` – přednačetla se z nich nanejvýš jedna a zbytek se pokaždé
+   táhl ze serveru až po kliknutí. Cesta navíc drží drobečkovou navigaci
+   a kanonickou adresu. */
 const NAV_LINKS = [
   { href: '/produkty', label: 'Kolekce' },
-  { href: '/produkty?kategorie=saty', label: 'Šaty' },
-  { href: '/produkty?kategorie=halenky-a-kosile', label: 'Halenky' },
-  { href: '/produkty?kategorie=svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty?kategorie=darkove-poukazy', label: 'Poukazy', accent: true },
+  { href: '/produkty/saty', label: 'Šaty' },
+  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
+  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
+  { href: '/produkty/darkove-poukazy', label: 'Poukazy', accent: true },
   { href: '/o-mne', label: 'O mně' },
 ];
 

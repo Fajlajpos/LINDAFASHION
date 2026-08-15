@@ -5,8 +5,10 @@
  * `null` a `MediaFrame` na jejich místě vykreslí značkovou výplň. Až fotky
  * přibudou do /public, stačí doplnit cestu sem, komponenty se nemění.
  *
- * Kategorie se filtrují přes query parametr (`/produkty?kategorie=…`),
- * protože route `/produkty/[slug]` v aplikaci neexistuje.
+ * Kategorie vedou na vlastní cestu `/produkty/[kategorie]`. Query tvar
+ * `/produkty?kategorie=…` pochází z doby, kdy ta routa neexistovala, a
+ * zbytečně zdržoval: `<Link>` přednačítá podle cesty, takže se z pěti dlaždic
+ * rozcestníku dala přednačíst nanejvýš jedna.
  */
 
 /** Název plastické ilustrace z `CategoryGlyph`. */
@@ -66,13 +68,13 @@ export interface HomeProduct {
  * jen šum.
  */
 export const KATEGORIE_ROZCESTNIK: HomeCategoryRow[] = [
-  { label: 'Šaty', href: '/produkty?kategorie=saty', glyph: 'saty' },
-  { label: 'Halenky', href: '/produkty?kategorie=halenky-a-kosile', glyph: 'halenky' },
-  { label: 'Svetry', href: '/produkty?kategorie=svetry-a-kardigany', glyph: 'svetry' },
-  { label: 'Saka', href: '/produkty?kategorie=saka-a-kabaty', glyph: 'saka' },
+  { label: 'Šaty', href: '/produkty/saty', glyph: 'saty' },
+  { label: 'Halenky', href: '/produkty/halenky-a-kosile', glyph: 'halenky' },
+  { label: 'Svetry', href: '/produkty/svetry-a-kardigany', glyph: 'svetry' },
+  { label: 'Saka', href: '/produkty/saka-a-kabaty', glyph: 'saka' },
   {
     label: 'Poukazy',
-    href: '/produkty?kategorie=darkove-poukazy',
+    href: '/produkty/darkove-poukazy',
     glyph: 'poukazy',
     accent: true,
   },
@@ -91,7 +93,7 @@ export const PROMO_BANNERY: HomePromo[] = [
   {
     eyebrow: 'Tip na dárek',
     titleLines: ['Dárkový poukaz', 'potěší vždy'],
-    cta: { label: 'Vybrat poukaz', href: '/produkty?kategorie=darkove-poukazy' },
+    cta: { label: 'Vybrat poukaz', href: '/produkty/darkove-poukazy' },
     obrazek: null,
     glyph: 'poukazy',
     alt: '',

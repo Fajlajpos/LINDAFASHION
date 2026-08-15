@@ -97,6 +97,11 @@ export const HeroSplit: React.FC = () => (
           src="/textures/plaster-wall.jpg"
           alt=""
           sizes="(min-width: 1024px) 50vw, 100vw"
+          /* Textura je nad ohybem a přes půl obrazovky – prohlížeč ji měřil
+             jako LCP prvek domovské stránky. Bez `priority` ji next/image
+             načítá líně, takže se ta polovina objevila až po zbytku heru
+             (Next to i hlásil do konzole). Fotka vpravo ji má z téhož důvodu. */
+          priority
           quality={85}
           className="texture-plaster -z-10"
         />
