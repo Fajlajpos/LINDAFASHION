@@ -28,12 +28,12 @@ export function OdhlasitSe() {
       onClick={() => void odhlasit()}
       disabled={odhlasuje}
       aria-busy={odhlasuje}
-      className="flex min-h-touch cursor-pointer items-center gap-1.5 text-[11px] text-linda-sand transition-colors hover:text-white hover:underline disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-touch cursor-pointer items-center gap-1.5 text-sm text-linda-sand transition-colors hover:text-white hover:underline disabled:cursor-not-allowed disabled:opacity-70"
     >
       {odhlasuje ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
       ) : (
-        <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+        <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
       )}
       {odhlasuje ? 'Odhlašuji…' : 'Odhlásit se'}
     </button>

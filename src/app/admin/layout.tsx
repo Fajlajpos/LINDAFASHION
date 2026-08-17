@@ -1,10 +1,8 @@
 import React from 'react';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { overitAdmina } from '@/lib/admin';
-import { AdminNav } from '@/components/admin/AdminNav';
-import { OdhlasitSe } from '@/components/admin/OdhlasitSe';
+import { db } from '@/lib/db';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
 export const metadata = {
   title: 'Administrace | LINDA FASHION',
@@ -18,35 +16,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const admin = await overitAdmina();
   if (!admin) redirect('/prihlaseni?dalsi=/admin');
 
+  /* Odznaky v menu. Tři počty přes indexované sloupce (`stav`, `vyrizeno`),
+     takže je můžou nést všechny stránky administrace – bez nich se dalo
+     poznat, že něco čeká, jen otevřením každé stránky zvlášť.
+
+     Layout je společný segment, takže se při přechodu mezi stránkami
+     administrace znovu nevykresluje: čísla jsou z chvíle, kdy se administrace
+     otevřela. Každá akce, která něco vyřídí, ale volá `router.refresh()`,
+     a ten obnoví celý strom včetně layoutu – odznak tedy klesne přesně tehdy,
+     když má. */
+  const [novychObjednavek, cekajicichReklamaci, nevyrizenychZprav] = await Promise.all([
+    db.order.count({ where: { stav: 'NOVA' } }),
+    db.reklamace.count({ where: { stav: { in: ['PRIJATA', 'RESI_SE'] } } }),
+    db.contactMessage.count({ where: { vyrizeno: false } }),
+  ]);
+
   return (
-    <div className="flex min-h-screen flex-col bg-linda-cream font-sans text-linda-espresso md:flex-row">
-      <aside className="w-full flex-shrink-0 space-y-8 bg-linda-espresso p-6 text-linda-cream shadow-neu md:w-64">
-        <div className="space-y-1">
-          <Link
-            href="/"
-            className="mb-2 flex min-h-touch items-center gap-1 text-xs text-linda-sand transition-colors hover:text-white hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            Zpět na e-shop
-          </Link>
-          <p className="font-serif text-2xl uppercase tracking-wider text-linda-sand">LINDA Admin</p>
-          <p className="text-[10px] uppercase tracking-widest text-linda-cream/70">Správa obchodu</p>
-        </div>
+    <div className="min-h-screen bg-linda-cream font-sans text-linda-espresso md:flex">
+      <AdminSidebar
+        podpis={admin.jmeno || admin.email}
+        pocty={{
+          objednavky: novychObjednavek,
+          reklamace: cekajicichReklamaci,
+          zpravy: nevyrizenychZprav,
+        }}
+      />
 
-        <AdminNav />
-
-        <div className="space-y-3 border-t border-linda-cream/10 pt-6 text-xs text-linda-cream/75">
-          <p className="flex items-center gap-2">
-            {/* Značková olivová (#405023) je na espressu prakticky
-                neviditelná (~1,5:1) – kontrolka svítí smaragdovou. */}
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-            <span className="truncate">{admin.jmeno || admin.email}</span>
-          </p>
-          <OdhlasitSe />
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-y-auto p-6 sm:p-10">{children}</main>
+      <main className="min-w-0 flex-1 p-5 sm:p-10">{children}</main>
     </div>
   );
 }

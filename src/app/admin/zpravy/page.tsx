@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inbox, Mail, MailOpen } from 'lucide-react';
+import { Clock, Inbox, Mail, MailCheck, MailOpen } from 'lucide-react';
 import { db } from '@/lib/db';
 import { OznacitVyrizene } from '@/components/admin/OznacitVyrizene';
 import { Strankovani, cisloStranky } from '@/components/ui/Strankovani';
@@ -26,6 +26,15 @@ interface Props {
   searchParams: { zprava?: string; odberatel?: string };
 }
 
+/** „1 potvrzený odběratel“, ne „1 potvrzených odběratelů“. */
+function potvrzeniOdberatele(pocet: number): string {
+  if (pocet === 0) return 'Žádný potvrzený odběratel newsletteru';
+  if (pocet === 1) return '1 potvrzený odběratel newsletteru';
+  if (pocet < 5) return `${pocet} potvrzení odběratelé newsletteru`;
+
+  return `${pocet} potvrzených odběratelů newsletteru`;
+}
+
 function formatCas(datum: Date): string {
   return datum.toLocaleString('cs-CZ', {
     day: 'numeric',
@@ -40,22 +49,25 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
   const strankaZprav = cisloStranky(searchParams.zprava);
   const strankaOdberatelu = cisloStranky(searchParams.odberatel);
 
-  const [zpravy, pocetZprav, nevyrizene, odberatele, pocetOdberatelu] = await Promise.all([
-    db.contactMessage.findMany({
-      orderBy: [{ vyrizeno: 'asc' }, { createdAt: 'desc' }],
-      skip: (strankaZprav - 1) * ZPRAV_NA_STRANKU,
-      take: ZPRAV_NA_STRANKU,
-    }),
-    db.contactMessage.count(),
-    db.contactMessage.count({ where: { vyrizeno: false } }),
-    db.newsletterSubscriber.findMany({
-      where: { odhlasenAt: null },
-      orderBy: { createdAt: 'desc' },
-      skip: (strankaOdberatelu - 1) * ODBERATELU_NA_STRANKU,
-      take: ODBERATELU_NA_STRANKU,
-    }),
-    db.newsletterSubscriber.count({ where: { odhlasenAt: null } }),
-  ]);
+  const [zpravy, pocetZprav, nevyrizene, odberatele, pocetOdberatelu, pocetPotvrzenych] =
+    await Promise.all([
+      db.contactMessage.findMany({
+        orderBy: [{ vyrizeno: 'asc' }, { createdAt: 'desc' }],
+        skip: (strankaZprav - 1) * ZPRAV_NA_STRANKU,
+        take: ZPRAV_NA_STRANKU,
+      }),
+      db.contactMessage.count(),
+      db.contactMessage.count({ where: { vyrizeno: false } }),
+      db.newsletterSubscriber.findMany({
+        where: { odhlasenAt: null },
+        orderBy: { createdAt: 'desc' },
+        skip: (strankaOdberatelu - 1) * ODBERATELU_NA_STRANKU,
+        take: ODBERATELU_NA_STRANKU,
+      }),
+      db.newsletterSubscriber.count({ where: { odhlasenAt: null } }),
+      // Rozesílat se smí jen na potvrzené adresy – to číslo je ta podstatná velikost seznamu.
+      db.newsletterSubscriber.count({ where: { odhlasenAt: null, potvrzeno: true } }),
+    ]);
 
   const stranekZprav = Math.ceil(pocetZprav / ZPRAV_NA_STRANKU);
   const stranekOdberatelu = Math.ceil(pocetOdberatelu / ODBERATELU_NA_STRANKU);
@@ -80,8 +92,10 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
         <h1 className="font-serif text-3xl text-linda-espresso sm:text-4xl">Zprávy z webu</h1>
         <p className="mt-1 text-xs text-linda-espresso/70">
           {nevyrizene > 0
-            ? `${nevyrizene} nevyřízených z ${pocetZprav} zpráv · ${pocetOdberatelu} odběratelů newsletteru`
-            : `Žádná nevyřízená zpráva · ${pocetOdberatelu} odběratelů newsletteru`}
+            ? `${nevyrizene} ${nevyrizene === 1 ? 'nevyřízená zpráva' : nevyrizene < 5 ? 'nevyřízené zprávy' : 'nevyřízených zpráv'} z ${pocetZprav}`
+            : 'Žádná nevyřízená zpráva'}
+          {' · '}
+          {potvrzeniOdberatele(pocetPotvrzenych)}
         </p>
       </div>
 
@@ -173,13 +187,14 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
         ) : (
           <>
             <div className="overflow-x-auto rounded-2xl bg-linda-cream shadow-neu">
-              <table className="w-full min-w-[420px] text-left text-xs">
+              <table className="w-full min-w-[520px] text-left text-xs">
                 <caption className="sr-only">
                   Seznam odběratelů newsletteru, stránka {strankaOdberatelu} z {stranekOdberatelu}
                 </caption>
                 <thead>
                   <tr className="border-b border-linda-sand/60 text-[11px] uppercase tracking-wider text-linda-espresso/70">
                     <th scope="col" className="p-4 font-semibold">E-mail</th>
+                    <th scope="col" className="p-4 font-semibold">Souhlas</th>
                     <th scope="col" className="p-4 font-semibold">Odkud</th>
                     <th scope="col" className="p-4 font-semibold">Přihlášeno</th>
                   </tr>
@@ -188,6 +203,25 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
                   {odberatele.map((o) => (
                     <tr key={o.id} className="border-b border-linda-sand/30 last:border-0">
                       <td className="p-4 text-linda-espresso">{o.email}</td>
+                      <td className="p-4">
+                        {/* Stav nese ikona i slovo, ne jen barva. Bez tohohle
+                            sloupce nebylo z administrace poznat, komu se smí
+                            napsat a kdo jen odeslal formulář. */}
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            o.potvrzeno
+                              ? 'bg-linda-sageLight text-linda-sage'
+                              : 'bg-linda-sandLight text-linda-espresso/75 shadow-neuInsetSm'
+                          }`}
+                        >
+                          {o.potvrzeno ? (
+                            <MailCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          )}
+                          {o.potvrzeno ? 'Potvrzeno' : 'Čeká na potvrzení'}
+                        </span>
+                      </td>
                       <td className="p-4 text-linda-espresso/70">{o.zdroj ?? '—'}</td>
                       <td className="p-4 text-linda-espresso/70">{formatCas(o.createdAt)}</td>
                     </tr>
@@ -205,9 +239,21 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
           </>
         )}
 
-        <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
-          Rozesílku zatím neumíme odeslat – čeká na SMTP přístupy. Seznam je proto
-          evidencí zájmu, ne potvrzeným odběrem (double opt-in doplníme spolu s e-maily).
+        {/* Text tady dřív tvrdil, že double opt-in chybí a seznam je jen
+            evidence zájmu. Potvrzování mezitím funguje, takže to bylo tvrzení
+            o vlastním souhlasu, které neplatilo – a přesně na tom stojí,
+            komu se smí napsat. */}
+        <p className="rounded-xl bg-linda-sandLight p-4 text-xs leading-relaxed text-linda-espresso/80 shadow-neuInsetSm">
+          Přihlášení se dokončuje kliknutím na odkaz v potvrzovacím e-mailu. Rozesílat
+          novinky můžete jen na adresy se stavem <strong className="font-semibold">Potvrzeno</strong>{' '}
+          – u ostatních jde zatím o vyplněný formulář, ne o souhlas.
+          {pocetOdberatelu > pocetPotvrzenych && (
+            <>
+              {' '}
+              Nepotvrzených čeká {pocetOdberatelu - pocetPotvrzenych}; dokud nejsou vyplněné
+              přístupy k odesílání e-mailů, potvrzovací zpráva se nikam neodešle.
+            </>
+          )}
         </p>
       </section>
     </div>

@@ -12,14 +12,38 @@ export const metadata = {
   title: 'Objednávky | Administrace LINDA FASHION',
 };
 
-const FILTRY = [
-  { klic: 'vse', popisek: 'Vše' },
-  { klic: 'NOVA', popisek: 'Nové' },
-  { klic: 'ZPRACOVAVA_SE', popisek: 'Zpracovávají se' },
-  { klic: 'EXPEDOVANA', popisek: 'Expedované' },
-  { klic: 'DORUCENA', popisek: 'Doručené' },
-  { klic: 'ZRUSENA', popisek: 'Zrušené' },
-];
+/**
+ * Stavy, na které se dá filtrovat. Slouží zároveň jako povolený seznam pro
+ * `?stav=` – hodnota z adresy šla dřív do Prismy přímo přetypovaná, takže
+ * `?stav=cokoliv` skončilo výjimkou nad neznámou hodnotou enumu, tedy 500
+ * a chybovou hranicí místo prázdného seznamu.
+ */
+const STAVY_FILTRU = [
+  'NOVA',
+  'ZPRACOVAVA_SE',
+  'EXPEDOVANA',
+  'DORUCENA',
+  'VRACENA',
+  'ZRUSENA',
+] as const;
+
+type StavFiltru = (typeof STAVY_FILTRU)[number];
+
+/** Popisky filtru. `VRACENA` tu dřív chyběla – vrácené objednávky se nedaly vypsat. */
+const POPISKY_FILTRU: Record<StavFiltru, string> = {
+  NOVA: 'Nové',
+  ZPRACOVAVA_SE: 'Zpracovávají se',
+  EXPEDOVANA: 'Expedované',
+  DORUCENA: 'Doručené',
+  VRACENA: 'Vrácené',
+  ZRUSENA: 'Zrušené',
+};
+
+function platnyStav(hodnota: string | undefined): StavFiltru | null {
+  return hodnota && (STAVY_FILTRU as readonly string[]).includes(hodnota)
+    ? (hodnota as StavFiltru)
+    : null;
+}
 
 /** Dřív se vypisovalo prvních 100 a na zbytek se nedalo dostat vůbec. */
 const NA_STRANKU = 25;
@@ -29,10 +53,10 @@ interface Props {
 }
 
 export default async function AdminObjednavkyPage({ searchParams }: Props) {
-  const stav = searchParams.stav && searchParams.stav !== 'vse' ? searchParams.stav : null;
+  const stav = platnyStav(searchParams.stav);
   const stranka = cisloStranky(searchParams.stranka);
 
-  const kde: Prisma.OrderWhereInput = stav ? { stav: stav as Prisma.EnumOrderStatusFilter['equals'] } : {};
+  const kde: Prisma.OrderWhereInput = stav ? { stav } : {};
 
   const [objednavky, pocty] = await Promise.all([
     db.order.findMany({
@@ -76,14 +100,16 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
       {/* Filtr stavů – aktivní je zamáčknutý, ostatní leží v rovině. */}
       <nav aria-label="Filtr objednávek">
         <ul className="flex flex-wrap gap-2">
-          {FILTRY.map((f) => {
-            const jeAktivni = (searchParams.stav ?? 'vse') === f.klic;
-            const pocet = f.klic === 'vse' ? celkem : (pocetPodleStavu.get(f.klic) ?? 0);
+          {(['vse', ...STAVY_FILTRU] as const).map((klic) => {
+            /* Porovnáváme s ověřenou hodnotou, ne se surovým parametrem:
+               při `?stav=cokoliv` se vypisuje vše, takže se musí zamáčknout „Vše“. */
+            const jeAktivni = (stav ?? 'vse') === klic;
+            const pocet = klic === 'vse' ? celkem : (pocetPodleStavu.get(klic) ?? 0);
 
             return (
-              <li key={f.klic}>
+              <li key={klic}>
                 <Link
-                  href={f.klic === 'vse' ? '/admin/objednavky' : `/admin/objednavky?stav=${f.klic}`}
+                  href={klic === 'vse' ? '/admin/objednavky' : `/admin/objednavky?stav=${klic}`}
                   aria-current={jeAktivni ? 'page' : undefined}
                   className={`flex min-h-touch cursor-pointer items-center rounded-full px-4 text-xs font-semibold transition-all duration-200 ${
                     jeAktivni
@@ -91,7 +117,7 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
                       : 'bg-linda-cream text-linda-espresso shadow-neuSm hover:shadow-neu active:shadow-neuInsetSm'
                   }`}
                 >
-                  {f.popisek} ({pocet})
+                  {klic === 'vse' ? 'Vše' : POPISKY_FILTRU[klic]} ({pocet})
                 </Link>
               </li>
             );
