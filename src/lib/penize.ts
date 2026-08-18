@@ -66,6 +66,47 @@ export function slevaZProcent(zaklad: Halere, procento: number): Halere {
   return Math.floor((zaklad * omezene) / 100);
 }
 
+/**
+ * Text pod přeškrtnutou cenou – § 12a zák. č. 634/1992 Sb.
+ *
+ * `null` znamená „nic nezobrazovat“, tedy když produkt slevu nemá nebo
+ * refereční cenu neevidujeme.
+ *
+ * Vrací se rovnou celá věta, ne jen číslo: formulace je součástí povinnosti
+ * a nemá se přepisovat v každé komponentě zvlášť.
+ *
+ * Žije tady, a ne v `cenova-historie.ts`, protože to potřebují klientské
+ * komponenty (karta v katalogu, detail produktu) – a ten soubor importuje Prismu.
+ */
+export function popisNejnizsiCeny(nejnizsiCena30DniHaleru: number | null): string | null {
+  if (nejnizsiCena30DniHaleru == null) return null;
+
+  return `Nejnižší cena za posledních 30 dnů před slevou: ${formatovatCenu(nejnizsiCena30DniHaleru)}`;
+}
+
+/**
+ * Sleva v procentech **z refereční ceny**, ne ze základní `cena`.
+ *
+ * Název je zdánlivě upovídaný, ale `procentoSlevy` už v tomhle souboru znamená
+ * něco jiného – procento ze slevového kódu ve `VypocetVstup`. Dvě různé sleva
+ * pod jedním jménem je přesně ta záměna, která by se našla až v inzerované ceně.
+ *
+ * Marketingové „−40 %“ počítané z původní ceny je přesně to, co novela
+ * zakazuje, pokud se za původní cenu posledních 30 dnů neprodávalo.
+ *
+ * Když refereční cena chybí, vrací `null` a procento se nezobrazí vůbec.
+ * Nedoložitelné procento je horší než žádné.
+ */
+export function procentoSlevyZReferencni(
+  aktualniHaleru: Halere,
+  nejnizsiCena30DniHaleru: number | null
+): number | null {
+  if (nejnizsiCena30DniHaleru == null || nejnizsiCena30DniHaleru <= 0) return null;
+  if (aktualniHaleru >= nejnizsiCena30DniHaleru) return null;
+
+  return Math.round(((nejnizsiCena30DniHaleru - aktualniHaleru) / nejnizsiCena30DniHaleru) * 100);
+}
+
 export interface PolozkaKosiku {
   cenaZaKus: Halere;
   mnozstvi: number;

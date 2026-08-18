@@ -16,13 +16,13 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
+  id                String  @id @default(cuid())
+  email             String  @unique
   passwordHash      String
   jmeno             String?
   telefon           String?
-  role              Role       @default(CUSTOMER)
-  newsletterSouhlas Boolean    @default(false)
+  role              Role    @default(CUSTOMER)
+  newsletterSouhlas Boolean @default(false)
 
   // Číslo se nese v session tokenu. Zvýšením se okamžitě zneplatní všechny
   // dosud vydané přihlášení – používá se při změně/resetu hesla a při odebrání
@@ -33,12 +33,12 @@ model User {
   // anonymizuje – tohle je značka, že se tak stalo.
   anonymizovanoAt DateTime?
 
-  createdAt     DateTime       @default(now())
-  addresses     Address[]
-  orders        Order[]
-  favorites     Favorite[]
-  cart          Cart?
-  resetTokeny   PasswordReset[]
+  createdAt   DateTime        @default(now())
+  addresses   Address[]
+  orders      Order[]
+  favorites   Favorite[]
+  cart        Cart?
+  resetTokeny PasswordReset[]
 }
 
 /// Jednorázový token pro obnovu zapomenutého hesla.
@@ -132,9 +132,116 @@ model Product {
   /// místo, kam sáhnout.
   hledaciText String @default("")
 
+  /// --- § 12a zákona o ochraně spotřebitele: sleva se počítá z nejnižší ceny ---
+  ///
+  /// Tohle NENÍ klouzavé okno. Zákon říká „nejnižší cena v době 30 dnů **před
+  /// poskytnutím** slevy", takže se hodnota **zmrazí v okamžiku, kdy sleva
+  /// začne**, a po celou dobu jejího trvání se už nemění. Kdyby se počítala
+  /// průběžně, po pár dnech by se do okna dostala i samotná akční cena a
+  /// referenční cena by se sesunula na ni – tedy „sleva z akční ceny", což je
+  /// přesně ten trik, který novela zakazuje.
+  ///
+  /// Když se sleva bez přerušení prohlubuje (500 → 450 → 400), zůstává hodnota
+  /// z prvního zlevnění; viz `slevaOd` a `zmenitCenuProduktu()` v cenova-historie.ts.
+  ///
+  /// Není null právě tehdy, když `cenaPoSleve` není null. V haléřích, aby
+  /// porovnání běželo ve stejných jednotkách jako zbytek peněz (penize.ts).
+  nejnizsiCena30DniHaleru Int?
+
+  /// Začátek souvisle běžící slevy. Slouží k rozhodnutí, jestli nové zlevnění
+  /// navazuje (referenční cena zůstává), nebo je to nová akce po přerušení
+  /// (referenční cena se přepočítá).
+  slevaOd DateTime?
+
+  /// --- GPSR, nařízení (EU) 2023/988, účinné od 13. 12. 2024 ---
+  ///
+  /// U výrobku nabízeného online musí být uveden výrobce a kontakt na něj;
+  /// u výrobce mimo EU navíc odpovědná osoba usazená v EU. Bez toho nesmí
+  /// být výrobek vůbec nabízen – proto to hlídá i validace, ne jen formulář.
+  vyrobceNazev  String?
+  vyrobceAdresa String?
+  vyrobceEmail  String?
+
+  /// Odpovědná osoba v EU (čl. 16 GPSR). Povinná jen tehdy, když výrobce
+  /// nesídlí v EU – u zboží od českého či italského dodavatele zůstává prázdná.
+  odpovednaOsobaNazev  String?
+  odpovednaOsobaAdresa String?
+  odpovednaOsobaEmail  String?
+
+  /// Varovné a bezpečnostní informace, které mají být připojeny k výrobku
+  /// (čl. 19 GPSR) – u oděvů typicky drobné části u dětského zboží,
+  /// hořlavost, teplota žehlení.
+  bezpecnostniUpozorneni String?
+
+  /// Údaje umožňující identifikaci výrobku (čl. 19 GPSR). `sku` je naše
+  /// interní značení, tohle je identifikátor výrobce.
+  ean        String?
+  cisloSarze String?
+  zemePuvodu String?
+
+  /// --- Nařízení (EU) 1007/2011 o názvech textilních vláken ---
+  ///
+  /// Materiálové složení v procentech hmotnosti, sestupně („55 % len,
+  /// 45 % bavlna"). Ukládá se odděleně od `material`, který je volný
+  /// marketingový popis („jemný praný len") – zákon vyžaduje to první.
+  slozeniMaterialu String?
+
+  /// Čl. 12 téhož nařízení: obsahuje-li textilní výrobek netextilní části
+  /// živočišného původu (kožený pásek u kabátu, rohové knoflíky, kožešinový
+  /// límec), musí to být uvedeno větou „Obsahuje netextilní části živočišného
+  /// původu". Není to totéž co složení vláken – tím se povinnost nesplní,
+  /// protože `slozeniMaterialu` popisuje jen textilní část výrobku.
+  obsahujeZivocisneCasti Boolean @default(false)
+
+  cenovaHistorie PriceHistory[]
+
   // Katalog filtruje na aktivní a řadí podle novinek; admin listuje po kategoriích.
   @@index([aktivni, createdAt])
   @@index([categoryId])
+}
+
+/// Cenová evidence podle § 12a zákona č. 634/1992 Sb.
+///
+/// ČOI po e-shopu chce, aby uměl **doložit**, za kolik se zboží v konkrétní
+/// den prodávalo. Samotné `Product.cena` to nedokáže: přepsáním sloupce
+/// předchozí hodnota beze stopy zmizí a nejnižší cenu za 30 dnů není z čeho
+/// spočítat. Proto se každá změna ceny zapisuje sem jako nový řádek.
+///
+/// Řádky se **nikdy nemění ani nemažou** – je to důkazní evidence. Úklidová
+/// úloha smí zahodit jen záznamy starší než `ROKY_UCHOVANI_CEN`.
+model PriceHistory {
+  id        String  @id @default(cuid())
+  productId String
+  // `Restrict`, ne `Cascade`.
+  //
+  // S kaskádou by `db.product.delete()` tiše smazal i cenovou evidenci – tedy
+  // právě to, co má dokládat, za kolik se zboží nabízelo. Smazání produktu je
+  // z pohledu ČOI ta nejméně vhodná chvíle na ztrátu důkazů a nesmí se stát
+  // jako vedlejší účinek údržby katalogu.
+  //
+  // Důsledek je záměr: produkt s evidencí nejde smazat jedním dotazem.
+  // Endpoint proto rozhoduje vědomě – viz DELETE v api/admin/produkty/[id].
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  /// Cena, za kterou se od `platnaOd` skutečně prodávalo – tedy `cenaPoSleve`,
+  /// když sleva běží, jinak `cena`. Do výpočtu nejnižší ceny vstupuje tahle.
+  cenaHaleru Int
+
+  /// Základní (nepřeškrtnutá) cena ve stejném okamžiku. Sama o sobě do výpočtu
+  /// nevstupuje, ale bez ní by z evidence nešlo poznat, jestli tehdy sleva
+  /// běžela, nebo se jen měnil ceník.
+  zakladniCenaHaleru Int
+
+  jeSleva  Boolean  @default(false)
+  platnaOd DateTime @default(now())
+
+  /// Kdo změnu vyvolal – „admin:e-mail", „seed", „import". Bez toho se při
+  /// kontrole nedá rozlišit ruční zásah od hromadné akce.
+  zdroj String
+
+  // Výpočet nejnižší ceny čte jeden produkt v okně posledních 30 dnů;
+  // složený index přesně na ten dotaz.
+  @@index([productId, platnaOd])
 }
 
 model ProductVariant {
@@ -210,19 +317,19 @@ enum ImageProcessingStatus {
 }
 
 model Order {
-  id                  String        @id @default(cuid())
-  userId              String?
-  user                User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  cisloObjednavky     String        @unique
+  id              String      @id @default(cuid())
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cisloObjednavky String      @unique
   /// Kontaktní e-mail objednávky. Nepovinný jen kvůli řádkům založeným dřív,
   /// než sloupec existoval – nová objednávka ho má vždy. Bez něj neměla
   /// objednávka bez registrace na faktuře žádný kontakt.
-  email               String?
+  email           String?
   /// Náhodný klíč pro odkazy, které musí fungovat i bez přihlášení
   /// (potvrzení objednávky, stažení faktury). Číslo objednávky se k tomu
   /// použít nedá – jde po sobě, takže by šlo cizí objednávky procházet.
-  verejnyToken        String        @unique @default(cuid())
-  stav                OrderStatus   @default(NOVA)
+  verejnyToken    String      @unique @default(cuid())
+  stav            OrderStatus @default(NOVA)
 
   /// Rozpis objednávky tak, jak platil v okamžiku nákupu.
   ///
@@ -231,39 +338,73 @@ model Order {
   /// změnila, vyšla faktura pro starou objednávku jinak a rozdíl se tiše
   /// schoval do dopravy. Rozpis je součást účetního dokladu – musí být
   /// zmrazený stejně jako doručovací adresa a `cenaVDobeNakupu`.
-  mezisoucet          Decimal       @default(0)
-  slevaCastka         Decimal       @default(0)
-  cenaDopravy         Decimal       @default(0)
+  mezisoucet  Decimal @default(0)
+  slevaCastka Decimal @default(0)
+  cenaDopravy Decimal @default(0)
 
   /// Součet zboží po slevě + doprava, tedy hodnota objednávky **před**
   /// uplatněním dárkového poukazu. Co zbývá doplatit = `celkovaCena - castkaZGiftCard`.
-  celkovaCena         Decimal
-  discountCodeId      String?
-  discountCode        DiscountCode? @relation(fields: [discountCodeId], references: [id])
-  giftCardId          String?
-  giftCard            GiftCard?     @relation(fields: [giftCardId], references: [id])
-  castkaZGiftCard     Decimal?
-  zpusobDopravy       String
-  vydejniMistoId      String?
-  vydejniMistoNazev   String?
-  zpusobPlatby        String
-  stavPlatby          String
+  celkovaCena       Decimal
+  discountCodeId    String?
+  discountCode      DiscountCode? @relation(fields: [discountCodeId], references: [id])
+  giftCardId        String?
+  giftCard          GiftCard?     @relation(fields: [giftCardId], references: [id])
+  castkaZGiftCard   Decimal?
+  zpusobDopravy     String
+  vydejniMistoId    String?
+  vydejniMistoNazev String?
+  zpusobPlatby      String
+  stavPlatby        String
 
   /// Identifikátor platby u brány (GoPay). Notifikace i návratová adresa
   /// nesou jen tohle id, takže je to jediná vazba mezi objednávkou a platbou.
   /// Unikátní schválně: jedna platba nesmí označit za zaplacené dvě objednávky.
-  platbaId            String?       @unique
+  platbaId String? @unique
 
-  cisloZasilky        String?
-  poznamka            String?
-  zrusil              ZrusilKdo?
+  cisloZasilky String?
+  poznamka     String?
+  zrusil       ZrusilKdo?
+
+  /// --- Doklad o uzavření smlouvy (§ 1820 a § 1826 o. z.) ---
+  ///
+  /// Zaškrtnutí souhlasu s obchodními podmínkami se dosud jen validovalo
+  /// a zahodilo. Při sporu ale musí prodávající doložit, **s čím přesně**
+  /// zákaznice souhlasila – proto se ukládá okamžik i verze podmínek.
+  /// Bez verze je záznam k ničemu: podmínky se mění a dnešní znění není to,
+  /// které platilo u loňské objednávky.
+  souhlasPodminkyAt DateTime?
+  verzePodminek     String?
+
+  /// IP, ze které objednávka přišla. Důkaz o uzavření smlouvy na dálku
+  /// (oprávněný zájem, čl. 6 odst. 1 písm. f GDPR); maže ji retenční úloha
+  /// dřív než zbytek objednávky, protože ji netřeba držet celých 10 let.
+  ipObjednavky String?
+
+  /// --- Lhůty, které běží od převzetí zboží ---
+  ///
+  /// Čtrnáctidenní lhůta pro odstoupení (§ 1829 o. z.) se počítá **ode dne
+  /// převzetí**, ne od objednání. Bez tohohle data e-shop nedokáže říct,
+  /// jestli je odstoupení včasné, a nemůže ani korektně zobrazit tlačítko
+  /// podle § 1830a.
+  datumExpedice DateTime?
+  datumDoruceni DateTime?
+
+  /// --- DPH: stav v době nákupu, ne dnešní ---
+  ///
+  /// `Settings.jePlatceDph` je aktuální stav e-shopu. Kdyby se majitelka
+  /// plátcem stala později, přepočítaly by se podle něj i staré doklady –
+  /// a faktura je účetní doklad, který se zpětně měnit nesmí. Proto snímek.
+  jePlatceDph         Boolean     @default(false)
+  sazbaDph            Int         @default(0)
+  /// Výše DPH z `celkovaCena` v haléřích. Neplátce má 0.
+  dphHaleru           Int         @default(0)
   dodaciJmenoPrijmeni String
   dodaciUlice         String
   dodaciMesto         String
   dodaciPsc           String
-  dodaciZeme          String        @default("CZ")
+  dodaciZeme          String      @default("CZ")
   dodaciTelefon       String?
-  createdAt           DateTime      @default(now())
+  createdAt           DateTime    @default(now())
   items               OrderItem[]
   reklamace           Reklamace[]
 
@@ -353,20 +494,104 @@ model Settings {
   cenaDopravyPPL        Decimal?
   cenaDopravyCeskaPosta Decimal?
   prahDopravaZdarma     Decimal?
+
+  /// --- Údaje povinné na obchodních listinách (§ 435 o. z.) ---
+  ///
+  /// Podnikatel musí na svých listinách i webu uvádět údaj o zápisu ve
+  /// veřejném rejstříku (spisová značka), případně o zápisu v živnostenském
+  /// rejstříku. Na faktuře i v patičce to dosud nebylo vůbec.
+  zapisVRejstriku String?
+
+  /// Základní sazba DPH v procentech. Uložená, ne zadrátovaná – sazby se
+  /// mění zákonem a přepis konstanty v kódu je zbytečné nasazení.
+  sazbaDph Int @default(21)
+
+  /// Adresa pro vracené zboží. Bývá jiná než sídlo (sklad, výdejna) a musí
+  /// být uvedena v poučení o odstoupení od smlouvy.
+  adresaProVraceni String?
+
+  /// --- GDPR: kontakt na správce (čl. 13 odst. 1) ---
+  ///
+  /// Adresa pro uplatnění práv subjektu údajů. Bez ní se zákaznice nemá kam
+  /// obrátit se žádostí o výmaz nebo o přenositelnost.
+  emailProGdpr String?
+
+  /// --- Verze obchodních podmínek ---
+  ///
+  /// Zapisuje se ke každé objednávce (`Order.verzePodminek`). Po každé změně
+  /// znění je potřeba ji zvednout, jinak snímek u objednávky ukazuje na text,
+  /// který zákaznice nikdy neviděla. Formát je volný, doporučeně datum
+  /// účinnosti: „2026-01-01".
+  verzePodminek String @default("1")
+}
+
+/// Evidence udělených a odvolaných souhlasů (čl. 7 odst. 1 GDPR).
+///
+/// „Správce musí být schopen doložit, že subjekt údajů udělil souhlas."
+/// Souhlas s cookies žil výhradně v `localStorage` prohlížeče, takže e-shop
+/// v ruce neměl **nic** – a localStorage zákaznice si sama smaže. Tahle
+/// tabulka je proto jediná evidence, která u kontroly ÚOOÚ obstojí.
+///
+/// Řádky jsou přírůstkové a neměnné: odvolání souhlasu se zapisuje jako nový
+/// záznam s `udeleno = false`, nikdy se nepřepisuje ten původní. Jinak by
+/// z evidence zmizelo, že souhlas nějakou dobu platil – a právě to je při
+/// sporu o zákonnost zpracování ta podstatná informace.
+model SouhlasZaznam {
+  id  String      @id @default(cuid())
+  typ TypSouhlasu
+
+  /// Koho se souhlas týká: e-mail (newsletter, objednávka), nebo náhodné id
+  /// návštěvnice z cookie u souhlasu s cookies. To id schválně **není**
+  /// odvozené z IP ani z otisku prohlížeče – takový klíč by sám o sobě byl
+  /// sledováním, které souhlas teprve povoluje.
+  subjekt String
+
+  udeleno Boolean
+
+  /// Co přesně bylo zaškrtnuto – u cookies `{ analyticke, marketingove }`.
+  /// Bez rozpisu by se nedalo doložit, že marketing zapnutý nebyl.
+  podrobnosti Json?
+
+  /// Verze textu, se kterým zákaznice souhlasila (podmínky, zásady cookies).
+  verze String?
+
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Typický dotaz: „jaký je poslední stav souhlasu tohoto subjektu".
+  @@index([subjekt, typ, createdAt])
+  @@index([typ, createdAt])
+}
+
+enum TypSouhlasu {
+  COOKIES
+  NEWSLETTER
+  OBCHODNI_PODMINKY
 }
 
 model NewsletterSubscriber {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  potvrzeno Boolean  @default(false)
+  id        String  @id @default(cuid())
+  email     String  @unique
+  potvrzeno Boolean @default(false)
+
+  /// Doložení souhlasu podle čl. 7 odst. 1 GDPR a § 7 zák. č. 480/2004 Sb.
+  ///
+  /// Samotné `potvrzeno = true` u kontroly neobstojí – ÚOOÚ se ptá **kdy**
+  /// a **odkud** souhlas přišel. Bez toho je důkazní břemeno na prodávajícím
+  /// a nedá se unést. Obě IP jsou uložené proto, že double opt-in má dva
+  /// kroky a doložit je potřeba oba.
+  potvrzenoAt  DateTime?
+  ipPrihlaseni String?
+  ipPotvrzeni  String?
   /// Odkud přihlášení přišlo – "hero", "paticka". Kvůli měření, ne kvůli funkci.
-  zdroj     String?
-  odhlasenAt DateTime?
+  zdroj        String?
+  odhlasenAt   DateTime?
 
   /// Klíč do odhlašovacího odkazu (a později do potvrzení double opt-inu).
   /// E-mail se do odkazu dát nesmí: kdokoliv by pak odhlásil kohokoliv,
   /// komu uhodne adresu. Token je náhodný a váže se na jediný záznam.
-  token     String   @unique @default(cuid())
+  token String @unique @default(cuid())
 
   createdAt DateTime @default(now())
 }
@@ -413,10 +638,30 @@ model Reklamace {
   datumPrijeti   DateTime      @default(now())
   datumVyrizeni  DateTime?
 
+  /// Zákonná lhůta na vyřízení, § 19 odst. 3 zák. č. 634/1992 Sb. – 30 dnů
+  /// od uplatnění. Marným uplynutím vzniká zákaznici právo od smlouvy
+  /// odstoupit, takže to není interní cíl, ale datum s právním následkem.
+  /// Dopočítává se při založení, aby ho administrace mohla řadit a barvit.
+  lhutaDo DateTime?
+
+  /// Odstoupení i reklamaci musí umět podat i **nepřihlášená** zákaznice –
+  /// právo má ze zákona každý spotřebitel, ne jen ten s účtem. Objednávka bez
+  /// registrace nemá `userId`, takže vazba na osobu vede přes e-mail
+  /// a přístup k detailu přes token, ne přes přihlášení.
+  email String?
+  token String  @unique @default(cuid())
+
+  /// § 1830a o. z. (účinný od 19. 6. 2026) žádá automatické potvrzení
+  /// odstoupení s datem a časem přijetí. Značka, že odešlo – aby opakované
+  /// zpracování fronty neposlalo zákaznici totéž potvrzení podruhé.
+  potvrzeniOdeslanoAt DateTime?
+
   // Zákaznice si v účtu vypisuje reklamace ke svým objednávkám; admin je
   // řadí podle stavu. Bez indexu na `orderId` je první z toho sekvenční sken.
   @@index([orderId])
   @@index([stav, datumPrijeti])
+  // Hlídání blížící se třicetidenní lhůty v administraci.
+  @@index([lhutaDo])
 }
 
 enum ReklamaceTyp {

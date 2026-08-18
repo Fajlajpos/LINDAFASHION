@@ -6,6 +6,7 @@ import { ShieldCheck, Settings, X, Check } from 'lucide-react';
 import {
   VYCHOZI_SOUHLAS,
   nacistSouhlas,
+  odeslatSouhlasNaServer,
   smazatSledovaciCookies,
   ulozitSouhlas,
   type SouhlasCookies,
@@ -50,6 +51,16 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     const predchozi = nacistSouhlas();
 
     ulozitSouhlas(souhlas);
+
+    /*
+     * Evidence na serveru (čl. 7 odst. 1 GDPR).
+     *
+     * `localStorage` drží souhlas u zákaznice, ale doložit ho musí správce –
+     * a co si zákaznice sama smaže, to důkaz není. Volá se **po** uložení
+     * do prohlížeče a nic se na ně nečeká: lišta musí zavřít hned.
+     */
+    odeslatSouhlasNaServer(souhlas);
+
     setPrefs(souhlas);
     setShowBanner(false);
     setShowSettingsModal(false);

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
+import { zaznamenatSouhlas } from '@/lib/souhlasy';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +116,24 @@ export async function POST(request: Request) {
       await db.user.updateMany({
         where: { email: odberatel.email, newsletterSouhlas: true },
         data: { newsletterSouhlas: false },
+      });
+
+      /*
+       * Odvolání se zapisuje jako **nový** záznam s `udeleno: false`, ne
+       * přepsáním toho původního.
+       *
+       * Čl. 7 odst. 3 GDPR říká, že odvoláním není dotčena zákonnost
+       * zpracování před odvoláním – takže správce musí umět ukázat, že souhlas
+       * do té chvíle platil. Přepsaný záznam by právě tohle smazal a e-shop by
+       * po odhlášení vypadal, jako by rozesílal bez souhlasu od začátku.
+       */
+      await zaznamenatSouhlas({
+        typ: 'NEWSLETTER',
+        subjekt: odberatel.email,
+        udeleno: false,
+        podrobnosti: { krok: 'odhlaseni' },
+        ip: klientskaIp(request),
+        userAgent: request.headers.get('user-agent'),
       });
     }
 

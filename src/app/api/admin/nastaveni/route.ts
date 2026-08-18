@@ -61,6 +61,12 @@ export async function PUT(request: Request) {
       cenaDopravyCeskaPosta:
         vstup.cenaDopravyCeskaPosta === null ? null : new Prisma.Decimal(vstup.cenaDopravyCeskaPosta),
       prahDopravaZdarma: vstup.prahDopravaZdarma === null ? null : new Prisma.Decimal(vstup.prahDopravaZdarma),
+
+      zapisVRejstriku: vstup.zapisVRejstriku,
+      sazbaDph: vstup.sazbaDph,
+      adresaProVraceni: vstup.adresaProVraceni,
+      emailProGdpr: vstup.emailProGdpr,
+      verzePodminek: vstup.verzePodminek,
     };
 
     await db.settings.upsert({
@@ -72,6 +78,11 @@ export async function PUT(request: Request) {
     await zapsatDoAuditu(admin.email, 'nastaveni.upraveno', 'Settings', String(ID_NASTAVENI), {
       rezimDovolene: data.rezimDovolene,
       zablokovatObjednavky: data.zablokovatObjednavky,
+      // Změna režimu DPH a verze podmínek se propisuje do každé další
+      // objednávky jako součást dokladu – v auditu musí být vidět kdy nastala.
+      jePlatceDph: data.jePlatceDph,
+      sazbaDph: data.sazbaDph,
+      verzePodminek: data.verzePodminek,
     });
 
     return odpovedOk({ ulozeno: true });

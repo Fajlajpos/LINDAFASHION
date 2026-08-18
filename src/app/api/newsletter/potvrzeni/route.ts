@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
+import { zaznamenatSouhlas } from '@/lib/souhlasy';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     }
 
     const { token } = schema.parse(await request.json());
+    const ip = klientskaIp(request);
 
     /*
      * `updateMany`, ne `update`: dvojklik ani znovunačtení stránky nesmí
@@ -83,15 +85,24 @@ export async function POST(request: Request) {
      * odhlásila a pak otevřela starý potvrzovací e-mail: potvrzení odhlášení
      * nezruší.
      */
+    /*
+     * `potvrzeno: false` v podmínce je nově **podstatné**, ačkoliv dřív tu
+     * schválně nebylo: `potvrzenoAt` musí nést okamžik, kdy souhlas skutečně
+     * vznikl. Bez té podmínky by každé znovunačtení stránky posunulo datum
+     * souhlasu na dnešek – evidence by pak tvrdila, že zákaznice souhlasila
+     * dnes, třeba rok poté, co to udělala doopravdy.
+     *
+     * Opakovaný průchod už proto nic nezmění a řeší ho větev níž.
+     */
     const zmeneno = await db.newsletterSubscriber.updateMany({
-      where: { token, odhlasenAt: null },
-      data: { potvrzeno: true },
+      where: { token, odhlasenAt: null, potvrzeno: false },
+      data: { potvrzeno: true, potvrzenoAt: new Date(), ipPotvrzeni: ip },
     });
 
     if (zmeneno.count === 0) {
       const existuje = await db.newsletterSubscriber.findUnique({
         where: { token },
-        select: { odhlasenAt: true },
+        select: { odhlasenAt: true, potvrzeno: true },
       });
 
       if (!existuje) {
@@ -101,10 +112,41 @@ export async function POST(request: Request) {
         );
       }
 
-      return odpovedChyba(
-        'Tuhle adresu evidujeme jako odhlášenou z odběru. Přihlaste se prosím znovu formulářem v patičce.',
-        409
-      );
+      if (existuje.odhlasenAt !== null) {
+        return odpovedChyba(
+          'Tuhle adresu evidujeme jako odhlášenou z odběru. Přihlaste se prosím znovu formulářem v patičce.',
+          409
+        );
+      }
+
+      /*
+       * Zbývá už jen „odběr byl potvrzený dřív“ – dřív to spadlo do větve
+       * o odhlášení a zákaznice dostala chybu za to, že klikla podruhé.
+       * Výsledek je přitom přesně ten, který chce.
+       */
+      return odpovedOk({
+        zprava: 'Odběr novinek už potvrzený máte. Nemusíte dělat nic dalšího.',
+      });
+    }
+
+    /*
+     * Do evidence až teď: souhlas vznikl právě tímto kliknutím, ne při vyplnění
+     * formuláře. To je celý smysl double opt-inu a evidence to musí odrážet.
+     */
+    const odberatel = await db.newsletterSubscriber.findUnique({
+      where: { token },
+      select: { email: true },
+    });
+
+    if (odberatel) {
+      await zaznamenatSouhlas({
+        typ: 'NEWSLETTER',
+        subjekt: odberatel.email,
+        udeleno: true,
+        podrobnosti: { krok: 'potvrzeni-double-opt-in' },
+        ip,
+        userAgent: request.headers.get('user-agent'),
+      });
     }
 
     return odpovedOk({

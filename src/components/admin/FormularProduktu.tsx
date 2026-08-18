@@ -44,6 +44,21 @@ export interface PocatecniProdukt {
   material: string | null;
   udrzba: string | null;
   sku: string | null;
+
+  // GPSR + nařízení o textilu – viz sekce „Zákonné údaje o výrobku“ ve formuláři.
+  slozeniMaterialu: string | null;
+  obsahujeZivocisneCasti: boolean;
+  vyrobceNazev: string | null;
+  vyrobceAdresa: string | null;
+  vyrobceEmail: string | null;
+  odpovednaOsobaNazev: string | null;
+  odpovednaOsobaAdresa: string | null;
+  odpovednaOsobaEmail: string | null;
+  bezpecnostniUpozorneni: string | null;
+  ean: string | null;
+  cisloSarze: string | null;
+  zemePuvodu: string | null;
+
   aktivni: boolean;
   doporuceny: boolean;
   jeDarkovyPoukaz: boolean;
@@ -134,6 +149,19 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     material: produkt?.material ?? '',
     udrzba: produkt?.udrzba ?? '',
     sku: produkt?.sku ?? '',
+
+    slozeniMaterialu: produkt?.slozeniMaterialu ?? '',
+    obsahujeZivocisneCasti: produkt?.obsahujeZivocisneCasti ?? false,
+    vyrobceNazev: produkt?.vyrobceNazev ?? '',
+    vyrobceAdresa: produkt?.vyrobceAdresa ?? '',
+    vyrobceEmail: produkt?.vyrobceEmail ?? '',
+    odpovednaOsobaNazev: produkt?.odpovednaOsobaNazev ?? '',
+    odpovednaOsobaAdresa: produkt?.odpovednaOsobaAdresa ?? '',
+    odpovednaOsobaEmail: produkt?.odpovednaOsobaEmail ?? '',
+    bezpecnostniUpozorneni: produkt?.bezpecnostniUpozorneni ?? '',
+    ean: produkt?.ean ?? '',
+    cisloSarze: produkt?.cisloSarze ?? '',
+    zemePuvodu: produkt?.zemePuvodu ?? '',
     aktivni: produkt?.aktivni ?? true,
     doporuceny: produkt?.doporuceny ?? false,
     jeDarkovyPoukaz: produkt?.jeDarkovyPoukaz ?? false,
@@ -283,6 +311,19 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       material: form.material || null,
       udrzba: form.udrzba || null,
       sku: form.sku || null,
+
+      slozeniMaterialu: form.slozeniMaterialu || null,
+      obsahujeZivocisneCasti: form.obsahujeZivocisneCasti,
+      vyrobceNazev: form.vyrobceNazev || null,
+      vyrobceAdresa: form.vyrobceAdresa || null,
+      vyrobceEmail: form.vyrobceEmail || null,
+      odpovednaOsobaNazev: form.odpovednaOsobaNazev || null,
+      odpovednaOsobaAdresa: form.odpovednaOsobaAdresa || null,
+      odpovednaOsobaEmail: form.odpovednaOsobaEmail || null,
+      bezpecnostniUpozorneni: form.bezpecnostniUpozorneni || null,
+      ean: form.ean || null,
+      cisloSarze: form.cisloSarze || null,
+      zemePuvodu: form.zemePuvodu || null,
       aktivni: form.aktivni,
       doporuceny: form.doporuceny,
       jeDarkovyPoukaz: form.jeDarkovyPoukaz,
@@ -528,6 +569,252 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                 className={POLE}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Zákonné údaje o výrobku.
+        Vlastní sekce, ne přívažek k materiálu: jsou to údaje, bez kterých
+        se zboží nesmí nabízet, a formulář to má dát najevo.
+      */}
+      {!form.jeDarkovyPoukaz && (
+        <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+          <div>
+            <h2 className="font-serif text-xl text-linda-espresso">Zákonné údaje o výrobku</h2>
+            <p className="mt-1 text-xs text-linda-espresso/70">
+              Vyžaduje nařízení EU 2023/988 (GPSR) a nařízení EU 1007/2011 o textilu. Bez nich
+              produkt nelze uložit – zboží bez údajů o výrobci se nesmí nabízet.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="slozeniMaterialu" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Materiálové složení <span className="text-linda-cognac">*</span>
+            </label>
+            <input
+              id="slozeniMaterialu"
+              type="text"
+              disabled={odesilam}
+              value={form.slozeniMaterialu}
+              onChange={(e) => setForm({ ...form, slozeniMaterialu: e.target.value })}
+              placeholder="Např. 55 % len, 45 % bavlna"
+              aria-invalid={chybyPoli.slozeniMaterialu ? true : undefined}
+              aria-describedby="slozeniMaterialu-napoveda"
+              className={POLE}
+            />
+            <p id="slozeniMaterialu-napoveda" className="mt-1 text-[11px] text-linda-espresso/70">
+              V procentech hmotnosti, sestupně. Volný popis („jemný praný len“) patří do pole
+              Materiál výš – zákon vyžaduje procenta.
+            </p>
+            {chybyPoli.slozeniMaterialu && (
+              <p className="mt-1 text-[11px] font-medium text-linda-cognac">{chybyPoli.slozeniMaterialu}</p>
+            )}
+          </div>
+
+          {/*
+            Čl. 12 nařízení o textilu. Zaškrtávátko, ne volný text: zákon předepisuje
+            konkrétní větu, takže jediné rozhodnutí je „ano, nebo ne“ – formulaci
+            si nemá vymýšlet každý produkt zvlášť.
+          */}
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+            <input
+              type="checkbox"
+              disabled={odesilam}
+              checked={form.obsahujeZivocisneCasti}
+              onChange={(e) => setForm({ ...form, obsahujeZivocisneCasti: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
+            />
+            <span className="text-linda-espresso/85">
+              <strong className="font-semibold text-linda-espresso">
+                Obsahuje netextilní části živočišného původu
+              </strong>
+              <br />
+              Zaškrtněte u kožených pásků a výpustků, kožešinových límců, perleťových či rohových
+              knoflíků. Složení vláken tuhle povinnost nesplní – popisuje jen textilní část.
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
+            <div>
+              <label htmlFor="vyrobceNazev" className="mb-1 block font-semibold text-linda-espresso">
+                Výrobce – název <span className="text-linda-cognac">*</span>
+              </label>
+              <input
+                id="vyrobceNazev"
+                type="text"
+                disabled={odesilam}
+                value={form.vyrobceNazev}
+                onChange={(e) => setForm({ ...form, vyrobceNazev: e.target.value })}
+                placeholder="Např. Tessitura Bellini S.r.l."
+                aria-invalid={chybyPoli.vyrobceNazev ? true : undefined}
+                className={POLE}
+              />
+              {chybyPoli.vyrobceNazev && (
+                <p className="mt-1 text-[11px] font-medium text-linda-cognac">{chybyPoli.vyrobceNazev}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="vyrobceAdresa" className="mb-1 block font-semibold text-linda-espresso">
+                Výrobce – adresa <span className="text-linda-cognac">*</span>
+              </label>
+              <input
+                id="vyrobceAdresa"
+                type="text"
+                disabled={odesilam}
+                value={form.vyrobceAdresa}
+                onChange={(e) => setForm({ ...form, vyrobceAdresa: e.target.value })}
+                placeholder="Via Roma 12, 50123 Firenze, Itálie"
+                aria-invalid={chybyPoli.vyrobceAdresa ? true : undefined}
+                className={POLE}
+              />
+              {chybyPoli.vyrobceAdresa && (
+                <p className="mt-1 text-[11px] font-medium text-linda-cognac">{chybyPoli.vyrobceAdresa}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="vyrobceEmail" className="mb-1 block font-semibold text-linda-espresso">
+                Výrobce – e-mail <span className="text-linda-cognac">*</span>
+              </label>
+              <input
+                id="vyrobceEmail"
+                type="email"
+                disabled={odesilam}
+                value={form.vyrobceEmail}
+                onChange={(e) => setForm({ ...form, vyrobceEmail: e.target.value })}
+                placeholder="info@vyrobce.it"
+                aria-invalid={chybyPoli.vyrobceEmail ? true : undefined}
+                className={POLE}
+              />
+              {chybyPoli.vyrobceEmail && (
+                <p className="mt-1 text-[11px] font-medium text-linda-cognac">{chybyPoli.vyrobceEmail}</p>
+              )}
+            </div>
+          </div>
+
+          {/*
+            Odpovědná osoba se vyplňuje jen u výrobce mimo EU. U italského
+            dodavatele zůstává prázdná – proto je v recesu, ne mezi povinnými poli.
+          */}
+          <div className="space-y-4 rounded-2xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+            <p className="text-[11px] text-linda-espresso/80">
+              <strong className="font-semibold">Odpovědná osoba v EU</strong> – vyplňte pouze tehdy,
+              když výrobce nesídlí v Evropské unii (čl. 16 GPSR). Buď všechna tři pole, nebo žádné.
+            </p>
+
+            <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
+              <div>
+                <label htmlFor="odpovednaOsobaNazev" className="mb-1 block font-semibold text-linda-espresso">
+                  Název
+                </label>
+                <input
+                  id="odpovednaOsobaNazev"
+                  type="text"
+                  disabled={odesilam}
+                  value={form.odpovednaOsobaNazev}
+                  onChange={(e) => setForm({ ...form, odpovednaOsobaNazev: e.target.value })}
+                  aria-invalid={chybyPoli.odpovednaOsobaNazev ? true : undefined}
+                  className={POLE}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="odpovednaOsobaAdresa" className="mb-1 block font-semibold text-linda-espresso">
+                  Adresa
+                </label>
+                <input
+                  id="odpovednaOsobaAdresa"
+                  type="text"
+                  disabled={odesilam}
+                  value={form.odpovednaOsobaAdresa}
+                  onChange={(e) => setForm({ ...form, odpovednaOsobaAdresa: e.target.value })}
+                  className={POLE}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="odpovednaOsobaEmail" className="mb-1 block font-semibold text-linda-espresso">
+                  E-mail
+                </label>
+                <input
+                  id="odpovednaOsobaEmail"
+                  type="email"
+                  disabled={odesilam}
+                  value={form.odpovednaOsobaEmail}
+                  onChange={(e) => setForm({ ...form, odpovednaOsobaEmail: e.target.value })}
+                  className={POLE}
+                />
+              </div>
+            </div>
+
+            {chybyPoli.odpovednaOsobaNazev && (
+              <p className="text-[11px] font-medium text-linda-cognac">{chybyPoli.odpovednaOsobaNazev}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
+            <div>
+              <label htmlFor="ean" className="mb-1 block font-semibold text-linda-espresso">
+                EAN / čárový kód
+              </label>
+              <input
+                id="ean"
+                type="text"
+                disabled={odesilam}
+                value={form.ean}
+                onChange={(e) => setForm({ ...form, ean: e.target.value })}
+                className={POLE}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="cisloSarze" className="mb-1 block font-semibold text-linda-espresso">
+                Číslo šarže / série
+              </label>
+              <input
+                id="cisloSarze"
+                type="text"
+                disabled={odesilam}
+                value={form.cisloSarze}
+                onChange={(e) => setForm({ ...form, cisloSarze: e.target.value })}
+                className={POLE}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="zemePuvodu" className="mb-1 block font-semibold text-linda-espresso">
+                Země původu
+              </label>
+              <input
+                id="zemePuvodu"
+                type="text"
+                disabled={odesilam}
+                value={form.zemePuvodu}
+                onChange={(e) => setForm({ ...form, zemePuvodu: e.target.value })}
+                placeholder="Např. Itálie"
+                className={POLE}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="bezpecnostniUpozorneni" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Bezpečnostní a varovné informace
+            </label>
+            <textarea
+              id="bezpecnostniUpozorneni"
+              rows={3}
+              disabled={odesilam}
+              value={form.bezpecnostniUpozorneni}
+              onChange={(e) => setForm({ ...form, bezpecnostniUpozorneni: e.target.value })}
+              placeholder="Např. Obsahuje drobné části – nevhodné pro děti do 3 let."
+              className={POLE}
+            />
+            <p className="mt-1 text-[11px] text-linda-espresso/70">
+              Nepovinné. Vyplňte, pokud výrobek nese varování na visačce nebo obalu (čl. 19 GPSR).
+            </p>
           </div>
         </div>
       )}

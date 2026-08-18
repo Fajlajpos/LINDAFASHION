@@ -312,6 +312,146 @@ now keyword search over normalized columns with a live suggestion dropdown
 read `hledat`, so search inside a category returned the whole category and page two
 of any category search dropped the filter.
 
+## Legal compliance — the rules that carry fines
+
+Czech/EU e-commerce law reaches into the schema, not just the copy. Everything here
+is enforced in code because a wrong value looks like nothing at all — no broken
+layout, no failing test, just a number on the page that is not lawful.
+
+### Price history is mandatory, and the reference price is **frozen**
+
+§ 12a zák. č. 634/1992 Sb.: whenever a discount is announced, the page must show the
+lowest price at which the goods were sold **in the 30 days before the discount
+started**, and the seller must be able to prove it (ČOI fine up to 5 000 000 Kč).
+
+- Every price write records a row in `PriceHistory` — rows are **never updated or
+  deleted**, it is evidence. `Product.cena` alone cannot prove anything: overwriting
+  the column destroys the previous value.
+- `Product.nejnizsiCena30DniHaleru` is **frozen when the discount starts**, not a
+  sliding window. A sliding window would pull the sale price itself into the window
+  after a few days, the reference would sink onto it, and the shop would advertise a
+  discount off its own discount — exactly the trick the amendment bans.
+- A discount that **deepens without interruption** keeps the original reference
+  (§ 12a odst. 3). Otherwise the duty is dodged by stepping 3490 → 2990 → 2490.
+- Reference price is computed in [cenova-historie.ts](src/lib/cenova-historie.ts)
+  **before** the new history row is written. Reversing that order poisons the window.
+- The lowest price in the window includes the price **in effect when the window
+  opened** — not just rows dated inside it. A product whose price last changed six
+  months ago has no rows in the window but was on sale at that price the whole time.
+- Percentages come from `procentoSlevyZReferencni`, never `(cena - cenaPoSleve) / cena`.
+  **No reference price → no percentage badge at all.** An undocumentable number is
+  worse than none.
+- The reference sentence belongs on **every** announcement of a discount — the catalog
+  card as well as the detail page, which is why `ProduktVypis` carries it.
+- `popisNejnizsiCeny` / `procentoSlevyZReferencni` live in [penize.ts](src/lib/penize.ts),
+  not in `cenova-historie.ts`: client components need them, and `cenova-historie.ts`
+  imports Prisma. Same Edge/Node split reasoning as `session.ts` vs `auth.ts`.
+- **`PriceHistory` is `onDelete: Restrict`, never `Cascade`.** It shipped as Cascade for
+  one afternoon and that was a real defect: `db.product.delete()` silently destroyed the
+  product's price evidence — no error, no warning, nothing in the audit log. Cascade is
+  the right default for photos and variants; on an evidentiary table it is a way to lose
+  the evidence by accident. The DB now refuses, so the DELETE endpoint has to decide out
+  loud: a product **ever offered at a discount** cannot be deleted at all (archive it by
+  unticking `aktivni`), and one that never was deletes its history in an explicit
+  `$transaction`. Covered by
+  [route.integration.test.ts](src/app/api/admin/produkty/route.integration.test.ts).
+- Vyhláška 450/2009 Sb. wants the **start and end** of each price period. The schema stores
+  only `platnaOd` and derives the end from the next row — deliberately: a stored `valid_to`
+  needs an UPDATE before every INSERT, and a crash between the two leaves a window with no
+  valid price at all. One append-only INSERT cannot produce that gap.
+
+### Product data required before a product may be offered
+
+- **GPSR**, nařízení (EU) 2023/988: manufacturer name, postal address and e-mail are
+  **required** by `produktSchema` — not just by the form, because a hand-built request
+  would otherwise create a product that is unlawful from the first second. An EU
+  responsible person (čl. 16) is required only for a non-EU manufacturer, and must be
+  filled in **completely or not at all** — a name without an address satisfies nothing
+  and reads on the page like a real record.
+- **Textile**, nařízení (EU) 1007/2011: `slozeniMaterialu` holds the fibre composition
+  in percentages ("55 % len, 45 % bavlna"). It is deliberately separate from
+  `material`, which is free marketing prose ("jemný praný len") and does **not**
+  satisfy the regulation.
+- `obsahujeZivocisneCasti` renders the sentence „Obsahuje netextilní části živočišného
+  původu" required by **čl. 12** of the same regulation — leather trims, fur collars, horn
+  or mother-of-pearl buttons. Fibre composition does **not** discharge this duty: it
+  describes only the textile part, so a leather belt on a wool coat never appears in it.
+  It is a checkbox, not free text, because the regulation prescribes the wording.
+- Gift cards are exempt from all of the above — a voucher is not a product with a
+  manufacturer. Same exemption as `material` and `udrzba`.
+
+### Consent must be provable by the controller, not the browser
+
+Čl. 7 odst. 1 GDPR: the controller must be able to **demonstrate** consent. Cookie
+consent used to live only in `localStorage` — held by the customer, not the shop, and
+deleted with her browser history. That is not evidence.
+
+- `SouhlasZaznam` rows are **incremental and immutable**. Withdrawal is a new row with
+  `udeleno = false`, never an overwrite — čl. 7 odst. 3 says withdrawal does not affect
+  the lawfulness of processing before it, so the controller must still be able to show
+  the consent once held.
+- The cookie subject id is `crypto.randomUUID()` and deliberately **not** derived from
+  IP or a browser fingerprint: such a key would itself be the tracking that the consent
+  is supposed to authorize.
+- Recording never blocks the user-facing action. `zaznamenatSouhlas` swallows failures
+  and `odeslatSouhlasNaServer` is fire-and-forget — an unreachable database must not
+  make the cookie bar unclickable, and consent is valid because it was given, not
+  because we managed to log it.
+- Newsletter double opt-in stores **both** steps (`ipPrihlaseni`, then `potvrzenoAt` +
+  `ipPotvrzeni`). The confirming `updateMany` carries `potvrzeno: false` in its
+  `where` — without it every page reload would push the consent date to today, and the
+  evidence would claim she consented this morning rather than a year ago.
+- **Backfilling consent is forbidden.** Old rows keep `potvrzenoAt` / `souhlasPodminkyAt`
+  null on purpose. Invented proof is worse than an admitted gap.
+
+### The order is an accounting document
+
+- `souhlasPodminkyAt` **and** `verzePodminek` are stored. The timestamp alone is
+  useless once the terms change — proving "she agreed" requires proving to what.
+  Bump `Settings.verzePodminek` in admin after every change of wording.
+- `jePlatceDph`, `sazbaDph` and `dphHaleru` are a **snapshot**, not a lookup. Reading
+  today's `Settings.jePlatceDph` would retroactively rewrite last year's invoices.
+- Prices in the shop include VAT, so `dphZCelkem` computes tax **from the top**:
+  `celkem − celkem / (1 + sazba/100)`. `celkem × sazba` overstates 21 % VAT by a fifth.
+- `ipObjednavky` is proof of a distance contract (legitimate interest), kept shorter
+  than the order itself.
+- `datumDoruceni` exists because the 14-day withdrawal period (§ 1829) runs **from
+  receipt**, not from ordering — without it the shop cannot tell whether a withdrawal
+  is timely.
+
+### Still open — known legal gaps
+
+- **Tlačítko „Odstoupit od smlouvy“ (§ 1830a o. z.) is missing and is already in
+  force** (19. 6. 2026). It must be reachable without logging in, be a two-step
+  confirmation, and send an automatic confirmation with date and time. Today
+  [api/reklamace](src/app/api/reklamace/route.ts) requires a login, so a guest order
+  has no way to withdraw at all — the schema is ready (`Reklamace.token`,
+  `Reklamace.email`, `potvrzeniOdeslanoAt`) but the flow is not built.
+- `Reklamace.lhutaDo` is stored and backfilled but nothing computes it on new rows
+  and no admin view warns before the 30-day deadline (§ 19 odst. 3) expires.
+- No retention job: contact messages, stock notifications, audit log and `ipObjednavky`
+  are kept forever, which breaches storage limitation (čl. 5 odst. 1 písm. e).
+- No data-portability export (čl. 20 GDPR).
+- The invoice PDF does not yet print the VAT breakdown or `zapisVRejstriku`, so a
+  VAT-registered shop's invoice is not a valid daňový doklad (§ 29 zák. o DPH).
+- Accessibility (zák. č. 424/2023 Sb., in force since 28. 6. 2025) applies unless the
+  business is a microenterprise — fewer than 10 employees **and** turnover under
+  2 mil. EUR, both at once.
+- **Terms are stored as a version label, not as text.** `Settings.verzePodminek` is
+  snapshotted onto every order, but [obchodni-podminky](<src/app/(shop)/obchodni-podminky/page.tsx>)
+  is hardcoded JSX — so the label points at wording nothing preserves. Proving *what* she
+  agreed to needs the terms moved into the database and the order referencing a stored
+  content snapshot, the way `OrderItem.cenaVDobeNakupu` already freezes the price.
+- If product **reviews** are ever added, the Omnibus amendment requires saying whether each
+  one comes from a verified purchase, and bans publishing only the positive ones. There is
+  no review feature today, so nothing is in breach — but the model needs an order link
+  from day one, because verification cannot be reconstructed afterwards.
+- **Public coupons count into the 30-day lowest price.** ČOI has confirmed that a coupon
+  displayed *at the product* enters the calculation. Today `DiscountCode` is only ever typed
+  in at checkout, so it stays out of `PriceHistory` on purpose — but the moment a code is
+  advertised on the product page, it becomes part of the offered price and has to be
+  recorded as one.
+
 ## Orders — rules that are easy to break
 
 - **Prices come from the database, never from the request.** [objednavka.ts](src/lib/objednavka.ts)

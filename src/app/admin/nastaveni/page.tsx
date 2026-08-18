@@ -8,6 +8,7 @@ import {
   Loader2,
   Palmtree,
   Save,
+  Scale,
   Share2,
   Truck,
 } from 'lucide-react';
@@ -39,6 +40,12 @@ interface Nastaveni {
   cenaDopravyPPL: number | null;
   cenaDopravyCeskaPosta: number | null;
   prahDopravaZdarma: number | null;
+
+  zapisVRejstriku: string | null;
+  sazbaDph: number;
+  adresaProVraceni: string | null;
+  emailProGdpr: string | null;
+  verzePodminek: string;
 }
 
 const PRAZDNE: Nastaveni = {
@@ -59,6 +66,11 @@ const PRAZDNE: Nastaveni = {
   cenaDopravyPPL: null,
   cenaDopravyCeskaPosta: null,
   prahDopravaZdarma: null,
+  zapisVRejstriku: null,
+  sazbaDph: 21,
+  adresaProVraceni: null,
+  emailProGdpr: null,
+  verzePodminek: '1',
 };
 
 const POLE =
@@ -296,10 +308,118 @@ export default function AdminNastaveniPage() {
               Jsme plátce DPH. Ovlivní popis cen na webu a na dokladech (sekce 11).
             </span>
           </label>
+
+          {/*
+            Sazba se ukazuje jen plátci. Neplátci by pole nabídlo údaj, který
+            na doklad nesmí – a nabídnuté pole se dřív nebo později vyplní.
+          */}
+          {n.jePlatceDph && (
+            <div className="max-w-xs">
+              <label htmlFor="sazbaDph" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                Základní sazba DPH (%)
+              </label>
+              <input
+                id="sazbaDph"
+                type="number"
+                min={0}
+                max={99}
+                step={1}
+                disabled={ukladam}
+                value={n.sazbaDph}
+                onChange={(e) => setN({ ...n, sazbaDph: Number(e.target.value) })}
+                className={POLE}
+              />
+              {chybaPole('sazbaDph')}
+              <p className="mt-1 text-[11px] text-linda-espresso/70">
+                Ceny v e-shopu se zadávají včetně daně; z téhle sazby se na dokladu
+                dopočítá základ a výše DPH.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/*
+          Zákonné údaje.
+          Vlastní karta, protože to není kosmetika obchodu – chybějící údaj
+          o zápisu v rejstříku nebo prázdná verze podmínek jsou nedostatky,
+          na které se při kontrole ČOI koukne dřív než na ceny dopravy.
+        */}
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(2)}>
+          <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
+            <Scale className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+            Zákonné údaje
+          </h2>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {(
+              [
+                [
+                  'zapisVRejstriku',
+                  'Zápis v rejstříku',
+                  'Např. Živnostenský rejstřík, Úřad městské části Praha 1',
+                  '§ 435 občanského zákoníku – patří na faktury i do patičky webu.',
+                ],
+                [
+                  'adresaProVraceni',
+                  'Adresa pro vrácené zboží',
+                  'Pařížská 12, 110 00 Praha 1',
+                  'Uvádí se v poučení o odstoupení od smlouvy. Bývá jiná než sídlo.',
+                ],
+                [
+                  'emailProGdpr',
+                  'E-mail pro žádosti podle GDPR',
+                  'gdpr@lindafashion.cz',
+                  'Kam se zákaznice obrátí se žádostí o výmaz nebo o kopii údajů.',
+                ],
+              ] as const
+            ).map(([klic, popisek, priklad, napoveda]) => (
+              <div key={klic}>
+                <label htmlFor={klic} className="mb-1 block text-xs font-semibold text-linda-espresso">
+                  {popisek}
+                </label>
+                <input
+                  id={klic}
+                  type="text"
+                  disabled={ukladam}
+                  value={n[klic] ?? ''}
+                  onChange={(e) => setN({ ...n, [klic]: e.target.value || null })}
+                  placeholder={priklad}
+                  aria-describedby={`${klic}-napoveda`}
+                  className={POLE}
+                />
+                <p id={`${klic}-napoveda`} className="mt-1 text-[11px] text-linda-espresso/70">
+                  {napoveda}
+                </p>
+                {chybaPole(klic)}
+              </div>
+            ))}
+
+            <div>
+              <label htmlFor="verzePodminek" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                Verze obchodních podmínek
+              </label>
+              <input
+                id="verzePodminek"
+                type="text"
+                disabled={ukladam}
+                value={n.verzePodminek}
+                onChange={(e) => setN({ ...n, verzePodminek: e.target.value })}
+                placeholder="2026-01-01"
+                aria-describedby="verzePodminek-napoveda"
+                className={POLE}
+              />
+              <p id="verzePodminek-napoveda" className="mt-1 text-[11px] text-linda-espresso/70">
+                Ukládá se ke každé objednávce. <strong className="font-semibold">Po každé změně
+                znění podmínek ji zvedněte</strong> – jinak staré objednávky odkazují
+                na text, který zákaznice nikdy neviděla.
+              </p>
+              {chybaPole('verzePodminek')}
+            </div>
+          </div>
         </section>
 
         {/* Sociální sítě */}
-        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(2)}>
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(3)}>
           <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
             <Share2 className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
             Sociální sítě
@@ -335,7 +455,7 @@ export default function AdminNastaveniPage() {
         </section>
 
         {/* Doprava */}
-        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(3)}>
+        <section className={`${NASYP} space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu`} style={zpozdeni(4)}>
           <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
             <Truck className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
             Ceny dopravy

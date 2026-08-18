@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import {
   AlertCircle,
+  AlertTriangle,
   Check,
+  ChevronDown,
   Gift,
   Heart,
   Ruler,
@@ -18,6 +20,7 @@ import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 import { HlidaniSkladu } from './HlidaniSkladu';
 import type { ProduktDetail } from '@/lib/katalog';
+import { popisNejnizsiCeny, procentoSlevyZReferencni } from '@/lib/penize';
 
 /** Popisky měr – klíče z Json pole na čitelný český text. */
 const POPISKY_MER: Record<string, string> = {
@@ -163,7 +166,23 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
 
               {produkt.cenaPoSleve !== null && (
                 <span className="text-sm text-linda-espresso/60 line-through">
+                  <span className="sr-only">Původní cena </span>
                   {produkt.cena.toLocaleString('cs-CZ')} Kč
+                </span>
+              )}
+
+              {procentoSlevyZReferencni(
+                Math.round((produkt.cenaPoSleve ?? produkt.cena) * 100),
+                produkt.nejnizsiCena30DniHaleru
+              ) !== null && (
+                <span className="rounded-full bg-linda-cognac px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                  <span className="sr-only">Sleva </span>
+                  -
+                  {procentoSlevyZReferencni(
+                    Math.round((produkt.cenaPoSleve ?? produkt.cena) * 100),
+                    produkt.nejnizsiCena30DniHaleru
+                  )}
+                  %
                 </span>
               )}
 
@@ -177,6 +196,17 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
                 </span>
               )}
             </div>
+
+            {/*
+              § 12a zákona o ochraně spotřebitele: u každého oznámení o slevě musí
+              být nejnižší cena za 30 dnů před jejím poskytnutím. Stojí hned
+              u ceny, ne v patře stránky – údaj má být tam, kde se sleva inzeruje.
+            */}
+            {popisNejnizsiCeny(produkt.nejnizsiCena30DniHaleru) && (
+              <p className="mt-1 text-[11px] font-medium text-linda-espresso/85">
+                {popisNejnizsiCeny(produkt.nejnizsiCena30DniHaleru)}
+              </p>
+            )}
 
             {/* Neplátce DPH ji uvádět nesmí, plátce musí – text řídí přepínač
                 v administraci, ne pevná věta v komponentě. */}
@@ -272,14 +302,99 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
             </div>
           )}
 
-          {(produkt.material || produkt.udrzba) && (
+          {(produkt.material || produkt.udrzba || produkt.slozeniMaterialu) && (
             <div className="space-y-1 text-xs text-linda-espresso/85">
               <h2 className="font-semibold uppercase tracking-wider text-linda-espresso">
                 Materiál a péče
               </h2>
+              {/* Složení je povinný údaj (nařízení EU 1007/2011), proto stojí první. */}
+              {produkt.slozeniMaterialu && <p>Složení: {produkt.slozeniMaterialu}</p>}
+              {/* Předepsaná věta podle čl. 12 nařízení (EU) 1007/2011 – doslova. */}
+              {produkt.obsahujeZivocisneCasti && <p>Obsahuje netextilní části živočišného původu.</p>}
               {produkt.material && <p>Materiál: {produkt.material}</p>}
               {produkt.udrzba && <p>Péče: {produkt.udrzba}</p>}
             </div>
+          )}
+
+          {/*
+            Údaje podle GPSR – nařízení (EU) 2023/988.
+            Čl. 19 chce výrobce a kontakt na něj **v nabídce**, tedy ještě před
+            nákupem, ne až na visačce. Je to úřední text, který nemá překrývat
+            výběr velikosti – proto je složený a dá se rozbalit.
+          */}
+          {produkt.vyrobceNazev && (
+            <details className="group rounded-2xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+              <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-2 font-semibold uppercase tracking-wider text-linda-espresso">
+                Informace o výrobci a bezpečnosti
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+
+              <div className="mt-3 space-y-3 text-linda-espresso/85">
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-linda-espresso">Výrobce</p>
+                  <p>{produkt.vyrobceNazev}</p>
+                  {produkt.vyrobceAdresa && <p>{produkt.vyrobceAdresa}</p>}
+                  {produkt.vyrobceEmail && (
+                    <p>
+                      <a
+                        href={`mailto:${produkt.vyrobceEmail}`}
+                        className="underline transition-colors hover:text-linda-cognac"
+                      >
+                        {produkt.vyrobceEmail}
+                      </a>
+                    </p>
+                  )}
+                </div>
+
+                {produkt.odpovednaOsobaNazev && (
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-linda-espresso">Odpovědná osoba v EU</p>
+                    <p>{produkt.odpovednaOsobaNazev}</p>
+                    {produkt.odpovednaOsobaAdresa && <p>{produkt.odpovednaOsobaAdresa}</p>}
+                    {produkt.odpovednaOsobaEmail && (
+                      <p>
+                        <a
+                          href={`mailto:${produkt.odpovednaOsobaEmail}`}
+                          className="underline transition-colors hover:text-linda-cognac"
+                        >
+                          {produkt.odpovednaOsobaEmail}
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {(produkt.ean || produkt.cisloSarze || produkt.zemePuvodu) && (
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-linda-espresso">Identifikace výrobku</p>
+                    {produkt.ean && <p>EAN: {produkt.ean}</p>}
+                    {produkt.cisloSarze && <p>Šarže: {produkt.cisloSarze}</p>}
+                    {produkt.zemePuvodu && <p>Země původu: {produkt.zemePuvodu}</p>}
+                  </div>
+                )}
+
+                {/*
+                  Varování nesmí splynout se zbytkem úředního textu – je to jediný
+                  údaj v bloku, který má změnit chování zákaznice. Vlastní vyvýšená
+                  karta v recesu, aby šla přečíst i při přeskakování očima.
+                */}
+                {produkt.bezpecnostniUpozorneni && (
+                  <div className="flex gap-2 rounded-xl bg-linda-cream p-3 shadow-neuSm">
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-linda-cognac"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="font-semibold text-linda-espresso">Bezpečnostní upozornění</p>
+                      <p className="whitespace-pre-line">{produkt.bezpecnostniUpozorneni}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
           )}
 
           {/* Akce */}

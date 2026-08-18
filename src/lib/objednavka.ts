@@ -11,7 +11,7 @@
 import { Prisma } from '@prisma/client';
 import { db } from './db';
 import { czkNaHalere, halereNaCzk, prodejniCena, spocitatObjednavku, type Halere } from './penize';
-import { nacistNastaveni } from './nastaveni';
+import { dphZCelkem, nacistNastaveni } from './nastaveni';
 import type { ObjednavkaVstup } from './validations/objednavka';
 
 export interface ChybaObjednavky {
@@ -99,9 +99,20 @@ function jeKolizeCisla(err: unknown): boolean {
   );
 }
 
+/**
+ * Doprovodné údaje o požadavku, které patří k dokladu o uzavření smlouvy.
+ *
+ * Nejsou součástí `ObjednavkaVstup` schválně: `ObjednavkaVstup` je to, co poslal
+ * prohlížeč, a IP si prohlížeč určovat nesmí. Tohle zjišťuje server.
+ */
+export interface KontextObjednavky {
+  ip?: string | null;
+}
+
 export async function vytvoritObjednavku(
   vstup: ObjednavkaVstup,
-  userId: string | null
+  userId: string | null,
+  kontext: KontextObjednavky = {}
 ): Promise<{ ok: true; data: VysledekObjednavky } | { ok: false; chyba: ChybaObjednavky }> {
   const nastaveni = await nacistNastaveni();
 
@@ -270,6 +281,32 @@ export async function vytvoritObjednavku(
           // Poukazem plně uhrazená objednávka je zaplacená hned.
           stavPlatby: rozpis.kUhrade === 0 ? 'ZAPLACENO' : 'CEKA_NA_PLATBU',
           poznamka: vstup.poznamka?.trim() || null,
+
+          /*
+           * Doklad o uzavření smlouvy (§ 1820 a násl. o. z.).
+           *
+           * `souhlasPodminky` se do téhle chvíle jen zvalidoval a zahodil.
+           * Při sporu ale musí prodávající doložit, **s čím přesně** zákaznice
+           * souhlasila – samotné „zaškrtla to“ nestačí, když se znění podmínek
+           * mezitím změnilo. Proto okamžik i verze.
+           *
+           * Schéma vyžaduje `souhlasPodminky: z.literal(true)`, takže sem se
+           * objednávka bez souhlasu vůbec nedostane a datum je bezpečné.
+           */
+          souhlasPodminkyAt: new Date(),
+          verzePodminek: nastaveni.verzePodminek,
+          ipObjednavky: kontext.ip ?? null,
+
+          /*
+           * Snímek režimu DPH, ne odkaz na aktuální nastavení.
+           *
+           * Kdyby se majitelka stala plátcem později, přepočítaly by se podle
+           * dnešního přepínače i loňské doklady – a faktura je účetní doklad,
+           * který se zpětně měnit nesmí.
+           */
+          jePlatceDph: nastaveni.jePlatceDph,
+          sazbaDph: nastaveni.jePlatceDph ? nastaveni.sazbaDph : 0,
+          dphHaleru: dphZCelkem(rozpis.celkem, nastaveni),
 
           // Snímek adresy, ne odkaz na Address – objednávka se nesmí změnit,
           // když si zákaznice adresu později upraví (sekce 7).

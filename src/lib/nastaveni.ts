@@ -32,6 +32,25 @@ export interface NastaveniWebu {
   cenaDopravyPPL: number | null;
   cenaDopravyCeskaPosta: number | null;
   prahDopravaZdarma: number | null;
+
+  /** Údaj o zápisu v obchodním či živnostenském rejstříku (§ 435 o. z.). */
+  zapisVRejstriku: string | null;
+
+  /** Základní sazba DPH v procentech. Uplatňuje se jen u plátce. */
+  sazbaDph: number;
+
+  /** Adresa pro vracené zboží – bývá jiná než sídlo. */
+  adresaProVraceni: string | null;
+
+  /** Kontakt pro uplatnění práv subjektu údajů (čl. 13 GDPR). */
+  emailProGdpr: string | null;
+
+  /**
+   * Verze obchodních podmínek. Zapisuje se ke každé objednávce – po změně
+   * znění je nutné ji zvednout, jinak snímek u objednávky ukazuje na text,
+   * který zákaznice nikdy neviděla.
+   */
+  verzePodminek: string;
 }
 
 export const VYCHOZI_NASTAVENI: NastaveniWebu = {
@@ -52,6 +71,11 @@ export const VYCHOZI_NASTAVENI: NastaveniWebu = {
   cenaDopravyPPL: null,
   cenaDopravyCeskaPosta: null,
   prahDopravaZdarma: null,
+  zapisVRejstriku: null,
+  sazbaDph: 21,
+  adresaProVraceni: null,
+  emailProGdpr: null,
+  verzePodminek: '1',
 };
 
 /** V tabulce je vždy nejvýš jeden řádek – drží ho pevné id. */
@@ -84,6 +108,11 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
       cenaDopravyPPL: zaznam.cenaDopravyPPL === null ? null : Number(zaznam.cenaDopravyPPL),
       cenaDopravyCeskaPosta: zaznam.cenaDopravyCeskaPosta === null ? null : Number(zaznam.cenaDopravyCeskaPosta),
       prahDopravaZdarma: zaznam.prahDopravaZdarma === null ? null : Number(zaznam.prahDopravaZdarma),
+      zapisVRejstriku: zaznam.zapisVRejstriku,
+      sazbaDph: zaznam.sazbaDph,
+      adresaProVraceni: zaznam.adresaProVraceni,
+      emailProGdpr: zaznam.emailProGdpr,
+      verzePodminek: zaznam.verzePodminek,
     };
   } catch (err) {
     // Web nesmí spadnout kvůli nastavení – bez něj se prostě chová výchozím
@@ -101,7 +130,25 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
  * přitom DPH uvádět nesmí a plátce ji u ceny uvést musí.
  */
 export function popisDph(nastaveni: NastaveniWebu): string {
-  return nastaveni.jePlatceDph ? 'Ceny jsou uvedené včetně DPH.' : 'Nejsme plátci DPH.';
+  return nastaveni.jePlatceDph
+    ? `Ceny jsou uvedené včetně DPH ${nastaveni.sazbaDph} %.`
+    : 'Nejsme plátci DPH.';
+}
+
+/**
+ * Rozpad koncové částky na základ daně a DPH.
+ *
+ * Ceny v e-shopu jsou vždy **včetně** daně, takže se DPH počítá shora:
+ * `daň = celkem − celkem / (1 + sazba/100)`. Počítat `celkem × sazba` je
+ * klasická záměna, která u 21 % přehodí daň o pětinu nahoru.
+ *
+ * Neplátce má nulu – DPH na dokladu uvádět nesmí.
+ */
+export function dphZCelkem(celkemHaleru: number, nastaveni: NastaveniWebu): number {
+  if (!nastaveni.jePlatceDph || nastaveni.sazbaDph <= 0) return 0;
+
+  const zaklad = Math.round(celkemHaleru / (1 + nastaveni.sazbaDph / 100));
+  return celkemHaleru - zaklad;
 }
 
 /**

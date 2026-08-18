@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
+import { cenaSeZmenila, urcitStavSlevy, zapsatCenu } from '@/lib/cenova-historie';
 import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 import { hledaciTextProduktu } from '@/lib/vyhledavani';
@@ -122,7 +123,30 @@ export async function PUT(request: Request, { params }: Kontext) {
     const bezpecneSmazat = kSmazani.filter((id) => !chranene.includes(id));
     const fotky = (vstup.fotky ?? []).filter((f) => jePlatnyToken(f.token));
 
+    /*
+     * § 12a zákona o ochraně spotřebitele – cenová evidence.
+     *
+     * Pořadí je podstatné: referenční cena se musí spočítat **před** zápisem
+     * nového bodu do evidence, jinak by do okna spadla právě nastavovaná
+     * akční cena a sleva by se vykazovala sama ze sebe.
+     *
+     * Zapisuje se jen při skutečné změně ceny. Bez téhle podmínky by každá
+     * úprava popisku přidala do evidence další řádek se stejnou částkou
+     * a doklad pro ČOI by se utopil v šumu.
+     */
+    const zmenaCeny = cenaSeZmenila(
+      { cena: stavajici.cena, cenaPoSleve: stavajici.cenaPoSleve },
+      { cena: vstup.cena, cenaPoSleve: vstup.cenaPoSleve }
+    );
+
     const noveObrazky = await db.$transaction(async (tx) => {
+      const stavSlevy = zmenaCeny
+        ? await urcitStavSlevy(tx, params.id, vstup.cena, vstup.cenaPoSleve, stavajici)
+        : {
+            nejnizsiCena30DniHaleru: stavajici.nejnizsiCena30DniHaleru,
+            slevaOd: stavajici.slevaOd,
+          };
+
       await tx.product.update({
         where: { id: params.id },
         data: {
@@ -141,6 +165,23 @@ export async function PUT(request: Request, { params }: Kontext) {
           jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
           metaTitle: vstup.metaTitle?.trim() || null,
           metaDescription: vstup.metaDescription?.trim() || null,
+
+          nejnizsiCena30DniHaleru: stavSlevy.nejnizsiCena30DniHaleru,
+          slevaOd: stavSlevy.slevaOd,
+
+          // GPSR (EU) 2023/988 – údaje o výrobci a bezpečnosti.
+          vyrobceNazev: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceNazev?.trim() || null,
+          vyrobceAdresa: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceAdresa?.trim() || null,
+          vyrobceEmail: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceEmail?.trim() || null,
+          odpovednaOsobaNazev: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaNazev?.trim() || null,
+          odpovednaOsobaAdresa: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaAdresa?.trim() || null,
+          odpovednaOsobaEmail: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaEmail?.trim() || null,
+          bezpecnostniUpozorneni: vstup.jeDarkovyPoukaz ? null : vstup.bezpecnostniUpozorneni?.trim() || null,
+          ean: vstup.jeDarkovyPoukaz ? null : vstup.ean?.trim() || null,
+          cisloSarze: vstup.jeDarkovyPoukaz ? null : vstup.cisloSarze?.trim() || null,
+          zemePuvodu: vstup.jeDarkovyPoukaz ? null : vstup.zemePuvodu?.trim() || null,
+          slozeniMaterialu: vstup.jeDarkovyPoukaz ? null : vstup.slozeniMaterialu?.trim() || null,
+          obsahujeZivocisneCasti: vstup.jeDarkovyPoukaz ? false : (vstup.obsahujeZivocisneCasti ?? false),
 
           // Přepočítat i při úpravě: přejmenovaný produkt by se jinak dál
           // hledal pod starým názvem a pod novým vůbec.
@@ -220,6 +261,15 @@ export async function PUT(request: Request, { params }: Kontext) {
         );
       }
 
+      /*
+       * Nový bod cenové evidence – až tady, po `urcitStavSlevy` výš.
+       * Uvnitř transakce schválně: kdyby zápis produktu selhal, nesmí
+       * v evidenci zůstat cena, za kterou se nikdy neprodávalo.
+       */
+      if (zmenaCeny) {
+        await zapsatCenu(tx, params.id, vstup.cena, vstup.cenaPoSleve, `admin:${admin.email}`);
+      }
+
       return vytvorene;
     });
 
@@ -231,6 +281,16 @@ export async function PUT(request: Request, { params }: Kontext) {
 
     await zapsatDoAuditu(admin.email, 'produkt.upraven', 'Product', params.id, {
       nazev: vstup.nazev,
+      // Změna ceny je právně významná (§ 12a) – v auditu musí být vidět
+      // i tehdy, když se zbytek produktu neměnil.
+      zmenaCeny: zmenaCeny
+        ? {
+            zPuvodni: Number(stavajici.cena),
+            zPuvodniPoSleve: stavajici.cenaPoSleve === null ? null : Number(stavajici.cenaPoSleve),
+            naCenu: vstup.cena,
+            naCenuPoSleve: vstup.cenaPoSleve ?? null,
+          }
+        : null,
       smazanoVariant: bezpecneSmazat.length,
       zachovanoVObjednavkach: chranene.length,
       novychFotek: noveObrazky.length,
@@ -273,6 +333,38 @@ export async function DELETE(request: Request, { params }: Kontext) {
       );
     }
 
+    /*
+     * Byl produkt někdy nabízený se slevou?
+     *
+     * Cenová evidence (§ 12a zák. č. 634/1992 Sb.) je důkazní záznam a nesmí
+     * zmizet jako vedlejší účinek údržby katalogu – právě to dřív dělala
+     * kaskáda na cizím klíči, aniž by o tom kdokoliv věděl.
+     *
+     * Rozlišuje se podle toho, jestli u produktu někdy běžela sleva:
+     *
+     *   • **Běžela** – existuje inzerovaná sleva, ke které se ČOI může zpětně
+     *     zeptat, z jaké ceny byla počítána. Produkt se nemaže, jen skryje.
+     *
+     *   • **Neběžela** – evidence obsahuje jen základní cenu, ke které nebylo
+     *     učinno žádné oznámení o slevě. Typicky omylem založený nebo testovací
+     *     kousek; ten smazat lze a evidence se smaže s ním – ale výslovně,
+     *     jedním řádkem v transakci, ne skrytou kaskádou.
+     *
+     * Produkty, které se už prodaly, odmítá kontrola výš bez ohledu na tohle.
+     */
+    const inzerovanaSleva = await db.priceHistory.count({
+      where: { productId: params.id, jeSleva: true },
+    });
+
+    if (inzerovanaSleva > 0) {
+      return odpovedChyba(
+        'Tenhle produkt byl v minulosti nabízený se slevou, takže u něj musíme uchovat cenovou evidenci – ' +
+          'zákon ji vyžaduje kvůli doložení nejnižší ceny za 30 dnů. Smažat ho proto nelze; ' +
+          'skryjte ho prosím přepnutím na „neaktivní“.',
+        409
+      );
+    }
+
     // Soubory nejdřív, databázi až potom – kdyby mazání souborů selhalo,
     // zůstane po nich v databázi stopa a jde je dohledat.
     for (const obrazek of produkt.images) {
@@ -282,12 +374,25 @@ export async function DELETE(request: Request, { params }: Kontext) {
       }
     }
 
-    // Varianty i fotky odejdou kaskádou (onDelete: Cascade ve schématu).
-    await db.product.delete({ where: { id: params.id } });
+    /*
+     * Varianty i fotky odejdou kaskádou (onDelete: Cascade ve schématu),
+     * cenová evidence ne – ta má `onDelete: Restrict`, takže ji je nutné
+     * smazat výslovně. Bez toho by `delete` skončil na cizím klíči.
+     *
+     * V jedné transakci: kdyby mazání produktu selhalo, nesmí zůstat produkt
+     * v katalogu s vymazanou cenovou evidencí.
+     */
+    await db.$transaction([
+      db.priceHistory.deleteMany({ where: { productId: params.id } }),
+      db.product.delete({ where: { id: params.id } }),
+    ]);
 
     await zapsatDoAuditu(admin.email, 'produkt.smazan', 'Product', params.id, {
       nazev: produkt.nazev,
       smazanoFotek: produkt.images.length,
+      // Se smazaným produktem odchází i jeho cenová evidence. V auditu musí
+      // zůstat aspoň stopa, že se tak stalo a kdo to udělal.
+      smazanoZaznamuCeny: true,
     });
 
     return odpovedOk({ smazano: true });

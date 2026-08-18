@@ -28,6 +28,16 @@ export interface ProduktVypis {
   slug: string;
   cena: number;
   cenaPoSleve: number | null;
+
+  /**
+   * Nejnižší cena za 30 dnů před slevou (§ 12a zák. č. 634/1992 Sb.), v haléřích.
+   *
+   * Ježí výpisu, ne jen detailu: povinnost se váže na **každé oznámení
+   * o slevě**, a přeškrtnutá cena na kartě v katalogu oznámení o slevě je.
+   * Není null právě tehdy, když `cenaPoSleve` není null.
+   */
+  nejnizsiCena30DniHaleru: number | null;
+
   znacka: string | null;
   kategorieNazev: string;
   kategorieSlug: string;
@@ -64,6 +74,7 @@ function naVypis(p: {
   slug: string;
   cena: Prisma.Decimal;
   cenaPoSleve: Prisma.Decimal | null;
+  nejnizsiCena30DniHaleru: number | null;
   znacka: string | null;
   doporuceny: boolean;
   jeDarkovyPoukaz: boolean;
@@ -77,6 +88,7 @@ function naVypis(p: {
     slug: p.slug,
     cena: Number(p.cena),
     cenaPoSleve: p.cenaPoSleve === null ? null : Number(p.cenaPoSleve),
+    nejnizsiCena30DniHaleru: p.nejnizsiCena30DniHaleru,
     znacka: p.znacka,
     kategorieNazev: p.category.nazev,
     kategorieSlug: p.category.slug,
@@ -97,6 +109,7 @@ const VYBER_VYPIS = {
   slug: true,
   cena: true,
   cenaPoSleve: true,
+  nejnizsiCena30DniHaleru: true,
   znacka: true,
   doporuceny: true,
   jeDarkovyPoukaz: true,
@@ -347,6 +360,24 @@ export interface ProduktDetail extends ProduktVypis {
   material: string | null;
   udrzba: string | null;
   sku: string | null;
+
+  /**
+   * Povinné údaje o výrobku – GPSR (EU) 2023/988 a nařízení o textilu
+   * (EU) 1007/2011. Musí být dostupné **před** dokončením nákupu, proto se
+   * čtou rovnou s detailem a nenačítají se dodatečně.
+   */
+  slozeniMaterialu: string | null;
+  obsahujeZivocisneCasti: boolean;
+  vyrobceNazev: string | null;
+  vyrobceAdresa: string | null;
+  vyrobceEmail: string | null;
+  odpovednaOsobaNazev: string | null;
+  odpovednaOsobaAdresa: string | null;
+  odpovednaOsobaEmail: string | null;
+  bezpecnostniUpozorneni: string | null;
+  ean: string | null;
+  cisloSarze: string | null;
+  zemePuvodu: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
   createdAt: Date;
@@ -386,6 +417,18 @@ export const nacistProdukt = cache(async (slug: string): Promise<ProduktDetail |
     material: p.material,
     udrzba: p.udrzba,
     sku: p.sku,
+    slozeniMaterialu: p.slozeniMaterialu,
+    obsahujeZivocisneCasti: p.obsahujeZivocisneCasti,
+    vyrobceNazev: p.vyrobceNazev,
+    vyrobceAdresa: p.vyrobceAdresa,
+    vyrobceEmail: p.vyrobceEmail,
+    odpovednaOsobaNazev: p.odpovednaOsobaNazev,
+    odpovednaOsobaAdresa: p.odpovednaOsobaAdresa,
+    odpovednaOsobaEmail: p.odpovednaOsobaEmail,
+    bezpecnostniUpozorneni: p.bezpecnostniUpozorneni,
+    ean: p.ean,
+    cisloSarze: p.cisloSarze,
+    zemePuvodu: p.zemePuvodu,
     metaTitle: p.metaTitle,
     metaDescription: p.metaDescription,
     createdAt: p.createdAt,

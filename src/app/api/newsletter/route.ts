@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { zaznamenatSouhlas } from '@/lib/souhlasy';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,14 +38,25 @@ export async function POST(request: Request) {
     }
 
     const { email, zdroj } = schema.parse(await request.json());
+    const ip = klientskaIp(request);
 
     // Opakované přihlášení nesmí skončit chybou o obsazeném e-mailu –
     // pro zákaznici je to tentýž úkon jako poprvé. Zároveň obnoví odběr,
     // který si dřív odhlásila.
+    /*
+     * IP prvního kroku double opt-inu (čl. 7 odst. 1 GDPR, § 7 zák. č. 480/2004 Sb.).
+     *
+     * Doložit je potřeba **oba** kroky: že někdo adresu zadal, i že jí patříící
+     * člověk klikl na potvrzení. Bez první IP se nedá ukázat, odkud přihláška
+     * přišla – a při stížnosti na neVyžádaný e-mail je to první dotaz ÚúOO.
+     *
+     * `ipPrihlaseni` se přepisuje i při opakovaném přihlášení: platí poslední
+     * projev vůle, ne ten původní. Historie zůstává v `SouhlasZaznam`.
+     */
     const odberatel = await db.newsletterSubscriber.upsert({
       where: { email },
-      update: { odhlasenAt: null },
-      create: { email, zdroj: zdroj ?? null },
+      update: { odhlasenAt: null, ipPrihlaseni: ip },
+      create: { email, zdroj: zdroj ?? null, ipPrihlaseni: ip },
       select: { token: true, potvrzeno: true },
     });
 
@@ -63,6 +75,21 @@ export async function POST(request: Request) {
         data: { odkaz: `${zaklad}/newsletter/potvrzeni?token=${encodeURIComponent(odberatel.token)}` },
       });
     }
+
+    /*
+     * Do evidence se zapisuje **žádost**, ne souhlas: `udeleno: false`.
+     * Souhlas vzniká až kliknutím na potvrzovací odkaz – do té doby je záznam
+     * evidencí zájmu. Kdyby se zapisoval jako udělený, vyrobený důkaz by tvrdil
+     * pravý opak toho, co double opt-in dokladá.
+     */
+    await zaznamenatSouhlas({
+      typ: 'NEWSLETTER',
+      subjekt: email,
+      udeleno: false,
+      podrobnosti: { krok: 'prihlaseni', zdroj: zdroj ?? null },
+      ip,
+      userAgent: request.headers.get('user-agent'),
+    });
 
     return odpovedOk({
       zprava: odberatel.potvrzeno

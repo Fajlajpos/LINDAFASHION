@@ -37,7 +37,13 @@ export async function POST(request: Request) {
     // odhlášen ze všech zařízení.
     const uzivatel = await overitUzivatele();
 
-    const vysledek = await vytvoritObjednavku(vstup, uzivatel?.id ?? null);
+    /*
+     * IP se předává ze serveru, ne z těla požadavku – je to důkaz o uzavření
+     * smlouvy na dálku a prohlížeč si ho určovat nesmí.
+     */
+    const vysledek = await vytvoritObjednavku(vstup, uzivatel?.id ?? null, {
+      ip: klientskaIp(request),
+    });
 
     if (!vysledek.ok) {
       return odpovedChyba(vysledek.chyba.zprava, vysledek.chyba.status, vysledek.chyba.pole);

@@ -6,6 +6,7 @@ import { unikatniSlug } from '@/lib/slug';
 import { hledaciTextProduktu } from '@/lib/vyhledavani';
 import { jePlatnyToken } from '@/lib/uloziste';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
+import { stavSlevyNovehoProduktu, zapsatCenu } from '@/lib/cenova-historie';
 import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -102,6 +103,14 @@ export async function POST(request: Request) {
     // Hlavní je právě jedna, i kdyby jich prohlížeč označil víc nebo žádnou.
     const hlavni = urcitHlavni(fotky);
 
+    /*
+     * § 12a zákona o ochraně spotřebitele. Nový produkt evidenci nemá, takže
+     * referenční cenou pro případnou slevu je jeho základní cena – viz
+     * `stavSlevyNovehoProduktu`. Zapisuje se rovnou při zakládání, aby se
+     * produkt nikdy neocitl v katalogu se slevou a bez referenční ceny.
+     */
+    const stavSlevy = stavSlevyNovehoProduktu(vstup.cena, vstup.cenaPoSleve);
+
     const produkt = await db.product.create({
       data: {
         nazev: vstup.nazev.trim(),
@@ -121,6 +130,26 @@ export async function POST(request: Request) {
         jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
         metaTitle: vstup.metaTitle?.trim() || null,
         metaDescription: vstup.metaDescription?.trim() || null,
+
+        nejnizsiCena30DniHaleru: stavSlevy.nejnizsiCena30DniHaleru,
+        slevaOd: stavSlevy.slevaOd,
+
+        // GPSR (EU) 2023/988 – bez údajů o výrobci se výrobek nesmí nabízet.
+        // U dárkového poukazu nejde o výrobek, proto se zahazují stejně
+        // jako materiál a údržba.
+        vyrobceNazev: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceNazev?.trim() || null,
+        vyrobceAdresa: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceAdresa?.trim() || null,
+        vyrobceEmail: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceEmail?.trim() || null,
+        odpovednaOsobaNazev: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaNazev?.trim() || null,
+        odpovednaOsobaAdresa: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaAdresa?.trim() || null,
+        odpovednaOsobaEmail: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaEmail?.trim() || null,
+        bezpecnostniUpozorneni: vstup.jeDarkovyPoukaz ? null : vstup.bezpecnostniUpozorneni?.trim() || null,
+        ean: vstup.jeDarkovyPoukaz ? null : vstup.ean?.trim() || null,
+        cisloSarze: vstup.jeDarkovyPoukaz ? null : vstup.cisloSarze?.trim() || null,
+        zemePuvodu: vstup.jeDarkovyPoukaz ? null : vstup.zemePuvodu?.trim() || null,
+        // Nařízení (EU) 1007/2011 – materiálové složení textilu v procentech.
+        slozeniMaterialu: vstup.jeDarkovyPoukaz ? null : vstup.slozeniMaterialu?.trim() || null,
+        obsahujeZivocisneCasti: vstup.jeDarkovyPoukaz ? false : (vstup.obsahujeZivocisneCasti ?? false),
 
         /* Text pro hledání se odvozuje z polí výš, takže musí vzniknout
            u každého zápisu produktu – jinak nový kousek v katalogu je, ale
@@ -154,6 +183,10 @@ export async function POST(request: Request) {
       },
       include: { images: { select: { id: true, originalSoubor: true } } },
     });
+
+    // Výchozí bod cenové evidence. Bez něj by první zlevnění produktu nemělo
+    // z čeho spočítat nejnižší cenu za 30 dnů.
+    await zapsatCenu(db, produkt.id, vstup.cena, vstup.cenaPoSleve, `admin:${admin.email}`);
 
     // Teprve teď do fronty – kdyby zakládání produktu selhalo, nezůstane
     // ve frontě úloha ukazující na neexistující řádek.

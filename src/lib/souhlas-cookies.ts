@@ -18,6 +18,16 @@ export interface SouhlasCookies {
 
 export const KLIC_SOUHLASU = 'linda_cookie_consent';
 
+/**
+ * Klíč pod nímž si prohlížeč drží náhodný identifikátor návštěvnice.
+ *
+ * Slouží **jen** k tomu, aby se v evidenci souhlasů dala spojit jednotlivá
+ * rozhodnutí téže osoby („nejdřív odmítla, později povolila analytiku“).
+ * Bez něj by evidence byla hromada nespojitelných řádků a nedoložila by,
+ * že dnešní stav souhlasu je ten poslední.
+ */
+export const KLIC_SUBJEKTU = 'linda_consent_id';
+
 /** Výchozí stav do doby, než návštěvnice rozhodne. Nic volitelného zapnuté. */
 export const VYCHOZI_SOUHLAS: SouhlasCookies = {
   nezbytne: true,
@@ -50,6 +60,52 @@ export function nacistSouhlas(): SouhlasCookies | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Náhodný identifikátor návštěvnice pro evidenci souhlasů.
+ *
+ * Záměrně `crypto.randomUUID()`, ne otisk prohlížeče ani hash IP: identifikátor
+ * odvozený z něčeho, co návštěvnici popisuje, by byl sledováním – tedy právě
+ * tím, co ten souhlas teprve povoluje. Náhodné číslo o ní neříká nic.
+ */
+export function idSubjektu(): string {
+  const ulozene = window.localStorage.getItem(KLIC_SUBJEKTU);
+  if (ulozene) return ulozene;
+
+  // `randomUUID` chybí v nezabezpečeném kontextu (http na LAN při testování
+  // na telefonu) – záložka není kryptograficky silná, ale k odlišení
+  // dvou návštěvnic stačí a nesmí to shodit celou lištu.
+  const nove =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+  window.localStorage.setItem(KLIC_SUBJEKTU, nove);
+  return nove;
+}
+
+/**
+ * Odeslání rozhodnutí do serverové evidence (čl. 7 odst. 1 GDPR).
+ *
+ * `void` a `catch` schválně: lišta se musí dát odkliknout i tehdy, když je
+ * server nedostupný. Souhlas platí tím, že ho návštěvnice udělila, ne tím,
+ * že se nám ho podařilo zapsat – a zablokovaná lišta by zablokovala web.
+ */
+export function odeslatSouhlasNaServer(souhlas: SouhlasCookies): void {
+  if (typeof window === 'undefined') return;
+
+  void fetch('/api/souhlas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subjekt: idSubjektu(),
+      analyticke: souhlas.analyticke,
+      marketingove: souhlas.marketingove,
+    }),
+  }).catch(() => {
+    // Ticho je záměr. Chyba sítě není nic, s čím by zákaznice mohla pohnout.
+  });
 }
 
 export function ulozitSouhlas(souhlas: SouhlasCookies): void {

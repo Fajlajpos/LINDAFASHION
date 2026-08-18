@@ -84,6 +84,52 @@ export const produktSchema = z
     metaTitle: z.string().max(180).optional().nullable(),
     metaDescription: z.string().max(400).optional().nullable(),
 
+    /*
+     * GPSR – nařízení (EU) 2023/988, účinné od 13. 12. 2024.
+     *
+     * Čl. 19 žádá, aby u výrobku nabízeného online byly uvedeny údaje
+     * o výrobci a kontakt na něj. Pole jsou tu volitelná na úrovni typu, ale
+     * `refine` níž je u běžného zboží vyžaduje – jinak by nový produkt šel
+     * uložit bez nich a rovnou by byl v katalogu v rozporu s nařízením.
+     */
+    vyrobceNazev: z.string().max(200).optional().nullable(),
+    vyrobceAdresa: z.string().max(300).optional().nullable(),
+    vyrobceEmail: z
+      .string()
+      .max(200)
+      .optional()
+      .nullable()
+      .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), {
+        message: 'Zadejte platný e-mail výrobce.',
+      }),
+
+    odpovednaOsobaNazev: z.string().max(200).optional().nullable(),
+    odpovednaOsobaAdresa: z.string().max(300).optional().nullable(),
+    odpovednaOsobaEmail: z
+      .string()
+      .max(200)
+      .optional()
+      .nullable()
+      .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), {
+        message: 'Zadejte platný e-mail odpovědné osoby.',
+      }),
+
+    bezpecnostniUpozorneni: z.string().max(2000).optional().nullable(),
+    ean: z.string().max(60).optional().nullable(),
+    cisloSarze: z.string().max(60).optional().nullable(),
+    zemePuvodu: z.string().max(120).optional().nullable(),
+
+    /** Nařízení (EU) 1007/2011 – složení v procentech hmotnosti, sestupně. */
+    slozeniMaterialu: z.string().max(500).optional().nullable(),
+
+    /**
+     * Čl. 12 téhož nařízení. Nepovinné v tom smyslu, že většina kusů živočišné
+     * části nemá – ale je to vědomá volba majitelky, ne výchozí pravda. Uvést
+     * větu u výrobku, který je nemá, je stejná vada jako zamlčet ji u toho,
+     * který je má.
+     */
+    obsahujeZivocisneCasti: z.boolean().optional().default(false),
+
     varianty: z.array(variantaSchema).min(1, 'Přidejte alespoň jednu variantu.').max(60),
     fotky: z.array(nahranaFotkaSchema).max(30).optional().default([]),
   })
@@ -91,6 +137,51 @@ export const produktSchema = z
     message: 'Akční cena musí být nižší než běžná cena.',
     path: ['cenaPoSleve'],
   })
+  /*
+   * GPSR: výrobce a kontakt na něj jsou u zboží povinné.
+   *
+   * Dárkový poukaz je vyjmutý – není to výrobek ve smyslu nařízení, nemá
+   * výrobce ani bezpečnostní pokyny. Stejná výjimka jako u materiálu a údržby.
+   */
+  .refine((d) => d.jeDarkovyPoukaz || !!d.vyrobceNazev?.trim(), {
+    message: 'Vyplňte výrobce – GPSR ho u nabízeného zboží vyžaduje.',
+    path: ['vyrobceNazev'],
+  })
+  .refine((d) => d.jeDarkovyPoukaz || !!d.vyrobceAdresa?.trim(), {
+    message: 'Vyplňte poštovní adresu výrobce – GPSR ji vyžaduje.',
+    path: ['vyrobceAdresa'],
+  })
+  .refine((d) => d.jeDarkovyPoukaz || !!d.vyrobceEmail?.trim(), {
+    message: 'Vyplňte kontaktní e-mail výrobce – GPSR ho vyžaduje.',
+    path: ['vyrobceEmail'],
+  })
+  /*
+   * Nařízení (EU) 1007/2011: textilní výrobek se nesmí dodávat na trh bez
+   * údaje o materiálovém složení. Volný popis v `material`
+   * („jemný praný len“) tu povinnost neplní – potřeba jsou procenta.
+   */
+  .refine((d) => d.jeDarkovyPoukaz || !!d.slozeniMaterialu?.trim(), {
+    message: 'Vyplňte materiálové složení v procentech – u textilu je povinné.',
+    path: ['slozeniMaterialu'],
+  })
+  /*
+   * Odpovědná osoba v EU (čl. 16 GPSR) se vyžaduje jen u výrobce mimo EU.
+   * Když je vyplněná jen částečně, je to skoro jistě nedopatření – údaj,
+   * který na stránce vyjde jako „jméno bez adresy“, povinnost nesplní.
+   */
+  .refine(
+    (d) => {
+      const vyplneno = [d.odpovednaOsobaNazev, d.odpovednaOsobaAdresa, d.odpovednaOsobaEmail].filter(
+        (c) => !!c?.trim()
+      ).length;
+      return vyplneno === 0 || vyplneno === 3;
+    },
+    {
+      message:
+        'U odpovědné osoby v EU vyplňte název, adresu i e-mail – nebo nechte všechna tři pole prázdná.',
+      path: ['odpovednaOsobaNazev'],
+    }
+  )
   .refine(
     (d) => {
       // Varianty se rozlišují podle velikosti (u poukazu podle částky) –

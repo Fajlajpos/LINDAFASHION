@@ -30,6 +30,7 @@ vi.mock('@/lib/queue', () => ({
 }));
 
 const { POST } = await import('./route');
+const { DELETE } = await import('./[id]/route');
 
 /** Token musí projít `jePlatnyToken` – 32 hex znaků a povolená přípona. */
 function token(): string {
@@ -54,21 +55,31 @@ function produkt(categoryId: string, fotky: Array<{ token: string; puvodniNazev:
     popis: 'Popis produktu pro test.',
     categoryId,
     cena: 3490,
+
+    // GPSR a nařízení o textilu – bez nich schéma produkt odmítne, takže
+    // „minimální platný produkt“ už je nese.
+    slozeniMaterialu: '100 % hedvábí',
+    vyrobceNazev: 'Tessitura Bellini S.r.l.',
+    vyrobceAdresa: 'Via Roma 12, 50123 Firenze, Itálie',
+    vyrobceEmail: 'info@bellini.it',
+
     varianty: [{ velikost: 'M', skladem: 3 }],
     fotky,
   };
 }
 
+// Na úrovni souboru, ne uvnitř jednoho `describe` – jinak druhá skupina testů
+// běží nad zbytky po první a padá na unikátním slugu kategorie.
+beforeEach(async () => {
+  await vycistitDatabazi();
+  stav.admin = { email: 'admin@example.cz' };
+});
+
+afterAll(async () => {
+  await db.$disconnect();
+});
+
 describe('POST /api/admin/produkty', () => {
-  beforeEach(async () => {
-    await vycistitDatabazi();
-    stav.admin = { email: 'admin@example.cz' };
-  });
-
-  afterAll(async () => {
-    await db.$disconnect();
-  });
-
   it('uloží fotky v poslaném pořadí a označenou udělá hlavní', async () => {
     const kat = await kategorie();
 
@@ -158,5 +169,75 @@ describe('POST /api/admin/produkty', () => {
     const odpoved = await POST(pozadavek(produkt('cokoliv', [])));
 
     expect(odpoved.status).toBe(403);
+  });
+});
+
+/*
+ * Cenová evidence (§ 12a zák. č. 634/1992 Sb.) je důkazní záznam.
+ *
+ * Původně visela na produktu přes `onDelete: Cascade`, takže smažení produktu
+ * v administraci ji tiše zahodilo – bez chyby, bez varování, bez stopy.
+ * Tyhle testy hlídají, že se to nevrátí: kaskáda se přidává do schématu
+ * mechanicky a nikdo si u ní nevzpomene, že tahle tabulka je jiná.
+ */
+describe('DELETE /api/admin/produkty/[id] – cenová evidence', () => {
+  it('nedovolí smazat produkt, který byl nabízený se slevou', async () => {
+    const kat = await kategorie();
+
+    const vytvoreni = await POST(pozadavek(produkt(kat.id, [])));
+    expect(vytvoreni.status).toBe(201);
+    const { id } = (await vytvoreni.json()) as { id: string };
+
+    // Sleva, jak by ji zapsála úprava produktu.
+    await db.priceHistory.create({
+      data: {
+        productId: id,
+        cenaHaleru: 299000,
+        zakladniCenaHaleru: 349000,
+        jeSleva: true,
+        zdroj: 'test',
+      },
+    });
+
+    const odpoved = await DELETE(pozadavek({}), { params: { id } });
+
+    expect(odpoved.status).toBe(409);
+    // Produkt i evidence zůstávají – ČOI se může zpětně zeptat, z jaké ceny
+    // byla inzerovaná sleva počítána.
+    expect(await db.product.count({ where: { id } })).toBe(1);
+    expect(await db.priceHistory.count({ where: { productId: id } })).toBeGreaterThan(0);
+  });
+
+  it('produkt bez inzerované slevy smazat lze i s jeho evidencí', async () => {
+    // Omylem založený kousek. Žádné oznámení o slevě nevzniklo, takže není
+    // co dokládat – ale smažení evidence je výslovný krok, ne kaskáda.
+    const kat = await kategorie();
+
+    const vytvoreni = await POST(pozadavek(produkt(kat.id, [])));
+    const { id } = (await vytvoreni.json()) as { id: string };
+
+    // Založení produktu samo zapisuje výchozí bod evidence.
+    expect(await db.priceHistory.count({ where: { productId: id } })).toBe(1);
+
+    const odpoved = await DELETE(pozadavek({}), { params: { id } });
+
+    expect(odpoved.status).toBe(200);
+    expect(await db.product.count({ where: { id } })).toBe(0);
+    expect(await db.priceHistory.count({ where: { productId: id } })).toBe(0);
+  });
+
+  it('založení produktu zapíše výchozí bod cenové evidence', async () => {
+    // Bez něj by první zlevnění nemělo z čeho spočítat nejnižší cenu za 30 dnů.
+    const kat = await kategorie();
+
+    const vytvoreni = await POST(pozadavek(produkt(kat.id, [])));
+    const { id } = (await vytvoreni.json()) as { id: string };
+
+    const zaznamy = await db.priceHistory.findMany({ where: { productId: id } });
+
+    expect(zaznamy).toHaveLength(1);
+    expect(zaznamy[0].cenaHaleru).toBe(349000);
+    expect(zaznamy[0].zakladniCenaHaleru).toBe(349000);
+    expect(zaznamy[0].jeSleva).toBe(false);
   });
 });

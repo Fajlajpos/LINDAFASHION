@@ -52,6 +52,31 @@ export const nastaveniSchema = z
     cenaDopravyPPL: volitelnaCena,
     cenaDopravyCeskaPosta: volitelnaCena,
     prahDopravaZdarma: volitelnaCena,
+
+    // § 435 o. z. – údaj o zápisu v rejstříku patří na obchodní listiny i na web.
+    zapisVRejstriku: volitelnyText(300),
+
+    /*
+     * Sazba DPH. Neomezuje se na výčet platných sazeb schválně – sazby mění
+     * zákon a pevný seznam v kódu je přesně ten kus, na který se při novele
+     * zapomene. Rozsah 0–99 stačí jako pojistka proti překlepu.
+     */
+    sazbaDph: z.coerce.number().int().min(0).max(99).optional().default(21),
+
+    adresaProVraceni: volitelnyText(300),
+    emailProGdpr: volitelnyText(180),
+
+    /*
+     * Verze obchodních podmínek. Prázdná být nesmí: zapisuje se ke každé
+     * objednávce jako součást dokladu a prázdný snímek nedokládá nic.
+     */
+    verzePodminek: z
+      .string()
+      .min(1, 'Vyplňte verzi obchodních podmínek.')
+      .max(60)
+      .optional()
+      .default('1')
+      .transform((v) => v.trim()),
   })
   .refine((d) => !d.rezimDovolene || d.datumNavratu !== null, {
     message: 'U zapnuté dovolené vyplňte datum návratu – zákaznice se podle něj řídí.',

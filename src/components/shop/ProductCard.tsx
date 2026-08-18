@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Heart, Sparkles, Gift } from 'lucide-react';
 import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
+import { popisNejnizsiCeny, procentoSlevyZReferencni } from '@/lib/penize';
 import { useFavorites } from '@/lib/favorites-context';
 
 /**
@@ -37,6 +38,13 @@ export interface ProductCardProps {
   slug: string;
   cena: number;
   cenaPoSleve?: number | null;
+
+  /**
+   * Nejnižší cena za 30 dnů před slevou v haléřích (§ 12a zák. č. 634/1992 Sb.).
+   * Bez ní se sleva na kartě **neinzeruje** – viz `procentoSlevyZReferencni` níž.
+   */
+  nejnizsiCena30DniHaleru?: number | null;
+
   znacka?: string | null;
   kategorieNazev?: string | null;
   obrazekUrl?: string | null;
@@ -49,6 +57,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   slug,
   cena,
   cenaPoSleve,
+  nejnizsiCena30DniHaleru,
   znacka,
   kategorieNazev,
   obrazekUrl,
@@ -59,7 +68,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const jeOblibeny = isFavorite(slug);
   const hasDiscount = Boolean(cenaPoSleve && cenaPoSleve < cena);
   const displayPrice = hasDiscount ? cenaPoSleve : cena;
-  const discountPercent = hasDiscount ? Math.round(((cena - cenaPoSleve!) / cena) * 100) : 0;
+
+  /*
+   * § 12a zákona o ochraně spotřebitele.
+   *
+   * Procento se počítá z **nejnižší ceny za 30 dnů**, ne ze základní ceny.
+   * Původní výpočet `(cena - cenaPoSleve) / cena` je přesně to, co novela
+   * zakazuje: kdyby se základní cena před akcí zvedla, inzerovala by karta
+   * slevu, která nikdy neexistovala.
+   *
+   * Když refereční cena chybí (produkt z doby před zavedenou evidencí),
+   * štítek se **nezobrazí vůbec**. Raději žádné procento než nedoložitelné.
+   */
+  const discountPercent = procentoSlevyZReferencni(
+    Math.round((displayPrice ?? cena) * 100),
+    nejnizsiCena30DniHaleru ?? null
+  );
+
+  const popisReferencniCeny = hasDiscount ? popisNejnizsiCeny(nejnizsiCena30DniHaleru ?? null) : null;
 
   return (
     /* Karta má stejnou barvu jako stránka – od podkladu ji dělí jen reliéf.
@@ -73,7 +99,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             Nová kolekce
           </span>
         )}
-        {hasDiscount && (
+        {discountPercent !== null && (
           <span className="bg-linda-cognac text-white text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full shadow-sm">
             <span className="sr-only">Sleva </span>-{discountPercent}%
           </span>
@@ -210,6 +236,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               )}
             </div>
+
+            {/* Přeškrtnutá cena je oznámení o slevě, a to podle § 12a musí
+                refereční cenu nést i tady, ne jen na detailu produktu. */}
+            {popisReferencniCeny && (
+              <p className="mt-1 text-[10px] leading-tight text-linda-espresso/70">{popisReferencniCeny}</p>
+            )}
           </div>
 
           {/* Šipka se posune při najetí na celou kartu, ne až na odkaz:
