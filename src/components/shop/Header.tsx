@@ -26,7 +26,7 @@ const NAV_LINKS = [
   { href: '/produkty/saty', label: 'Šaty' },
   { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
   { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty/darkove-poukazy', label: 'Poukazy', accent: true },
+  { href: '/produkty/darkove-poukazy', label: 'Poukazy' },
   { href: '/o-mne', label: 'O mně' },
 ];
 
@@ -195,18 +195,15 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label="Hlavní navigace"
               className="hidden lg:flex items-center gap-2 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
             >
-              {NAV_LINKS.map(({ href, label, accent }) => (
+              {NAV_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
-                  /* Vlasové podtržítko se vysouvá zleva. Kreslí ho `::after`
-                     přes `scaleX`, ne přes rostoucí šířku – šířka nutí
-                     prohlížeč přepočítat rozvržení v každém snímku, kdežto
-                     `transform` odbaví kompozitor. Prvek je vlasový (1 px) a
-                     leží uvnitř `py-2`, takže odkazy nemění výšku. */
-                  className={`relative py-2 rounded-sm transition-colors hover:text-linda-cognac after:absolute after:inset-x-0 after:bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-linda-cognac after:transition-transform after:duration-200 after:ease-out after:content-[''] hover:after:scale-x-100 ${
-                    accent ? 'text-linda-cognac font-semibold' : ''
-                  }`}
+                  /* Hover je jen přebarvení do cognacu – nic dalšího.
+                     `rounded-full` je kvůli globálnímu `:focus-visible`
+                     prstenci, aby při procházení klávesnicí obepnul slovo
+                     a nekreslil kolem něj hranatý obdélník. */
+                  className="rounded-full py-2 transition-colors duration-200 hover:text-linda-cognac"
                 >
                   {label}
                 </Link>
@@ -391,14 +388,12 @@ export const Header: React.FC<HeaderProps> = ({
             </Link>
           )}
 
-          {NAV_LINKS.map(({ href, label, accent }) => (
+          {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex min-h-touch items-center justify-center border-b border-linda-sand/40 ${
-                accent ? 'font-semibold text-linda-cognac' : ''
-              }`}
+              className="flex min-h-touch items-center justify-center border-b border-linda-sand/40"
             >
               {label}
             </Link>

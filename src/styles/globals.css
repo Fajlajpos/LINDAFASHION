@@ -194,14 +194,6 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
     transform: none !important;
   }
 
-  /* Podtržítko, které se u odkazu vysouvá zleva (`after:scale-x-0` →
-     `hover:after:scale-x-100`). Pravidlo výš na pseudoelement nedosáhne a
-     zrušit ho úplně nejde – podtržení nese stav hoveru. Necháme ho tedy
-     naskočit skokem: informace zůstane, pohyb zmizí. */
-  [class*="after:scale-x"]::after {
-    transition: none !important;
-  }
-
   /* Naskočení odznaků. Bez animace prvek zůstane ve svém koncovém stavu
      (opacity 1, scale 1), takže se nic neztratí – jen se neroztáhne. */
   .animate-popIn {
