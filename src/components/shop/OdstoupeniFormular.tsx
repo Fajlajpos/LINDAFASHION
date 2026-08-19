@@ -45,6 +45,8 @@ interface NalezenaObjednavka {
   datumDoruceni: string | null;
   lhutaDo: string | null;
   polozky: Polozka[];
+  /** Kusy, které už pokrývá dřívější, dosud nevyřízené odstoupení. */
+  jizPodanePolozky: string[];
 }
 
 type OdpovedHledani =
@@ -55,6 +57,9 @@ interface OdpovedPrijeti {
   prijatoAt: string;
   cisloObjednavky: string;
   adresaProVraceni: string | null;
+  /** Co se doopravdy vrací – u částečného odstoupení ne celá objednávka. */
+  vraceno: Array<{ nazev: string; velikost: string; mnozstvi: number }>;
+  celaObjednavka: boolean;
   zprava: string;
 }
 
@@ -107,6 +112,14 @@ export function OdstoupeniFormular({
   const [objednavka, setObjednavka] = useState<NalezenaObjednavka | null>(null);
   const [vysledek, setVysledek] = useState<OdpovedPrijeti | null>(null);
 
+  /*
+   * Které kusy se vracejí. Předvyplněné je **všechno, co ještě jde vrátit** –
+   * vracení celé objednávky je nejčastější případ a zákaznice, která chce
+   * vrátit všechno, tak nemusí nic zaškrtávat. Odškrtnout je snazší než
+   * hledat, proč tlačítko nejde stisknout.
+   */
+  const [vybrane, setVybrane] = useState<string[]>([]);
+
   const [nacitam, setNacitam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
@@ -136,7 +149,13 @@ export function OdstoupeniFormular({
       return;
     }
 
-    setObjednavka(odpoved.data.objednavka);
+    const nalezena = odpoved.data.objednavka;
+    setObjednavka(nalezena);
+    setVybrane(
+      nalezena.polozky
+        .filter((p) => !nalezena.jizPodanePolozky.includes(p.id))
+        .map((p) => p.id)
+    );
     setKrok('rekapitulace');
     setNacitam(false);
   }, []);
@@ -169,6 +188,7 @@ export function OdstoupeniFormular({
       token: objednavka.token,
       potvrzeno: true,
       duvod: duvod.trim() || null,
+      polozky: vybrane,
     });
 
     if (odpoved.ok) {
@@ -207,6 +227,16 @@ export function OdstoupeniFormular({
           <div className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
             <Radek stitek="Objednávka" hodnota={vysledek.cisloObjednavky} />
             <Radek stitek="Přijato" hodnota={datumACas(vysledek.prijatoAt)} />
+            <Radek
+              stitek="Vracíte"
+              hodnota={
+                vysledek.celaObjednavka
+                  ? 'celou objednávku'
+                  : vysledek.vraceno
+                      .map((p) => `${p.nazev} (${p.velikost}), ${p.mnozstvi} ks`)
+                      .join(' · ')
+              }
+            />
           </div>
         </section>
 
@@ -294,22 +324,76 @@ export function OdstoupeniFormular({
             />
           </div>
 
+          {/*
+            Výběr kusů k vrácení.
+            Odstoupit lze i **částečně** – zákaznice, která si ze tří kousků
+            chce nechat dva, na to má právo. Dokud tu byl jen výpis, mohla to
+            napsat leda do nepovinné poznámky a doufat, že si toho někdo
+            všimne. Zaškrtnuté je předem všechno, co ještě jde vrátit.
+          */}
           {objednavka.polozky.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-linda-espresso/70">
-                Zboží z objednávky
-              </h3>
-              <ul className="space-y-1.5 text-xs text-linda-espresso/85">
-                {objednavka.polozky.map((p) => (
-                  <li key={p.id} className="flex justify-between gap-3">
-                    <span>
-                      {p.nazev} <span className="text-linda-espresso/70">· {p.velikost}</span>
-                    </span>
-                    <span className="shrink-0 font-semibold">{p.mnozstvi} ks</span>
-                  </li>
-                ))}
+            <fieldset>
+              <legend className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-linda-espresso/70">
+                Co vracíte
+              </legend>
+
+              <ul className="space-y-2">
+                {objednavka.polozky.map((p) => {
+                  const jizPodane = objednavka.jizPodanePolozky.includes(p.id);
+                  const zaskrtnuto = vybrane.includes(p.id);
+
+                  return (
+                    <li key={p.id}>
+                      <label
+                        className={`flex min-h-touch items-center gap-3 rounded-xl px-4 py-2.5 text-xs transition-all duration-200 ${
+                          jizPodane
+                            ? 'cursor-not-allowed bg-linda-sandLight text-linda-espresso/60 shadow-neuInsetSm'
+                            : zaskrtnuto
+                              ? 'cursor-pointer bg-linda-sandLight text-linda-espresso shadow-neuInsetSm'
+                              : 'cursor-pointer bg-linda-cream text-linda-espresso/85 shadow-neuSm hover:shadow-neu'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={zaskrtnuto}
+                          disabled={jizPodane || nacitam}
+                          onChange={(e) =>
+                            setVybrane((stav) =>
+                              e.target.checked
+                                ? [...stav, p.id]
+                                : stav.filter((id) => id !== p.id)
+                            )
+                          }
+                          className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac disabled:cursor-not-allowed"
+                        />
+
+                        <span className="flex-1">
+                          {p.nazev}{' '}
+                          <span className="text-linda-espresso/70">
+                            · {p.velikost} · {p.mnozstvi} ks
+                          </span>
+                          {jizPodane && (
+                            /* Popisek uvnitř stavového prvku musí nést význam
+                               textem, ne jen barvou – tady navíc barvou nemůže,
+                               protože zapuštěná plocha je stejná jako
+                               u zaškrtnuté položky. */
+                            <span className="ml-1 font-semibold text-linda-cognac">
+                              — už vracíte
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
               </ul>
-            </div>
+
+              {vybrane.length === 0 && (
+                <p role="alert" className="mt-2 text-[11px] font-medium text-red-800">
+                  Vyberte aspoň jeden kus, který chcete vrátit.
+                </p>
+              )}
+            </fieldset>
           )}
 
           <p className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-4 text-[11px] leading-relaxed text-linda-espresso/85 shadow-neuInsetSm">
@@ -352,7 +436,7 @@ export function OdstoupeniFormular({
             <button
               type="button"
               onClick={() => void potvrdit()}
-              disabled={nacitam}
+              disabled={nacitam || vybrane.length === 0}
               className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {nacitam ? (

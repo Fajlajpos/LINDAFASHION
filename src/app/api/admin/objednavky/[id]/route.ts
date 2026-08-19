@@ -44,6 +44,35 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const rusi = vstup.stav === 'ZRUSENA' && objednavka.stav !== 'ZRUSENA';
     const obnovujeZeZruseni = objednavka.stav === 'ZRUSENA' && vstup.stav && vstup.stav !== 'ZRUSENA';
 
+    /*
+     * --- Datum expedice a doručení ---
+     *
+     * Oba sloupce ve schématu byly, ale **nikdo do nich nikdy nezapsal**.
+     * `datumDoruceni` přitom rozhoduje o tom, kdy začíná čtrnáctidenní lhůta
+     * pro odstoupení (§ 1829 odst. 1): dokud je prázdné, `lzeOdstoupit()`
+     * vrací pořád `true` a e-shop nedokáže říct, jestli je odstoupení včasné.
+     * Chyba to byla v bezpečném směru – ve prospěch zákaznice – ale znamenala,
+     * že se lhůta ve skutečnosti nehlídala vůbec.
+     *
+     * Datum se dopisuje jen tehdy, když ještě žádné není. Přepsat ho při
+     * druhém uložení téhož stavu by lhůtu posunulo dopředu, a to je přesně ta
+     * změna, kterou zákaznice odnese: odstoupení podané poslední den by se
+     * najednou počítalo od nového data.
+     *
+     * `EXPEDOVANA` je v aplikaci název pro odeslání zásilky; `datumExpedice`
+     * na běh lhůty vliv nemá, drží se kvůli přehledu a reklamacím.
+     */
+    const ted = new Date();
+
+    const casovaZnacka = {
+      ...(vstup.stav === 'EXPEDOVANA' && objednavka.datumExpedice === null
+        ? { datumExpedice: ted }
+        : {}),
+      ...(vstup.stav === 'DORUCENA' && objednavka.datumDoruceni === null
+        ? { datumDoruceni: ted }
+        : {}),
+    };
+
     if (obnovujeZeZruseni) {
       return odpovedChyba(
         'Zrušenou objednávku nelze vrátit zpět – zboží se už vrátilo do nabídky. Založte prosím novou objednávku.',
@@ -63,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           ...(vstup.stav ? { stav: vstup.stav } : {}),
           ...(vstup.stavPlatby ? { stavPlatby: vstup.stavPlatby } : {}),
           ...(vstup.cisloZasilky !== undefined ? { cisloZasilky: vstup.cisloZasilky } : {}),
+          ...casovaZnacka,
           // Z pole `zrusil` je pak v adminu vidět, kdo objednávku zrušil (sekce 6.4).
           ...(rusi ? { zrusil: 'ADMIN' as const } : {}),
         },

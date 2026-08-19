@@ -134,9 +134,14 @@ export const NAZVY_DRUHU: Record<DruhDokumentu, string> = {
  * vzorový formulář, náklady na vrácení, mimosoudní řešení sporů a odpovědnost
  * z vadného plnění.
  *
- * Značky `{{nazevFirmy}}` a spol. se nahrazují údaji z `Settings` až při
- * vykreslení. Ve **vloženém** dokumentu značky být nemají – uložený text je
- * důkaz a má být čitelný sám o sobě.
+ * Údaje o prodávajícím tu schválně nejsou – doplňuje je stránka z `Settings`,
+ * protože adresa se stěhuje častěji než pravidla a nová verze celého dokumentu
+ * kvůli změně telefonu by z verzování udělala šum.
+ *
+ * **Evropská platforma ODR se tu neuvádí a nesmí vrátit.** Nařízení (EU)
+ * 524/2013 bylo zrušeno a platforma 20. 7. 2025 skončila; odkaz na ni by dnes
+ * posílal zákaznici na neexistující službu. Mimosoudní řešení sporů obstarává
+ * ČOI, ta funguje dál.
  */
 export const VYCHOZI_ZNENI: Record<DruhDokumentu, { verze: string; nadpis: string; obsah: string }> =
   {
@@ -185,7 +190,7 @@ Práva z vadného plnění a postup při reklamaci upravuje reklamační řád, 
 
 ## 7. Mimosoudní řešení sporů
 
-K mimosoudnímu řešení spotřebitelských sporů z kupní smlouvy je příslušná Česká obchodní inspekce, se sídlem Štěpánská 567/15, 120 00 Praha 2, internetová adresa www.coi.cz. Spotřebitel může využít rovněž platformu pro řešení sporů online.
+K mimosoudnímu řešení spotřebitelských sporů z kupní smlouvy je příslušná Česká obchodní inspekce, se sídlem Štěpánská 567/15, 120 00 Praha 2, internetová adresa www.coi.cz. Návrh na zahájení mimosoudního řešení sporu podává spotřebitel; řízení je pro něj bezplatné.
 
 ## 8. Ochrana osobních údajů
 

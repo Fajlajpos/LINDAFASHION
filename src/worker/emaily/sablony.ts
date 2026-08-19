@@ -410,6 +410,12 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         ? (data.polozky as Array<{ nazev?: unknown; velikost?: unknown; mnozstvi?: unknown }>)
         : [];
 
+      /* Nadpis seznamu rozlišuje celou objednávku od částečného vrácení.
+         „Zboží z objednávky" u částečného odstoupení vypadá, jako by se
+         vracelo všechno – a potvrzení je doklad, ne shrnutí. */
+      const celaObjednavka = data.celaObjednavka === true;
+      const nadpisSeznamu = celaObjednavka ? 'Zboží z objednávky:' : 'Vracíte tyto kusy:';
+
       const seznamHtml = polozky.length
         ? '<ul style="margin:0 0 14px 0;padding-left:20px;">' +
           polozky
@@ -435,7 +441,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
               ['Objednávka', cislo],
               ['Přijato', kdy],
             ]) +
-            (seznamHtml ? odstavec('<strong>Zboží z objednávky:</strong>') + seznamHtml : '') +
+            (seznamHtml ? odstavec(`<strong>${nadpisSeznamu}</strong>`) + seznamHtml : '') +
             (data.duvod ? odstavec(`<strong>Vaše poznámka:</strong> ${e(data.duvod)}`) : '') +
             odstavec(
               adresa
@@ -453,7 +459,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           '',
           `Objednávka: ${cislo}`,
           `Přijato: ${kdy}`,
-          ...(seznamText.length ? ['', 'Zboží z objednávky:', ...seznamText] : []),
+          ...(seznamText.length ? ['', nadpisSeznamu, ...seznamText] : []),
           ...(data.duvod ? ['', `Vaše poznámka: ${String(data.duvod)}`] : []),
           '',
           adresa

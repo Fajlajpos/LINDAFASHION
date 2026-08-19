@@ -46,6 +46,15 @@ export type DuvodOdmitnuti = 'nenalezeno' | 'uzavrena' | 'lhuta_vyprsela' | 'jiz
 export interface VysledekHledani {
   objednavka: NalezenaObjednavka | null;
   duvod: DuvodOdmitnuti | null;
+  /**
+   * Položky, které už rozpracované odstoupení pokrývá.
+   *
+   * Odstoupit lze i **částečně** – vrátit jedny šaty ze tří a zbytek si nechat
+   * (§ 1829 nikde neříká, že se odstupuje od celé objednávky). Formulář proto
+   * musí umět říct „tuhle už vracíte" a zároveň nechat ostatní vybrat.
+   * Prázdné pole = zatím nic.
+   */
+  jizPodanePolozky: string[];
 }
 
 const VYBER = {
@@ -150,14 +159,14 @@ export async function najitProOdstoupeni(
 ): Promise<VysledekHledani> {
   const objednavka = await najitObjednavkuKlicem(klic);
 
-  if (!objednavka) return { objednavka: null, duvod: 'nenalezeno' };
+  if (!objednavka) return { objednavka: null, duvod: 'nenalezeno', jizPodanePolozky: [] };
 
   if ((UZAVRENE as readonly string[]).includes(objednavka.stav)) {
-    return { objednavka, duvod: 'uzavrena' };
+    return { objednavka, duvod: 'uzavrena', jizPodanePolozky: [] };
   }
 
   if (!lzeOdstoupit(objednavka.datumDoruceni, ted)) {
-    return { objednavka, duvod: 'lhuta_vyprsela' };
+    return { objednavka, duvod: 'lhuta_vyprsela', jizPodanePolozky: [] };
   }
 
   /*
@@ -165,19 +174,38 @@ export async function najitProOdstoupeni(
    * omyl brzdí, ale dvojklik na potvrzení ani znovuposlání stránky nesmí
    * vyrobit dvě žádosti — majitelka by je rozplétala ručně a zákaznice by
    * dostala dvě potvrzení o tomtéž.
+   *
+   * Kontrola je ale **po položkách**, ne na celou objednávku. Původně stačila
+   * jediná otevřená žádost a další odstoupení se odmítlo — což zákaznici,
+   * která minulý týden vrátila jedny šaty a teď chce vrátit i druhé, upíralo
+   * právo, na které jí lhůta pořád běží.
    */
-  const jizPodano = await db.reklamace.findFirst({
+  const otevrene = await db.reklamace.findMany({
     where: {
       orderId: objednavka.id,
       typ: 'VRACENI',
       stav: { in: ['PRIJATA', 'RESI_SE'] },
     },
-    select: { id: true },
+    select: { orderItemId: true },
   });
 
-  if (jizPodano) return { objednavka, duvod: 'jiz_podano' };
+  // `orderItemId: null` znamená odstoupení od celé objednávky – tím je
+  // pokryté všechno a další žádost už nemá co přidat.
+  const celaObjednavka = otevrene.some((r) => r.orderItemId === null);
 
-  return { objednavka, duvod: null };
+  const jizPodanePolozky = otevrene
+    .map((r) => r.orderItemId)
+    .filter((id): id is string => id !== null);
+
+  const vseVyrizeno =
+    objednavka.polozky.length > 0 &&
+    objednavka.polozky.every((p) => jizPodanePolozky.includes(p.id));
+
+  if (celaObjednavka || vseVyrizeno) {
+    return { objednavka, duvod: 'jiz_podano', jizPodanePolozky };
+  }
+
+  return { objednavka, duvod: null, jizPodanePolozky };
 }
 
 /** Text pro zákaznici k jednotlivým důvodům odmítnutí. */

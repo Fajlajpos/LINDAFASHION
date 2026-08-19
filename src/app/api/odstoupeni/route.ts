@@ -46,6 +46,17 @@ const potvrzeniSchema = klicSchema.and(
       errorMap: () => ({ message: 'Odstoupení je potřeba potvrdit druhým krokem.' }),
     }),
     duvod: z.string().max(1000).optional().nullable(),
+
+    /*
+     * Které položky se vracejí. Prázdné pole nebo vynechaný klíč = celá
+     * objednávka.
+     *
+     * Částečné odstoupení je zákonná možnost, ne vylepšení: § 1829 nikde
+     * neříká, že se odstupuje od objednávky vcelku, a zákaznice, která si ze
+     * tří kousků chce nechat dva, na to má nárok. Dokud tu ten výběr nebyl,
+     * mohla to napsat leda do nepovinné poznámky a doufat.
+     */
+    polozky: z.array(z.string().min(1)).max(100).optional(),
   })
 );
 
@@ -80,7 +91,7 @@ export async function GET(request: Request) {
       email: url.searchParams.get('email') ?? undefined,
     });
 
-    const { objednavka, duvod } = await najitProOdstoupeni(klicZVstupu(vstup));
+    const { objednavka, duvod, jizPodanePolozky } = await najitProOdstoupeni(klicZVstupu(vstup));
 
     if (duvod !== null || !objednavka) {
       return odpovedOk({
@@ -103,6 +114,8 @@ export async function GET(request: Request) {
         datumDoruceni: objednavka.datumDoruceni,
         lhutaDo: konec,
         polozky: objednavka.polozky,
+        // Formulář je ukáže jako už vrácené a nenechá je vybrat znovu.
+        jizPodanePolozky,
       },
     });
   } catch (err) {
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
     }
 
     const vstup = potvrzeniSchema.parse(await request.json());
-    const { objednavka, duvod } = await najitProOdstoupeni(klicZVstupu(vstup));
+    const { objednavka, duvod, jizPodanePolozky } = await najitProOdstoupeni(klicZVstupu(vstup));
 
     if (duvod !== null || !objednavka) {
       // 409 i pro „nenalezeno": stav se mohl mezi krokem jedna a dva změnit
@@ -137,17 +150,58 @@ export async function POST(request: Request) {
      */
     const prijeti = new Date();
 
-    const zaznam = await db.reklamace.create({
-      data: {
-        orderId: objednavka.id,
-        typ: 'VRACENI',
-        duvod: vstup.duvod?.trim() || null,
-        datumPrijeti: prijeti,
-        lhutaDo: lhutaNaVyrizeni(prijeti),
-        email: objednavka.email,
-      },
-      select: { id: true, token: true },
-    });
+    /*
+     * --- Které položky se vracejí ---
+     *
+     * Vybrané id se prosejí proti skutečné objednávce: cizí id se zahodí,
+     * ne odmítne. Zákaznice s vybranou položkou, kterou mezitím pokrylo jiné
+     * odstoupení, tak nepřijde o zbytek žádosti kvůli chybové hlášce, které
+     * by stejně nerozuměla.
+     *
+     * Prázdný výběr (nebo výběr všeho, co ještě zbývá) znamená celou
+     * objednávku – jeden záznam s `orderItemId: null`. Rozepisovat ho na
+     * položky by v administraci vypadalo jako tři samostatné žádosti místo
+     * jednoho odstoupení.
+     */
+    const dostupne = objednavka.polozky.filter((p) => !jizPodanePolozky.includes(p.id));
+
+    const vybrane = vstup.polozky?.length
+      ? dostupne.filter((p) => vstup.polozky!.includes(p.id))
+      : dostupne;
+
+    if (vybrane.length === 0) {
+      return odpovedChyba(
+        'Vyberte prosím aspoň jeden kus, který chcete vrátit.',
+        422,
+        { polozky: 'Nic k vrácení nezbývá – vybrané zboží už vracíte.' }
+      );
+    }
+
+    const celaObjednavka = vybrane.length === objednavka.polozky.length;
+
+    /*
+     * Jedna transakce: buď se založí všechny řádky, nebo žádný. Poloviční
+     * odstoupení by zákaznici tvrdilo, že vrací tři kusy, a majitelce
+     * ukázalo jeden.
+     */
+    const zaznamy = await db.$transaction(
+      (celaObjednavka ? [null] : vybrane.map((p) => p.id)).map((orderItemId) =>
+        db.reklamace.create({
+          data: {
+            orderId: objednavka.id,
+            orderItemId,
+            typ: 'VRACENI',
+            duvod: vstup.duvod?.trim() || null,
+            datumPrijeti: prijeti,
+            lhutaDo: lhutaNaVyrizeni(prijeti),
+            email: objednavka.email,
+          },
+          select: { id: true, token: true },
+        })
+      )
+    );
+
+    const zaznam = zaznamy[0];
 
     const nastaveni = await nacistNastaveni();
 
@@ -169,13 +223,20 @@ export async function POST(request: Request) {
           prijatoAt: prijeti.toISOString(),
           duvod: vstup.duvod?.trim() || null,
           adresaProVraceni: nastaveni.adresaProVraceni,
-          polozky: objednavka.polozky,
+          // Do potvrzení patří to, co zákaznice opravdu vrací, ne celý nákup.
+          // Kopie podané žádosti je náležitost potvrzení – seznam, který
+          // neodpovídá výběru, ji dělá nepravdivou.
+          polozky: vybrane,
+          celaObjednavka,
         },
       });
 
       if (zarazeno) {
-        await db.reklamace.update({
-          where: { id: zaznam.id },
+        // Značka patří na **všechny** dnes založené řádky. Kdyby ji nesl jen
+        // první, tvářily by se ostatní jako nepotvrzené a hlídání by je hnalo
+        // znovu, přestože zákaznici dorazilo jedno společné potvrzení.
+        await db.reklamace.updateMany({
+          where: { id: { in: zaznamy.map((z) => z.id) } },
           data: { potvrzeniOdeslanoAt: new Date() },
         });
       }
@@ -201,6 +262,8 @@ export async function POST(request: Request) {
         prijatoAt: prijeti,
         cisloObjednavky: objednavka.cisloObjednavky,
         adresaProVraceni: nastaveni.adresaProVraceni,
+        vraceno: vybrane.map((p) => ({ nazev: p.nazev, velikost: p.velikost, mnozstvi: p.mnozstvi })),
+        celaObjednavka,
         zprava:
           'Vaše odstoupení od smlouvy jsme přijali. Potvrzení s datem a časem jsme vám poslali e-mailem.',
       },

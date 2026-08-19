@@ -466,6 +466,21 @@ deleted with her browser history. That is not evidence.
   The time comes from the server and is fixed once (`prijeti`) so the database row and the
   e-mail cannot disagree. `potvrzeniOdeslanoAt` is set only **after** the job is queued —
   setting it first would mark as confirmed something the customer never received.
+- **Odstoupit lze i částečně.** § 1829 nikde neříká, že se odstupuje od celé
+  objednávky, takže formulář nechá vybrat kusy. Vrácení všeho je **jeden** řádek
+  s `orderItemId: null`, částečné vrácení jeden řádek na kus — rozepsat celou
+  objednávku na položky by v administraci vypadalo jako tři samostatné žádosti.
+  Kontrola duplicit je proto **po položkách**: jediná otevřená žádost dřív blokovala
+  jakékoli další odstoupení, což zákaznici, která minulý týden vrátila jedny šaty
+  a teď chce vrátit druhé, upíralo právo, na které jí lhůta pořád běží.
+- **`datumDoruceni` plní přechod objednávky do `DORUCENA`**, `datumExpedice` přechod
+  do `EXPEDOVANA` — a jen tehdy, když je sloupec ještě prázdný. Přepsat datum při
+  druhém uložení téhož stavu by lhůtu pro odstoupení posunulo dopředu a odstoupení
+  podané poslední den by se počítalo od nového data. Do téhle chvíle do obou sloupců
+  **nikdo nikdy nezapsal**, takže čtrnáctidenní lhůta fakticky nikdy nezačala běžet.
+- **Evropská platforma ODR se v podmínkách neuvádí.** Nařízení (EU) 524/2013 bylo
+  zrušeno a platforma 20. 7. 2025 skončila; odkaz by posílal zákaznici na
+  neexistující službu. Mimosoudní řešení sporů obstarává ČOI, ta funguje dál.
 - **Two public keys, never the order number alone.** `verejnyToken`, or order number **plus**
   e-mail. Numbers run in sequence, so the number by itself would let anyone page through
   other people's purchases. `najitObjednavkuKlicem` in [odstoupeni.ts](src/lib/odstoupeni.ts)
