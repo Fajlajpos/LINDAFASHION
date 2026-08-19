@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CalendarClock, Loader2 } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { STAV_REKLAMACE } from '@/lib/objednavka-popisky';
+import { DNU_NA_REKLAMACI, stavLhuty, zbyvaDnu } from '@/lib/lhuty';
 
 interface Reklamace {
   id: string;
@@ -14,6 +15,7 @@ interface Reklamace {
   poznamkaAdmina: string | null;
   datumPrijeti: string;
   datumVyrizeni: string | null;
+  lhutaDo: string | null;
   cisloObjednavky: string;
   orderId: string;
   zakaznik: string;
@@ -21,6 +23,56 @@ interface Reklamace {
 }
 
 const STAVY = ['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA', 'VYRIZENA_ZAMITNUTA'];
+
+/** Vyřízené reklamaci už lhůta neběží – hlídá se jen to, co je otevřené. */
+const OTEVRENE = ['PRIJATA', 'RESI_SE'];
+
+/**
+ * Štítek se zbývající lhůtou (§ 19 odst. 3 zák. č. 634/1992 Sb.).
+ *
+ * Marné uplynutí třiceti dnů zakládá zákaznici právo odstoupit od smlouvy,
+ * takže tohle není interní připomínka, ale hlídání právního následku. Barvu
+ * i práh počítá `stavLhuty()` – kdyby si je stránka určovala sama, „zbývá pět
+ * dnů" by ve výpisu a v detailu znamenalo jinou barvu.
+ *
+ * Zapuštěná plocha (`sandLight` + inset) je záměr: je to údaj ke čtení,
+ * ne tlačítko. Význam nenese jen barva, ale i text a ikona – barevně
+ * odlišený, ale nepřečtený štítek je k ničemu.
+ */
+function StitekLhuty({ lhutaDo, stav }: { lhutaDo: string | null; stav: string }) {
+  if (!lhutaDo || !OTEVRENE.includes(stav)) return null;
+
+  const konec = new Date(lhutaDo);
+  const nalehavost = stavLhuty(konec);
+  if (nalehavost === null) return null;
+
+  const zbyva = zbyvaDnu(konec);
+
+  const podle = {
+    po_terminu: {
+      tridy: 'bg-red-50 text-red-800 shadow-neuInsetSm',
+      text: `Po termínu o ${Math.abs(zbyva)} d.`,
+    },
+    blizi_se: {
+      tridy: 'bg-linda-sandLight text-linda-cognac shadow-neuInsetSm',
+      text: zbyva === 0 ? 'Termín je dnes' : `Zbývá ${zbyva} d.`,
+    },
+    v_poradku: {
+      tridy: 'bg-linda-sandLight text-linda-espresso/75 shadow-neuInsetSm',
+      text: `Zbývá ${zbyva} d.`,
+    },
+  }[nalehavost];
+
+  return (
+    <span
+      title={`Zákonná lhůta ${DNU_NA_REKLAMACI} dnů končí ${konec.toLocaleDateString('cs-CZ')}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${podle.tridy}`}
+    >
+      <CalendarClock className="h-3 w-3" aria-hidden="true" />
+      {podle.text}
+    </span>
+  );
+}
 
 /**
  * Přehled reklamací a vrácení (sekce 6.10).
@@ -84,6 +136,17 @@ export default function AdminReklamacePage() {
     setMeniId(null);
   };
 
+  /*
+   * Kolik otevřených reklamací je po termínu nebo se k němu blíží. Počítá se
+   * z načteného seznamu, ne dotazem navíc: nevyřízené jsou v odpovědi vždy
+   * nahoře, takže se do limitu 200 vejdou celé, i když se seznam ořízne.
+   */
+  const hlidane = reklamace.filter(
+    (r) => r.lhutaDo && OTEVRENE.includes(r.stav)
+  );
+  const poTerminu = hlidane.filter((r) => stavLhuty(new Date(r.lhutaDo!)) === 'po_terminu').length;
+  const bliziSe = hlidane.filter((r) => stavLhuty(new Date(r.lhutaDo!)) === 'blizi_se').length;
+
   return (
     <div className="max-w-4xl space-y-8">
       <div className="border-b border-linda-sand pb-6">
@@ -92,6 +155,39 @@ export default function AdminReklamacePage() {
           Nové záznamy se zakládají v detailu konkrétní objednávky
         </p>
       </div>
+
+      {/* Výstraha ke lhůtě stojí nad seznamem, ne jen u jednotlivých řádků:
+          marné uplynutí 30 dnů (§ 19 odst. 3 zák. č. 634/1992 Sb.) dává
+          zákaznici právo odstoupit od smlouvy, a to se nemá zjišťovat
+          rolováním. */}
+      {(poTerminu > 0 || bliziSe > 0) && (
+        <p
+          role="status"
+          className={`flex items-start gap-2 rounded-xl p-3 text-xs font-medium shadow-neuInsetSm ${
+            poTerminu > 0 ? 'bg-red-50 text-red-800' : 'bg-linda-sandLight text-linda-cognac'
+          }`}
+        >
+          <CalendarClock className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            {poTerminu > 0 && (
+              <>
+                <strong>
+                  {poTerminu === 1
+                    ? '1 reklamace je po zákonné lhůtě'
+                    : `${poTerminu} reklamací je po zákonné lhůtě`}
+                </strong>
+                . Zákaznice má právo odstoupit od smlouvy.{' '}
+              </>
+            )}
+            {bliziSe > 0 && (
+              <>
+                {bliziSe === 1 ? 'U 1 reklamace' : `U ${bliziSe} reklamací`} končí{' '}
+                {DNU_NA_REKLAMACI}denní lhůta do pěti dnů.
+              </>
+            )}
+          </span>
+        </p>
+      )}
 
       {chyba && (
         <p
@@ -157,9 +253,12 @@ export default function AdminReklamacePage() {
                     {r.duvod && <p className="mt-1 text-xs text-linda-espresso/85">{r.duvod}</p>}
                   </div>
 
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${popis.tridy}`}>
-                    {popis.text}
-                  </span>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <StitekLhuty lhutaDo={r.lhutaDo} stav={r.stav} />
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${popis.tridy}`}>
+                      {popis.text}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">

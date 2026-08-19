@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 // Relativní cesta, ne alias `@/`: seed běží přes ts-node s tsconfig.node.json,
 // které cesty nepřepisuje (stejný důvod jako u kódu workeru).
 import { hledaciNazevKategorie, hledaciTextProduktu } from '../src/lib/vyhledavani';
+import { VYCHOZI_ZNENI } from '../src/lib/pravni-dokumenty';
 
 const prisma = new PrismaClient();
 
@@ -375,8 +376,42 @@ async function main() {
   // zapomenout u produktu, který sem někdo přidá později. Stejná funkce běží
   // v administraci při každém uložení, takže se seed a provoz nerozejdou.
   await preindexovatVyhledavani();
+  await zalozitPravniDokumenty();
 
   console.log('✅ Seedování databáze LINDA FASHION bylo úspěšně dokončeno!');
+}
+
+/**
+ * Výchozí znění obchodních podmínek a reklamačního řádu.
+ *
+ * Vkládá se **jen když v tabulce nic není**. Znění, na které už odkazuje
+ * objednávka, se nesmí přepsat – tím by se zpětně změnilo, s čím zákaznice
+ * souhlasila. Seed se přitom pouští i na databázi, kde se už nakupovalo.
+ *
+ * Verze nese datum, ne pořadové číslo: štítek se zapisuje ke každé objednávce
+ * a „2026-08-18" řekne při dohledávání víc než „1".
+ */
+async function zalozitPravniDokumenty() {
+  const dnes = new Date().toISOString().slice(0, 10);
+
+  for (const druh of ['obchodni-podminky', 'reklamacni-rad'] as const) {
+    const uzJe = await prisma.pravniDokument.findFirst({ where: { druh } });
+    if (uzJe) continue;
+
+    const vychozi = VYCHOZI_ZNENI[druh];
+
+    await prisma.pravniDokument.create({
+      data: {
+        druh,
+        verze: dnes,
+        nadpis: vychozi.nadpis,
+        obsah: vychozi.obsah,
+        ucinnostOd: new Date(),
+      },
+    });
+
+    console.log(`📜 Vloženo výchozí znění „${vychozi.nadpis}" jako verze ${dnes}.`);
+  }
 }
 
 async function preindexovatVyhledavani() {

@@ -4,7 +4,7 @@ import { PokladnaFormular, type MoznostDopravy } from '@/components/shop/Pokladn
 import { jeNastaveno } from '@/lib/gopay';
 import { overitUzivatele } from '@/lib/auth';
 import { nacistAdresy } from '@/lib/adresy';
-import { nacistNastaveni, popisDph, zpravaODovolene } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDodaciLhuty, popisDph, zpravaODovolene } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +75,7 @@ export default async function PokladnaPage() {
         objednavaniZablokovano={nastaveni.rezimDovolene && nastaveni.zablokovatObjednavky}
         zpravaODovolene={zpravaODovolene(nastaveni)}
         popisDph={popisDph(nastaveni)}
+        dodaciLhuta={popisDodaciLhuty(nastaveni)}
         platbaKartouDostupna={jeNastaveno()}
       />
     </div>

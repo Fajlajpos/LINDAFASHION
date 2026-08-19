@@ -510,6 +510,14 @@ model Settings {
   /// být uvedena v poučení o odstoupení od smlouvy.
   adresaProVraceni String?
 
+  /// Obvyklá doba dodání v pracovních dnech.
+  ///
+  /// § 1820 odst. 1 písm. h) o. z. ukládá sdělit dobu dodání **před**
+  /// uzavřením smlouvy. Nikde na webu uvedená nebyla. Je to číslo, ne text:
+  /// věta se dá poskládat na jednom místě a nemůže se rozejít mezi detailem
+  /// produktu, pokladnou a obchodními podmínkami.
+  dodaciLhutaDnu Int @default(3)
+
   /// --- GDPR: kontakt na správce (čl. 13 odst. 1) ---
   ///
   /// Adresa pro uplatnění práv subjektu údajů. Bez ní se zákaznice nemá kam
@@ -688,4 +696,42 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+/// Znění právních dokumentů, na které se odkazují objednávky.
+///
+/// `Settings.verzePodminek` se snímkuje na každou objednávku (`Order.verzePodminek`),
+/// jenže samotný text podmínek byl natvrdo v JSX – štítek tedy ukazoval na znění,
+/// které nikdo neuchovával. Doložit „souhlasila s verzí 2026-01" jde jen tehdy,
+/// když se ta verze dá otevřít a přečíst i po deseti změnách textu.
+///
+/// Tabulka je proto **append-only, stejně jako `PriceHistory`**: nové znění =
+/// nový řádek s novou verzí. Řádek, na který se odkazuje byť jediná objednávka,
+/// se nesmí přepsat – tím by se zpětně změnilo, s čím zákaznice souhlasila.
+/// Unikátní dvojice (druh, verze) zajišťuje, že snímek u objednávky ukazuje
+/// právě na jeden text.
+model PravniDokument {
+  id String @id @default(cuid())
+
+  /// "obchodni-podminky", "reklamacni-rad", "ochrana-osobnich-udaju".
+  /// Volný řetězec, ne enum: přibývají zákonem, ne vývojem, a migrace kvůli
+  /// novému druhu dokumentu by byla zbytečná překážka.
+  druh String
+
+  /// Štítek verze, doporučeně datum účinnosti ("2026-01-01"). Právě tenhle
+  /// řetězec se ukládá do `Order.verzePodminek`.
+  verze String
+
+  nadpis String
+
+  /// Celý text dokumentu v Markdownu. Uložený jako text, ne jako HTML:
+  /// vykreslení je věc šablony a HTML od administrátorky by byl vstup,
+  /// který se rovnou vkládá do stránky.
+  obsah String
+
+  ucinnostOd DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([druh, verze])
+  @@index([druh, ucinnostOd])
 }

@@ -37,9 +37,24 @@ interface Props {
   objednavaniZablokovano?: boolean;
   /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
   popisDph: string;
+  /**
+   * Doba dodání – § 1820 odst. 1 písm. h) o. z.
+   *
+   * Přichází z nastavení, ne z konstanty v komponentě. Dřív tu stálo natvrdo
+   * „Doručení do 2 dnů": nesplnitelný slib, který nikdo nemohl opravit jinak
+   * než nasazením, a přitom je to zákonem vyžadovaný údaj.
+   */
+  dodaciLhuta: string;
+  dodaciLhutaDnu: number;
 }
 
-export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisDph }: Props) {
+export function DetailProduktu({
+  produkt,
+  objednavaniZablokovano = false,
+  popisDph,
+  dodaciLhuta,
+  dodaciLhutaDnu,
+}: Props) {
   // Předvybereme první variantu, která je skladem – zákaznice tak nezačíná
   // na vyprodané velikosti s neaktivním tlačítkem.
   const vychoziVarianta = produkt.varianty.find((v) => v.skladem > 0) ?? produkt.varianty[0];
@@ -211,6 +226,9 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
             {/* Neplátce DPH ji uvádět nesmí, plátce musí – text řídí přepínač
                 v administraci, ne pevná věta v komponentě. */}
             <p className="mt-1 text-[11px] text-linda-espresso/70">{popisDph}</p>
+
+            {/* Doba dodání musí zaznít před objednáním, ne až v košíku. */}
+            <p className="mt-1 text-[11px] text-linda-espresso/70">{dodaciLhuta}</p>
           </div>
 
           <p className="whitespace-pre-line text-sm font-light leading-relaxed text-linda-espresso/85">
@@ -465,7 +483,7 @@ export function DetailProduktu({ produkt, objednavaniZablokovano = false, popisD
 
           <ul className="grid grid-cols-3 gap-2 border-t border-linda-sand/40 pt-4 text-center text-[10px] text-linda-espresso/75">
             {[
-              { Ikona: Truck, text: 'Doručení do 2 dnů' },
+              { Ikona: Truck, text: `Odesíláme do ${dodaciLhutaDnu} prac. dnů` },
               { Ikona: RotateCcw, text: '14 dní na vyzkoušení' },
               { Ikona: ShieldCheck, text: 'Bezpečná platba' },
             ].map(({ Ikona, text }) => (

@@ -42,6 +42,9 @@ export interface NastaveniWebu {
   /** Adresa pro vracené zboží – bývá jiná než sídlo. */
   adresaProVraceni: string | null;
 
+  /** Obvyklá doba dodání v pracovních dnech (§ 1820 odst. 1 písm. h o. z.). */
+  dodaciLhutaDnu: number;
+
   /** Kontakt pro uplatnění práv subjektu údajů (čl. 13 GDPR). */
   emailProGdpr: string | null;
 
@@ -74,6 +77,7 @@ export const VYCHOZI_NASTAVENI: NastaveniWebu = {
   zapisVRejstriku: null,
   sazbaDph: 21,
   adresaProVraceni: null,
+  dodaciLhutaDnu: 3,
   emailProGdpr: null,
   verzePodminek: '1',
 };
@@ -111,6 +115,7 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
       zapisVRejstriku: zaznam.zapisVRejstriku,
       sazbaDph: zaznam.sazbaDph,
       adresaProVraceni: zaznam.adresaProVraceni,
+      dodaciLhutaDnu: zaznam.dodaciLhutaDnu,
       emailProGdpr: zaznam.emailProGdpr,
       verzePodminek: zaznam.verzePodminek,
     };
@@ -169,4 +174,34 @@ export function zpravaODovolene(nastaveni: NastaveniWebu): string | null {
       : 'Momentálně čerpáme dovolenou. Objednávky odešleme hned po návratu.');
 
   return sablona.replace('{datum}', datum ?? 'našeho návratu');
+}
+
+/**
+ * Věta o době dodání – § 1820 odst. 1 písm. h) o. z.
+ *
+ * Dobu dodání musí prodávající sdělit **před** uzavřením smlouvy, a na webu
+ * nebyla nikde. Věta se skládá tady, na jednom místě: detail produktu,
+ * pokladna i obchodní podmínky by si ji jinak formulovaly každý po svém
+ * a zákaznice by ze tří míst dostala tři různé sliby.
+ *
+ * Režim dovolené má přednost. Slibovat „do tří pracovních dnů", když
+ * majitelka nebalí, je horší než mlčet – z informační povinnosti by se stala
+ * nepravdivá informace.
+ */
+export function popisDodaciLhuty(nastaveni: NastaveniWebu): string {
+  if (nastaveni.rezimDovolene) {
+    const datum = nastaveni.datumNavratu
+      ? nastaveni.datumNavratu.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })
+      : null;
+
+    return datum
+      ? `Kvůli dovolené odesíláme objednávky až od ${datum}.`
+      : 'Kvůli dovolené odesíláme objednávky až po návratu.';
+  }
+
+  // Po „do" stojí genitiv: jednotné „1 pracovního dne", množné „5 pracovních dnů".
+  const dnu = nastaveni.dodaciLhutaDnu;
+  const jednotka = dnu === 1 ? 'pracovního dne' : 'pracovních dnů';
+
+  return `Zboží skladem odesíláme do ${dnu} ${jednotka} od přijetí platby.`;
 }

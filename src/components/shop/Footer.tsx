@@ -23,12 +23,18 @@ const KOLEKCE_ODKAZY = [
   { href: '/o-mne', label: 'O mně' },
 ];
 
+/* „Odstoupit od smlouvy" je v patičce kvůli § 1830a o. z.: funkce pro
+   odstoupení musí být **snadno dostupná** z prostředí, kde smlouva vznikla.
+   Odkaz schovaný v obchodních podmínkách tu podmínku nesplňuje – patička je
+   na každé stránce obchodu a nevyžaduje přihlášení. */
 const SERVIS_ODKAZY = [
   { href: '/doprava-a-platba', label: 'Doprava a platba' },
   { href: '/kontakt', label: 'Kontakt a prodejna' },
   { href: '/obchodni-podminky', label: 'Obchodní podmínky' },
   { href: '/ochrana-osobnich-udaju', label: 'Ochrana údajů' },
   { href: '/reklamacni-rad', label: 'Reklamační řád' },
+  { href: '/reklamace', label: 'Reklamovat zboží' },
+  { href: '/odstoupeni', label: 'Odstoupit od smlouvy' },
 ];
 
 /**

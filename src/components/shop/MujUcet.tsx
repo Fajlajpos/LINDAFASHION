@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  Download,
   FileText,
   Loader2,
   LogOut,
@@ -320,6 +321,7 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
           className="animate-fadeIn space-y-6"
         >
           <UdajeKarta profil={uzivatel} />
+          <ExportUdaju />
           <SmazaniUctu />
         </div>
       )}
@@ -335,6 +337,43 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Přenositelnost údajů – čl. 20 GDPR.
+ *
+ * Stojí nad smazáním účtu schválně: zákaznice, která přišla „vyřešit své
+ * údaje", má nejdřív narazit na možnost si je odnést a teprve pak na tu
+ * nevratnou. Opačné pořadí nabízí smazání jako první odpověď na otázku,
+ * kterou si ještě nepoložila.
+ *
+ * Odkaz je obyčejné `<a download>` na endpoint, ne fetch do paměti: prohlížeč
+ * si se stahováním poradí sám a soubor nemusí projít Reactem.
+ */
+function ExportUdaju() {
+  return (
+    <section className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
+      <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
+        <Download className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+        Kopie mých údajů
+      </h2>
+
+      <p className="text-xs leading-relaxed text-linda-espresso/85">
+        Stáhněte si všechno, co o vás vedeme: profil, objednávky, adresy, oblíbené kousky, hlídané
+        velikosti, souhlasy i zprávy z kontaktního formuláře. Soubor je ve formátu JSON, takže si
+        ho můžete nechat, otevřít nebo předat jinému obchodu.
+      </p>
+
+      <a
+        href="/api/ucet/export"
+        download
+        className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+      >
+        <Download className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+        Stáhnout moje údaje (JSON)
+      </a>
+    </section>
   );
 }
 

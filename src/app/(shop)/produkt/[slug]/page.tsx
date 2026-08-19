@@ -7,7 +7,7 @@ import { DetailProduktu } from '@/components/shop/DetailProduktu';
 import { JsonLd } from '@/components/shop/JsonLd';
 import { KostraMrizky } from '@/components/ui/Kostra';
 import { nacistPodobne, nacistProdukt, type ProduktDetail } from '@/lib/katalog';
-import { nacistNastaveni, popisDph } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDodaciLhuty, popisDph } from '@/lib/nastaveni';
 import { drobeckyLd, produktLd } from '@/lib/strukturovana-data';
 
 export const dynamic = 'force-dynamic';
@@ -118,6 +118,8 @@ export default async function DetailProduktPage({ params }: Props) {
         produkt={produkt}
         objednavaniZablokovano={nastaveni.rezimDovolene && nastaveni.zablokovatObjednavky}
         popisDph={popisDph(nastaveni)}
+        dodaciLhuta={popisDodaciLhuty(nastaveni)}
+        dodaciLhutaDnu={nastaveni.dodaciLhutaDnu}
       />
 
       <Suspense

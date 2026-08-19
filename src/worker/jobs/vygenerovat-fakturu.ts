@@ -61,7 +61,9 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
       dic: nastaveni?.dicFirmy ?? null,
       adresa: nastaveni?.adresaFirmy ?? null,
       email: nastaveni?.emailFirmy ?? null,
-      jePlatceDph: nastaveni?.jePlatceDph ?? false,
+      // Snímek z objednávky, ne dnešní nastavení – doklad se zpětně nemění.
+      jePlatceDph: objednavka.jePlatceDph,
+      zapisVRejstriku: nastaveni?.zapisVRejstriku ?? null,
     },
     odberatel: {
       jmeno: objednavka.dodaciJmenoPrijmeni,
@@ -77,6 +79,8 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
     zPoukazuHaleru: zPoukazu,
     celkemHaleru: celkem,
     zpusobPlatby: objednavka.zpusobPlatby,
+    sazbaDph: objednavka.sazbaDph,
+    dphHaleru: objednavka.dphHaleru,
   });
 
   await fs.mkdir(SLOZKA_FAKTUR, { recursive: true });

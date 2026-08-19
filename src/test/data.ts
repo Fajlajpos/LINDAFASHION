@@ -31,8 +31,14 @@ const TABULKY = [
   'NewsletterSubscriber',
   'ContactMessage',
   'AuditLog',
+  'SouhlasZaznam',
+  'PravniDokument',
   'ProductImage',
   'ProductVariant',
+  // `PriceHistory` visí na produktu přes ON DELETE RESTRICT, takže musí padnout
+  // dřív než on. `TRUNCATE ... CASCADE` by si poradilo i tak, ale pořadí je
+  // tu proto, aby seznam odpovídal skutečné závislosti.
+  'PriceHistory',
   'Product',
   'Category',
   'User',

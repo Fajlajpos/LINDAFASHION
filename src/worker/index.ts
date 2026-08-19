@@ -25,12 +25,14 @@ import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
 import { vygenerovatFakturuUloha, type UlohaFaktura } from './jobs/vygenerovat-fakturu';
 import { vygenerovatPoukazyUloha, type UlohaPoukazy } from './jobs/vygenerovat-poukazy';
 import { uklidResetTokenu } from '../lib/reset-hesla';
+import { popisVysledku, spustitRetenci } from '../lib/retence';
 import { zavritTransport } from './emaily/transport';
 
 const FRONTA_UKLID = 'uklid-uloziste';
 const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
 const FRONTA_NIZKY_SKLAD = 'nizky-sklad-upozorneni';
 const FRONTA_HLIDANI_SKLADU = 'hlidani-skladu';
+const FRONTA_RETENCE = 'retence-osobnich-udaju';
 
 async function spustitWorker() {
   console.log('🚀 Spouštím worker LINDA FASHION…');
@@ -200,6 +202,20 @@ async function spustitWorker() {
   });
   await boss.schedule(FRONTA_HLIDANI_SKLADU, '*/30 * * * *');
 
+  // --- Retence osobních údajů (čl. 5 odst. 1 písm. e GDPR) ----------------
+  //
+  // Jednou denně ve 3:20. Ne častěji: nic z toho nehoří na minuty a mazání
+  // sahá na tabulky, do kterých se přes den píše. Ne v celou hodinu, ať se
+  // to nesejde s jinou noční úlohou v kontejneru.
+  //
+  // Chyba se zaloguje a úloha spadne, aby ji pg-boss zopakoval. Tichý
+  // `catch` by z retence udělal to, čím byla dosud – nic, o čem se neví.
+  await boss.work(FRONTA_RETENCE, async () => {
+    const vysledek = await spustitRetenci();
+    console.log(`[retence] Smazáno: ${popisVysledku(vysledek)}.`);
+  });
+  await boss.schedule(FRONTA_RETENCE, '20 3 * * *');
+
   // Jedno kolo úklidu hned po startu – posbírá, co zbylo z minulého běhu.
   await uklidUlozisteUloha();
 
@@ -212,6 +228,7 @@ async function spustitWorker() {
   console.log(`   • ${FRONTA_OPUSTENE_KOSIKY} (každé 4 hodiny)`);
   console.log(`   • ${FRONTA_NIZKY_SKLAD} (každé 2 hodiny)`);
   console.log(`   • ${FRONTA_HLIDANI_SKLADU} (každých 30 minut)`);
+  console.log(`   • ${FRONTA_RETENCE} (denně ve 3:20)`);
 }
 
 async function ukoncit(signal: string) {

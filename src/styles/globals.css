@@ -294,3 +294,42 @@ html {
 .editorial-shadow {
   box-shadow: 0 10px 30px -5px rgba(43, 32, 25, 0.06);
 }
+
+/* --- Tisk -----------------------------------------------------------------
+
+   Vzorový formulář pro odstoupení od smlouvy (nařízení vlády 363/2013 Sb.)
+   se má dát vytisknout a poslat poštou. Na papíře nemá co dělat navigace,
+   patička, zrno ani neumorfní reliéf: stín, který na obrazovce dělá hloubku,
+   vyjde z tiskárny jako šedý flek přes celý list.
+
+   Pravidlo je schválně obecné, ne jen pro tuhle stránku – tisk košíku nebo
+   potvrzení objednávky chce totéž a nikdo si na to jindy nevzpomene. */
+@media print {
+  header,
+  footer,
+  [data-tisk='skryt'] {
+    display: none !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .tisk-list {
+    background: #fff !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Prohlubně uvnitř tištěného listu potřebují obrys, jinak po ztrátě stínu
+     splynou s papírem a adresát vypadá jako běžný odstavec. */
+  .tisk-list .shadow-neuInsetSm,
+  .tisk-list .shadow-neuInset {
+    box-shadow: none !important;
+    border: 1px solid theme('colors.linda.sand') !important;
+  }
+}

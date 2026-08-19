@@ -189,6 +189,17 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       const token = data.verejnyToken ? String(data.verejnyToken) : null;
       const odkaz = token ? `${web}/pokladna/potvrzeni?token=${encodeURIComponent(token)}` : `${web}/muj-ucet`;
 
+      /*
+       * Odkaz na odstoupení od smlouvy patří přímo do potvrzení objednávky.
+       * § 1830a chce funkci snadno dostupnou; potvrzovací e-mail je jediná
+       * věc, kterou má zákaznice po nákupu jistě u sebe – i ta, která u nás
+       * nemá účet. S tokenem přeskočí hledání objednávky a rovnou vidí
+       * rekapitulaci.
+       */
+      const odkazOdstoupeni = token
+        ? `${web}/odstoupeni?token=${encodeURIComponent(token)}`
+        : `${web}/odstoupeni`;
+
       const radky: Array<[string, string]> = [['Číslo objednávky', cislo]];
       if (typeof data.celkovaCena === 'number') {
         radky.push(['Celkem', `${data.celkovaCena.toLocaleString('cs-CZ')} Kč`]);
@@ -206,6 +217,9 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
             tlacitko('Zobrazit objednávku', odkaz) +
             odstavec(
               'Platíte-li převodem, najdete platební údaje i QR platbu na stránce objednávky. Zboží odesíláme po připsání částky.'
+            ) +
+            odstavec(
+              `Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu – <a href="${odkazOdstoupeni}" style="color:${BARVY.cognac};">odstoupit od smlouvy</a> jde přímo z tohoto odkazu, přihlašovat se nemusíte.`
             )
         ),
         text: [
@@ -218,6 +232,9 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           `Detail objednávky: ${odkaz}`,
           '',
           'Platíte-li převodem, platební údaje i QR platbu najdete na stránce objednávky.',
+          '',
+          'Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu.',
+          `Odstoupení od smlouvy: ${odkazOdstoupeni}`,
         ].join('\n'),
       };
     }
@@ -359,6 +376,93 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           `Předmět: ${String(data.predmet ?? '(bez předmětu)')}`,
           '',
           odkaz,
+        ].join('\n'),
+      };
+    }
+
+    /*
+     * Automatické potvrzení odstoupení od smlouvy – § 1830a o. z.
+     *
+     * Zákon chce potvrzení **s datem a časem přijetí** a s kopií toho, co
+     * zákaznice podala. Není to zdvořilostní zpráva: je to doklad, že
+     * odstoupení dorazilo včas, a nese ho zákaznice, ne my.
+     *
+     * Čas se formátuje v české zóně, ne v zóně kontejneru. V Dockeru je UTC,
+     * takže odstoupení podané v 00:30 SELČ by v potvrzení vyšlo na předchozí
+     * den – u lhůty počítané na dny je to rozdíl, který rozhoduje.
+     */
+    case 'odstoupeni-potvrzeni': {
+      const cislo = String(data.cisloObjednavky ?? '');
+      const prijato = data.prijatoAt ? new Date(String(data.prijatoAt)) : new Date();
+
+      const kdy = prijato.toLocaleString('cs-CZ', {
+        timeZone: 'Europe/Prague',
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const adresa = data.adresaProVraceni ? String(data.adresaProVraceni) : null;
+
+      const polozky = Array.isArray(data.polozky)
+        ? (data.polozky as Array<{ nazev?: unknown; velikost?: unknown; mnozstvi?: unknown }>)
+        : [];
+
+      const seznamHtml = polozky.length
+        ? '<ul style="margin:0 0 14px 0;padding-left:20px;">' +
+          polozky
+            .map(
+              (i) =>
+                `<li style="font-size:14px;color:#6B5B4F;">${e(i.nazev)} (${e(i.velikost)}) – ${e(i.mnozstvi)} ks</li>`
+            )
+            .join('') +
+          '</ul>'
+        : '';
+
+      const seznamText = polozky.map((i) => `  • ${String(i.nazev)} (${String(i.velikost)}) – ${String(i.mnozstvi)} ks`);
+
+      return {
+        predmet: `Potvrzení odstoupení od smlouvy – objednávka ${cislo}`,
+        html: obalka(
+          'Odstoupení od smlouvy přijato',
+          odstavec('Dobrý den,') +
+            odstavec(
+              'potvrzujeme, že jsme přijali vaše odstoupení od kupní smlouvy. Tenhle e-mail je zároveň dokladem o tom, kdy odstoupení dorazilo – uschovejte si ho prosím.'
+            ) +
+            panel([
+              ['Objednávka', cislo],
+              ['Přijato', kdy],
+            ]) +
+            (seznamHtml ? odstavec('<strong>Zboží z objednávky:</strong>') + seznamHtml : '') +
+            (data.duvod ? odstavec(`<strong>Vaše poznámka:</strong> ${e(data.duvod)}`) : '') +
+            odstavec(
+              adresa
+                ? `Zboží prosím odešlete zpět na adresu:<br><strong>${e(adresa)}</strong><br>Nejpozději do 14 dnů od tohohle odstoupení.`
+                : 'Ozveme se vám s pokyny, kam zboží poslat. Odeslat ho potřebujete nejpozději do 14 dnů od tohohle odstoupení.'
+            ) +
+            odstavec(
+              'Peníze vám vrátíme do 14 dnů od doručení odstoupení. Můžeme s vrácením počkat, dokud zboží nedorazí zpět nebo dokud nedoložíte jeho odeslání.'
+            )
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          'potvrzujeme přijetí vašeho odstoupení od kupní smlouvy.',
+          '',
+          `Objednávka: ${cislo}`,
+          `Přijato: ${kdy}`,
+          ...(seznamText.length ? ['', 'Zboží z objednávky:', ...seznamText] : []),
+          ...(data.duvod ? ['', `Vaše poznámka: ${String(data.duvod)}`] : []),
+          '',
+          adresa
+            ? `Zboží prosím odešlete zpět na adresu: ${adresa}`
+            : 'Ozveme se vám s pokyny, kam zboží poslat.',
+          'Odeslat ho potřebujete nejpozději do 14 dnů od tohohle odstoupení.',
+          '',
+          'Peníze vám vrátíme do 14 dnů od doručení odstoupení.',
+          'Tenhle e-mail je dokladem o tom, kdy odstoupení dorazilo – uschovejte si ho.',
         ].join('\n'),
       };
     }

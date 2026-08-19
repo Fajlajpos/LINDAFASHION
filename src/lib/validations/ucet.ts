@@ -83,18 +83,35 @@ export const adresaSchema = z.object({
  * `orderItemId` prázdné = týká se celé objednávky. Konkrétní položka se
  * ověřuje proti objednávce až v endpointu – schéma o cizích klíčích nic neví.
  */
-export const reklamaceSchema = z.object({
-  orderId: z.string().min(1, 'Vyberte objednávku.'),
-  orderItemId: z.string().min(1).optional().nullable(),
-  typ: z.enum(['REKLAMACE', 'VRACENI'], {
-    errorMap: () => ({ message: 'Vyberte, jestli jde o reklamaci, nebo o vrácení.' }),
-  }),
-  duvod: z
-    .string()
-    .min(10, 'Popište prosím alespoň pár větami, co se stalo.')
-    .max(2000, 'Popis je příliš dlouhý.')
-    .transform((v) => v.trim()),
-});
+/**
+ * Reklamace nebo vrácení.
+ *
+ * `orderId` je nepovinné, protože nepřihlášená zákaznice ho nezná – ta se
+ * prokazuje veřejným klíčem (`token`, nebo číslo objednávky + e-mail).
+ * Právo z vadného plnění má každý spotřebitel, ne jen ten s účtem, a nákup
+ * bez registrace je u nás běžná cesta. Že přesně jeden z těch dvou způsobů
+ * musí dorazit, hlídá `.refine()` níž – ne komentář.
+ */
+export const reklamaceSchema = z
+  .object({
+    orderId: z.string().min(1).optional(),
+    token: z.string().min(10).max(200).optional(),
+    cisloObjednavky: z.string().max(40).optional(),
+    email: z.string().max(200).optional(),
+    orderItemId: z.string().min(1).optional().nullable(),
+    typ: z.enum(['REKLAMACE', 'VRACENI'], {
+      errorMap: () => ({ message: 'Vyberte, jestli jde o reklamaci, nebo o vrácení.' }),
+    }),
+    duvod: z
+      .string()
+      .min(10, 'Popište prosím alespoň pár větami, co se stalo.')
+      .max(2000, 'Popis je příliš dlouhý.')
+      .transform((v) => v.trim()),
+  })
+  .refine((d) => !!d.orderId || !!d.token || (!!d.cisloObjednavky && !!d.email), {
+    message: 'Vyberte objednávku, nebo zadejte její číslo a e-mail.',
+    path: ['orderId'],
+  });
 
 export type ProfilVstup = z.infer<typeof profilSchema>;
 export type ZmenaHeslaVstup = z.infer<typeof zmenaHeslaSchema>;

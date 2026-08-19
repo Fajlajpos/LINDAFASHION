@@ -32,6 +32,14 @@ export interface PodkladFaktury {
     adresa: string | null;
     email: string | null;
     jePlatceDph: boolean;
+    /**
+     * Údaj o zápisu ve veřejném či živnostenském rejstříku.
+     *
+     * § 435 o. z.: patří na každou obchodní listinu, tedy i na fakturu.
+     * Chybějící údaj na dokladu není kosmetika – je to nedostatek, který
+     * se vytýká při kontrole.
+     */
+    zapisVRejstriku: string | null;
   };
 
   odberatel: {
@@ -48,6 +56,21 @@ export interface PodkladFaktury {
   zPoukazuHaleru: Halere;
   celkemHaleru: Halere;
   zpusobPlatby: string;
+
+  /**
+   * --- Rozpis DPH, § 29 zák. č. 235/2004 Sb. ---
+   *
+   * Daňový doklad plátce musí obsahovat sazbu, základ daně a výši daně.
+   * Bez toho to není daňový doklad, jen stvrzenka – a odběratel z ní nemůže
+   * uplatnit odpočet.
+   *
+   * Obojí je **snímek z objednávky** (`Order.sazbaDph`, `Order.dphHaleru`),
+   * ne dnešní nastavení: kdyby se e-shop stal plátcem později, přepočítaly by
+   * se podle aktuálního přepínače i loňské doklady. Neplátce má nulu a rozpis
+   * se na doklad vůbec nevytiskne – uvádět DPH bez registrace se nesmí.
+   */
+  sazbaDph: number;
+  dphHaleru: Halere;
 }
 
 const SLOZKA_FONTU = path.join(process.cwd(), 'assets', 'fonts');
@@ -127,6 +150,8 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
     podklad.dodavatel.ico ? `IČO: ${podklad.dodavatel.ico}` : null,
     podklad.dodavatel.dic ? `DIČ: ${podklad.dodavatel.dic}` : null,
     podklad.dodavatel.email,
+    // § 435 o. z. – zápis v rejstříku patří na obchodní listiny.
+    podklad.dodavatel.zapisVRejstriku,
     // Neplátce DPH to musí na dokladu uvést (sekce 11).
     podklad.dodavatel.jePlatceDph ? null : 'Neplátce DPH',
   ].filter(Boolean) as string[];
@@ -194,6 +219,19 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
   radek('Doprava', podklad.dopravaHaleru === 0 ? 'Zdarma' : castka(podklad.dopravaHaleru));
   if (podklad.zPoukazuHaleru > 0) radek('Uhrazeno poukazem', `−${castka(podklad.zPoukazuHaleru)}`);
 
+  /*
+   * Rozpis daně u plátce. Ceny v e-shopu jsou včetně DPH, takže se základ
+   * počítá **shora**: základ = celkem − daň. Násobit celkovou částku sazbou
+   * je klasická záměna, která u 21 % přehodí daň o pětinu nahoru.
+   *
+   * Vytiskne se jen plátci a jen s nenulovou daní – u neplátce by to byl
+   * údaj, který na doklad nepatří.
+   */
+  if (podklad.dodavatel.jePlatceDph && podklad.dphHaleru > 0) {
+    radek('Základ daně', castka(podklad.celkemHaleru - podklad.dphHaleru));
+    radek(`DPH ${podklad.sazbaDph} %`, castka(podklad.dphHaleru));
+  }
+
   radek('Celkem', castka(podklad.celkemHaleru), true);
 
   y += 10;
@@ -212,8 +250,12 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
     .fontSize(8)
     .fillColor(SEDA)
     .text(
-      'Od kupní smlouvy lze odstoupit do 14 dnů od převzetí zboží bez udání důvodu. ' +
-        'Postup, lhůty i vzorový formulář najdete v obchodních podmínkách na lindafashion.cz. ' +
+      /* Odkaz musí vést tam, kde formulář opravdu je. Věta roky posílala
+         zákaznici do obchodních podmínek „pro vzorový formulář", který v nich
+         nebyl – nesplněná povinnost schovaná v poučení o jejím splnění. */
+      'Od kupní smlouvy lze odstoupit do 14 dnů od převzetí zboží bez udání důvodu, ' +
+        'a to i bez přihlášení na lindafashion.cz/odstoupeni. ' +
+        'Tamtéž najdete poučení i vzorový formulář podle nařízení vlády č. 363/2013 Sb. ' +
         'Reklamace se řídí reklamačním řádem a občanským zákoníkem.',
       50,
       760,

@@ -1,50 +1,152 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AlertCircle, History } from 'lucide-react';
+import { PravniText } from '@/components/shop/PravniText';
+import { nacistZneni, nacistVerzi } from '@/lib/pravni-dokumenty';
+import { nacistNastaveni, popisDodaciLhuty } from '@/lib/nastaveni';
 
-export default function ObchodniPodminkyPage() {
+export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Obchodní podmínky | LINDA FASHION',
+  description:
+    'Všeobecné obchodní podmínky: uzavření smlouvy, ceny, doba dodání, odstoupení od smlouvy do 14 dnů, reklamace a mimosoudní řešení sporů.',
+  alternates: { canonical: '/obchodni-podminky' },
+};
+
+/**
+ * Obchodní podmínky.
+ *
+ * Text se čte z databáze (`PravniDokument`), ne z JSX. Důvod je důkazní:
+ * `Order.verzePodminek` se snímkuje na každou objednávku, ale dokud znění
+ * žilo v kódu, ukazoval ten štítek na text, který nikdo neuchovával – „s čím
+ * přesně souhlasila" nešlo doložit.
+ *
+ * `?verze=` otevře konkrétní historické znění. Tenhle parametr je celý smysl
+ * přestavby: odkaz u objednávky musí i za pět let vést na to, co zákaznice
+ * tenkrát odsouhlasila, ne na dnešní text.
+ *
+ * Údaje o prodávajícím se berou z `Settings` a stojí **nad** dokumentem.
+ * V uloženém znění schválně nejsou: adresa se stěhuje častěji než podmínky
+ * a nová verze celého dokumentu kvůli změně telefonu by z verzování udělala
+ * šum, ve kterém se skutečná změna pravidel ztratí.
+ */
+export default async function ObchodniPodminkyPage({
+  searchParams,
+}: {
+  searchParams: { verze?: string };
+}) {
+  const nastaveni = await nacistNastaveni();
+
+  const zadanaVerze = searchParams.verze?.trim();
+  const historicke = zadanaVerze ? await nacistVerzi('obchodni-podminky', zadanaVerze) : null;
+  const zneni = historicke ?? (await nacistZneni('obchodni-podminky'));
+
+  const jeHistoricke = historicke !== null;
+  const nenalezeno = Boolean(zadanaVerze) && historicke === null;
+
+  const prodavajici = [
+    nastaveni.nazevFirmy,
+    nastaveni.adresaFirmy,
+    nastaveni.icoFirmy ? `IČO: ${nastaveni.icoFirmy}` : null,
+    nastaveni.dicFirmy ? `DIČ: ${nastaveni.dicFirmy}` : null,
+    nastaveni.zapisVRejstriku,
+    nastaveni.emailFirmy,
+    nastaveni.telefonFirmy,
+  ].filter((r): r is string => Boolean(r && r.trim()));
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 text-linda-espresso">
-      <div className="border-b border-linda-sand pb-6">
-        <h1 className="font-serif text-4xl">Všeobecné obchodní podmínky</h1>
-        <p className="text-xs text-linda-espresso/70 mt-1">Platné od 1. 1. 2026 pro e-shop LINDA FASHION</p>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+      <header className="space-y-2 border-b border-linda-sand pb-8">
+        <h1 className="font-serif text-4xl text-linda-espresso">{zneni.nadpis}</h1>
+        <p className="text-xs text-linda-espresso/70">
+          Verze <strong className="font-semibold">{zneni.verze}</strong>
+          {zneni.zDatabaze && (
+            <> · účinné od {zneni.ucinnostOd.toLocaleDateString('cs-CZ')}</>
+          )}
+        </p>
+      </header>
 
-      <div className="prose prose-stone max-w-none text-xs space-y-6 leading-relaxed">
-        <section className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-lg text-linda-cognac">1. Základní ustanovení</h2>
-          <p>
-            Tyto všeobecné obchodní podmínky (dále jen &bdquo;VOP&ldquo;) upravují práva a povinnosti mezi prodávajícím LINDA FASHION s.r.o., IČO: 12345678, se sídlem Pařížská 12, Praha 1, zapísaným v obchodním rejstříku (dále jen &bdquo;prodávající&ldquo;) a kupujícím (dále jen &bdquo;zákazník&ldquo;).
-          </p>
-        </section>
+      {nenalezeno && (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso/85 shadow-neuInsetSm"
+        >
+          <AlertCircle className="mt-px h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+          <span>
+            Znění verze „{zadanaVerze}&ldquo; jsme nenašli. Níž je aktuální znění. Pokud potřebujete
+            doložit starší verzi, napište nám prosím – dohledáme ji.
+          </span>
+        </p>
+      )}
 
-        <section className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-lg text-linda-cognac">2. Objednávka a uzavření kupní smlouvy</h2>
-          <p>
-            Veškerá prezentace zboží umístěná na e-shopu je informativního charakteru. Odesláním objednávky zákazník stvrzuje, že se seznámil s těmito VOP. Kupní smlouva vzniká doručením potvrzení objednávky na e-mail zákazníka.
-          </p>
-        </section>
+      {jeHistoricke && (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso/85 shadow-neuInsetSm"
+        >
+          <History className="mt-px h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+          <span>
+            Prohlížíte si <strong>historické znění</strong> verze {zneni.verze}. Pro nové
+            objednávky platí{' '}
+            <Link
+              href="/obchodni-podminky"
+              className="font-semibold text-linda-cognac underline underline-offset-2"
+            >
+              aktuální podmínky
+            </Link>
+            .
+          </span>
+        </p>
+      )}
 
+      {/* Údaje o prodávajícím – § 435 o. z. a § 1811 odst. 2 o. z. */}
+      {prodavajici.length > 0 && (
         <section className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-lg text-linda-cognac">3. Ceny a platební podmínky</h2>
-          <p>
-            Ceny zboží jsou uváděny v českých korunách (CZK). Úhrada je možná online platbou kartou (GoPay) nebo bezhotovostním bankovním převodem na účet prodávajícího s QR platbou. Dobírka není podporována.
-          </p>
+          <h2 className="font-serif text-lg text-linda-cognac">Prodávající</h2>
+          <address className="whitespace-pre-line rounded-xl bg-linda-sandLight p-4 text-xs not-italic leading-relaxed text-linda-espresso shadow-neuInsetSm">
+            {prodavajici.join('\n')}
+          </address>
         </section>
+      )}
 
-        <section className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-lg text-linda-cognac">4. Odstoupení od smlouvy do 14 dnů</h2>
-          <p>
-            Kupující spotřebitel má právo odstoupit od smlouvy bez udání důvodu ve lhůtě 14 dnů ode dne převzetí zboží. Zboží musí být vráceno nepoškozené, nenosené a s původními visačkami.
-          </p>
-        </section>
+      <article className="rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
+        <PravniText obsah={zneni.obsah} />
 
-        <section className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-lg text-linda-cognac">5. Mimosoudní řešení sporů (ČOI)</h2>
-          <p>
-            K mimosoudnímu řešení spotřebitelských sporů z kupní smlouvy je příslušná Česká obchodní inspekce, se sídlem Štěpánská 567/15, 120 00 Praha 2, internetová adresa: www.coi.cz.
-          </p>
-        </section>
-      </div>
+        {/* Doba dodání se dopisuje pod text, ne do něj: mění se v nastavení
+            a je to údaj o provozu, ne pravidlo smlouvy. § 1820 odst. 1
+            písm. h) chce, aby zazněla – tady i u produktu a v pokladně. */}
+        <p className="mt-6 rounded-xl bg-linda-sandLight p-4 text-xs leading-relaxed text-linda-espresso/85 shadow-neuInsetSm">
+          <strong className="font-semibold">Aktuální doba dodání:</strong>{' '}
+          {popisDodaciLhuty(nastaveni)} Odstoupit od smlouvy můžete{' '}
+          <Link
+            href="/odstoupeni"
+            className="font-semibold text-linda-cognac underline underline-offset-2"
+          >
+            zde
+          </Link>
+          , vzorový formulář najdete{' '}
+          <Link
+            href="/odstoupeni/formular"
+            className="font-semibold text-linda-cognac underline underline-offset-2"
+          >
+            zde
+          </Link>
+          .
+        </p>
+      </article>
+
+      {!zneni.zDatabaze && (
+        /* Záložní text z kódu. Říct to nahlas je důležitější než hezčí
+           stránka: dokud znění není v databázi, nemá se čím doložit, s čím
+           zákaznice u konkrétní objednávky souhlasila. */
+        <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] leading-relaxed text-linda-espresso/75 shadow-neuInsetSm">
+          Toto je výchozí znění dodané s e-shopem. Majitelka ho může nahradit vlastním
+          v administraci; teprve vložené znění se archivuje s verzí a dá se doložit
+          u konkrétní objednávky.
+        </p>
+      )}
     </div>
   );
 }

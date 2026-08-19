@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 import { db } from './db';
 import { czkNaHalere, halereNaCzk, prodejniCena, spocitatObjednavku, type Halere } from './penize';
 import { dphZCelkem, nacistNastaveni } from './nastaveni';
+import { verzeProObjednavku } from './pravni-dokumenty';
 import type { ObjednavkaVstup } from './validations/objednavka';
 
 export interface ChybaObjednavky {
@@ -149,6 +150,14 @@ export async function vytvoritObjednavku(
       },
     };
   }
+
+  /*
+   * Verze podmínek, se kterou zákaznice souhlasí, se zjistí **jednou před
+   * transakcí**. Uvnitř by se ptala znovu při každém opakování kvůli kolizi
+   * čísla objednávky – a v tu chvíli by se dvě opakování téže objednávky
+   * mohla trefit do různých verzí, kdyby mezi nimi nabyla účinnosti nová.
+   */
+  const verzePodminek = await verzeProObjednavku(nastaveni.verzePodminek);
 
   /** Jeden pokus o zápis; `posun` posouvá pořadové číslo po kolizi. */
   const zapsat = (posun: number) =>
@@ -294,7 +303,7 @@ export async function vytvoritObjednavku(
            * objednávka bez souhlasu vůbec nedostane a datum je bezpečné.
            */
           souhlasPodminkyAt: new Date(),
-          verzePodminek: nastaveni.verzePodminek,
+          verzePodminek,
           ipObjednavky: kontext.ip ?? null,
 
           /*

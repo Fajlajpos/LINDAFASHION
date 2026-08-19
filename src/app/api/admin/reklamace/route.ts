@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
+import { lhutaNaVyrizeni } from '@/lib/lhuty';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,9 @@ export async function GET() {
         poznamkaAdmina: r.poznamkaAdmina,
         datumPrijeti: r.datumPrijeti,
         datumVyrizeni: r.datumVyrizeni,
+        // Lhůta jde ven i pro vyřízené záznamy – administrace podle ní pozná
+        // nejen „zbývá pět dnů", ale i „tahle se stihla den po termínu".
+        lhutaDo: r.lhutaDo,
         cisloObjednavky: r.order.cisloObjednavky,
         orderId: r.order.id,
         zakaznik: r.order.dodaciJmenoPrijmeni,
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
 
     const objednavka = await db.order.findUnique({
       where: { id: vstup.orderId },
-      select: { id: true, cisloObjednavky: true },
+      select: { id: true, cisloObjednavky: true, email: true },
     });
 
     if (!objednavka) {
@@ -101,12 +105,24 @@ export async function POST(request: Request) {
       }
     }
 
+    /*
+     * Třicetidenní lhůta se počítá i u záznamu založeného v administraci –
+     * a je to ta důležitější polovina: většina reklamací přijde telefonem
+     * nebo na prodejně a majitelka je zakládá tudy. Kdyby se `lhutaDo`
+     * plnilo jen ze zákaznického formuláře, hlídání by minulo právě ty
+     * případy, které nikde jinde zapsané nejsou. (§ 19 odst. 3 zák. 634/1992.)
+     */
+    const prijeti = new Date();
+
     const reklamace = await db.reklamace.create({
       data: {
         orderId: vstup.orderId,
         orderItemId: vstup.orderItemId || null,
         typ: vstup.typ,
         duvod: vstup.duvod?.trim() || null,
+        datumPrijeti: prijeti,
+        lhutaDo: lhutaNaVyrizeni(prijeti),
+        email: objednavka.email,
       },
     });
 

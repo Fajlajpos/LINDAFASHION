@@ -67,6 +67,13 @@ export const nastaveniSchema = z
     emailProGdpr: volitelnyText(180),
 
     /*
+     * Doba dodání v pracovních dnech (§ 1820 odst. 1 písm. h o. z.).
+     * Minimum je 1: nula by na webu slíbila odeslání „do 0 dnů", což není
+     * informace, ale nesplnitelný závazek.
+     */
+    dodaciLhutaDnu: z.coerce.number().int().min(1).max(90).optional().default(3),
+
+    /*
      * Verze obchodních podmínek. Prázdná být nesmí: zapisuje se ke každé
      * objednávce jako součást dokladu a prázdný snímek nedokládá nic.
      */

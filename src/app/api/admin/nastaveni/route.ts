@@ -65,6 +65,7 @@ export async function PUT(request: Request) {
       zapisVRejstriku: vstup.zapisVRejstriku,
       sazbaDph: vstup.sazbaDph,
       adresaProVraceni: vstup.adresaProVraceni,
+      dodaciLhutaDnu: vstup.dodaciLhutaDnu,
       emailProGdpr: vstup.emailProGdpr,
       verzePodminek: vstup.verzePodminek,
     };

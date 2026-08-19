@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { CheckCircle, FileText, Package, QrCode, Truck } from 'lucide-react';
+import { CheckCircle, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { generateQrPaymentString, getQrPaymentImageUrl } from '@/lib/qr-code';
@@ -189,18 +189,43 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
         </p>
       </section>
 
-      {/* Zákonné poučení – u zásilkového prodeje povinné (sekce 11) */}
+      {/* Zákonné poučení – u zásilkového prodeje povinné (sekce 11).
+
+          Odkaz mířil do obchodních podmínek na „postup i vzorový formulář",
+          které tam nikdy nebyly. Teď vede na skutečný formulář podle přílohy 2
+          nařízení vlády 363/2013 Sb. – slib v poučení a obsah odkazu se musí
+          shodovat, jinak povinnost splněná není. */}
       <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] leading-relaxed text-linda-espresso/75 shadow-neuInsetSm">
-        Od smlouvy můžete odstoupit do 14 dnů od převzetí zboží bez udání důvodu. Postup i vzorový
-        formulář najdete v{' '}
-        <Link href="/obchodni-podminky" className="font-semibold text-linda-cognac underline">
-          obchodních podmínkách
+        Od smlouvy můžete odstoupit do 14 dnů od převzetí zboží bez udání důvodu. Postup, poučení
+        i{' '}
+        <Link href="/odstoupeni/formular" className="font-semibold text-linda-cognac underline">
+          vzorový formulář
+        </Link>{' '}
+        najdete na stránce{' '}
+        <Link href="/odstoupeni" className="font-semibold text-linda-cognac underline">
+          odstoupení od smlouvy
         </Link>
         . Reklamace řeší{' '}
         <Link href="/reklamacni-rad" className="font-semibold text-linda-cognac underline">
           reklamační řád
         </Link>
         .
+        {objednavka.verzePodminek && (
+          <>
+            {' '}
+            Objednávku jste uzavřela za{' '}
+            {/* Odkaz na **to znění, které tehdy platilo**, ne na dnešní text.
+                Kvůli tomuhle jedinému odkazu se podmínky přestěhovaly do
+                databáze: verze u objednávky je jinak štítek bez obsahu. */}
+            <Link
+              href={`/obchodni-podminky?verze=${encodeURIComponent(objednavka.verzePodminek)}`}
+              className="font-semibold text-linda-cognac underline"
+            >
+              podmínek ve znění {objednavka.verzePodminek}
+            </Link>
+            .
+          </>
+        )}
         {nastaveni.emailFirmy && (
           <>
             {' '}
@@ -234,6 +259,16 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
           className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
         >
           Moje objednávky
+        </Link>
+        {/* Token jde rovnou do odkazu, takže odstoupení přeskočí hledání
+            objednávky. § 1830a chce funkci **snadno dostupnou** – tady je
+            nejblíž tomu, co zákaznice zrovna koupila. */}
+        <Link
+          href={`/odstoupeni?token=${objednavka.verejnyToken}`}
+          className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+        >
+          <Undo2 className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+          Odstoupit od smlouvy
         </Link>
       </div>
     </div>

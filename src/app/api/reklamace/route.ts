@@ -5,6 +5,8 @@ import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { reklamaceSchema } from '@/lib/validations/ucet';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { lhutaNaVyrizeni } from '@/lib/lhuty';
+import { najitObjednavkuKlicem, type VerejnyKlic } from '@/lib/odstoupeni';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,37 @@ const UZAVRENE = ['ZRUSENA', 'VRACENA'] as const;
 /** Brzda proti opakovanému odeslání formuláře. */
 const MAX_ZADOSTI = 10;
 const OKNO_MS = 60 * 60 * 1000;
+
+/**
+ * Objednávka podle veřejného klíče, pro žádost bez přihlášení.
+ *
+ * Vrací tvar shodný s přihlášenou větví, aby zbytek endpointu nemusel
+ * rozlišovat, odkud objednávka přišla – rozlišování je právě ta věc, na
+ * kterou se v jedné z větví zapomene.
+ */
+async function najitVerejne(vstup: {
+  token?: string;
+  cisloObjednavky?: string;
+  email?: string;
+}): Promise<{ id: string; cisloObjednavky: string; stav: string; email: string | null } | null> {
+  const klic: VerejnyKlic | null = vstup.token
+    ? { token: vstup.token }
+    : vstup.cisloObjednavky && vstup.email
+      ? { cisloObjednavky: vstup.cisloObjednavky.trim(), email: vstup.email.trim().toLowerCase() }
+      : null;
+
+  if (!klic) return null;
+
+  const nalezena = await najitObjednavkuKlicem(klic);
+  if (!nalezena) return null;
+
+  return {
+    id: nalezena.id,
+    cisloObjednavky: nalezena.cisloObjednavky,
+    stav: nalezena.stav,
+    email: nalezena.email,
+  };
+}
 
 /** GET – přehled vlastních reklamací pro `/muj-ucet`. */
 export async function GET() {
@@ -74,7 +107,6 @@ export async function POST(request: Request) {
     if (!jeStejnyPuvod(request)) return odpovedChyba('Neplatný požadavek.', 403);
 
     const uzivatel = await overitUzivatele();
-    if (!uzivatel) return odpovedChyba('Nejste přihlášeni.', 401);
 
     const limit = zkontrolovatLimit(`reklamace:${klientskaIp(request)}`, MAX_ZADOSTI, OKNO_MS);
     if (!limit.povoleno) {
@@ -84,16 +116,38 @@ export async function POST(request: Request) {
     const vstup = reklamaceSchema.parse(await request.json());
 
     /*
-     * Objednávka se hledá rovnou s `userId` v podmínce. Cizí objednávku tak
-     * nejde ani načíst – odpověď je stejná jako pro neexistující, takže se
-     * z ní nedá vyčíst, že existuje.
+     * Dvě cesty k téže objednávce, obě stejně přísné:
+     *
+     *  • **přihlášená** – objednávka se hledá rovnou s `userId` v podmínce,
+     *    takže cizí nejde ani načíst a odpověď je stejná jako pro
+     *    neexistující. Z odpovědi se tedy nedá vyčíst, že existuje.
+     *
+     *  • **nepřihlášená** – veřejný klíč: token z e-mailu, nebo číslo
+     *    objednávky spolu s e-mailem. Právo z vadného plnění i právo na
+     *    odstoupení má každý spotřebitel, ne jen ten, kdo si u nás založil
+     *    účet; objednávka bez registrace žádný `userId` nemá, takže dřív
+     *    neměla jak nárok uplatnit vůbec.
+     *
+     * Přihlášení má přednost: když session existuje, `orderId` se ověřuje
+     * proti ní a veřejný klíč se ignoruje. Jinak by přihlášená zákaznice
+     * mohla poslat cizí token a projít mimo vlastní kontrolu.
      */
-    const objednavka = await db.order.findFirst({
-      where: { id: vstup.orderId, userId: uzivatel.id },
-      select: { id: true, cisloObjednavky: true, stav: true },
-    });
+    const objednavka =
+      uzivatel && vstup.orderId
+        ? await db.order.findFirst({
+            where: { id: vstup.orderId, userId: uzivatel.id },
+            select: { id: true, cisloObjednavky: true, stav: true, email: true },
+          })
+        : await najitVerejne(vstup);
 
-    if (!objednavka) return odpovedChyba('Objednávka nebyla nalezena.', 404);
+    if (!objednavka) {
+      return odpovedChyba(
+        uzivatel
+          ? 'Objednávka nebyla nalezena.'
+          : 'Objednávku jsme podle zadaných údajů nenašli. Zkontrolujte prosím číslo objednávky a e-mail, který jste u ní použila.',
+        404
+      );
+    }
 
     if ((UZAVRENE as readonly string[]).includes(objednavka.stav)) {
       return odpovedChyba(
@@ -148,14 +202,31 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+      * Lhůta se dopočítává při založení, ne až při zobrazení v administraci.
+      *
+      * § 19 odst. 3 zák. č. 634/1992 Sb. dává na vyřízení 30 dnů od uplatnění
+      * a marným uplynutím vzniká zákaznici právo odstoupit od smlouvy. Uložené
+      * datum jde řadit a indexovat, dopočítané ne – a hlídání lhůty, které se
+      * dá seřadit, je jediné hlídání, které někdo opravdu použije.
+      */
+    const prijeti = new Date();
+
     const reklamace = await db.reklamace.create({
       data: {
         orderId: objednavka.id,
         orderItemId: vstup.orderItemId || null,
         typ: vstup.typ,
         duvod: vstup.duvod,
+        datumPrijeti: prijeti,
+        lhutaDo: lhutaNaVyrizeni(prijeti),
+        // Kontakt patří k žádosti, ne k účtu: objednávka bez registrace žádný
+        // účet nemá a odpovědět na reklamaci je potřeba i jí. `?? null` je
+        // poslední instance – bez adresy se odpovídá telefonem, ale žádost
+        // se kvůli tomu odmítnout nesmí.
+        email: objednavka.email ?? uzivatel?.email ?? null,
       },
-      select: { id: true },
+      select: { id: true, token: true },
     });
 
     // Notifikace majitelce. Bez SMTP skončí v logu workeru – žádost samotná

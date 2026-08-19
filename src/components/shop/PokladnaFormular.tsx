@@ -139,6 +139,11 @@ interface Props {
   /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
   popisDph: string;
   /**
+   * Doba dodání – § 1820 odst. 1 písm. h) o. z. Musí zaznít **před**
+   * odesláním objednávky, ne až v potvrzovacím e-mailu.
+   */
+  dodaciLhuta: string;
+  /**
    * Je platební brána zapojená (má `.env` klíče GoPay)?
    *
    * Rozhoduje se na serveru: klíče do prohlížeče nepatří a `NEXT_PUBLIC_`
@@ -166,6 +171,7 @@ export function PokladnaFormular({
   objednavaniZablokovano,
   zpravaODovolene,
   popisDph,
+  dodaciLhuta,
   platbaKartouDostupna,
 }: Props) {
   const router = useRouter();
@@ -740,6 +746,7 @@ export function PokladnaFormular({
           </dl>
 
           <p className="text-[11px] text-linda-espresso/70">{popisDph}</p>
+          <p className="text-[11px] text-linda-espresso/70">{dodaciLhuta}</p>
 
           {prahDopravaZdarma !== null && !dopravaZdarma && (
             <p className="rounded-xl bg-linda-sandLight p-3 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
@@ -812,7 +819,14 @@ export function PokladnaFormular({
             ) : (
               <>
                 <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                Objednat závazně
+                {/*
+                  § 1826 odst. 3 o. z.: popisek musí odkazovat na **platbu**, ne jen
+                  na závaznost. „Objednat závazně“ říká, že to zavazuje, ale ne
+                  k čemu – a ČOI hodnotí právě popisek tlačítka, ne větu pod ním.
+                  Zákon připouští „objednávka zavazující k platbě“ nebo jinou
+                  jednoznačnou formulaci; tahle je kratší a platí též.
+                */}
+                Objednat a zaplatit
               </>
             )}
           </button>

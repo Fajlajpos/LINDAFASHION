@@ -85,6 +85,9 @@ Consequences worth remembering:
   Covered by [katalog.integration.test.ts](src/lib/katalog.integration.test.ts).
 - **Never `in`-test a parsed request body without checking it is an object first.**
   `request.json()` happily returns `null`, a number or a string, and `'x' in 5` throws.
+- **Worker-safe legal libs.** [lhuty.ts](src/lib/lhuty.ts) and
+  [retence.ts](src/lib/retence.ts) use relative imports and no `next/*` — the worker runs
+  the retention job and the queue jobs compute deadlines. Keep them that way.
 - Admin lists are paginated through [Strankovani.tsx](src/components/ui/Strankovani.tsx)
   (`?stranka=`, windowed page numbers). Counts in the headings come from `count()`, not
   from the length of the rendered page — that used to report "200 registrovaných účtů"
@@ -203,6 +206,9 @@ konfigurace je vylučuje.
 - Do integračních testů patří jen to, co bez databáze nedává smysl: transakce,
   unikátní indexy a podmínky uvnitř `UPDATE`. Zesměšněná Prisma by u nich
   potvrzovala jen to, že jsme kód napsali tak, jak jsme ho napsali.
+  Retence je toho případ: ověřuje se **co po ní zbude**, a hlavně to, co zbýt
+  musí (doklady, souhlasy). Nová tabulka patří i do `TABULKY`
+  v [data.ts](src/test/data.ts), jinak zbytek po předchozím testu shodí ten další.
 - Route handler se testuje s `vi.mock('@/lib/auth')` (respektive `@/lib/admin`) —
   `next/headers` mimo požadavek Next.js neexistuje.
 
@@ -215,8 +221,6 @@ What is still missing:
 
 - **`oblibene/`** page renders from the context, which works, but was never rewritten to
   use the server data shape returned by [api/oblibene](src/app/api/oblibene/route.ts).
-- **Saved addresses** in `muj-ucet` — the `Address` model exists and the admin shows them,
-  but the customer cannot add or edit one; checkout always asks for the address again.
 - **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
 
 ### Other gaps
@@ -270,7 +274,20 @@ What is still missing:
   A gateway outage during checkout does not cancel the order: `platebniUrl` comes back null
   and the customer pays by transfer from the confirmation page.
 
-Closed: newsletter had no double opt-in, so `potvrzeno` stayed `false` forever and the list
+Closed: the § 1830a withdrawal button did not exist and the shop was already two months
+past its effective date, so a guest order had no way to withdraw at all · the model
+withdrawal form promised by the confirmation page and by the invoice was nowhere on the
+site (nařízení vlády 363/2013 Sb.) · the order button said „Objednat závazně", which says
+that it binds but not to what (§ 1826 odst. 3) · `Reklamace.lhutaDo` was stored and
+backfilled but never computed for new rows and nothing warned before the 30-day deadline ·
+complaints required a login, which a guest order can never have · nothing was ever deleted,
+so contact messages, stock watches, audit log and `ipObjednavky` were kept forever (čl. 5
+odst. 1 písm. e) · no data-portability export (čl. 20) · the privacy policy had three
+paragraphs and invented company details, missing legal bases, retention periods, recipients
+and every right except access · the delivery time was nowhere on the site (§ 1820 odst. 1
+písm. h) and the product card promised a hardcoded „Doručení do 2 dnů" · terms were a
+version label pointing at wording nothing preserved · the invoice printed neither the VAT
+breakdown (§ 29 zák. o DPH) nor `zapisVRejstriku` (§ 435 o. z.) · newsletter had no double opt-in, so `potvrzeno` stayed `false` forever and the list
 was interest rather than consent — now `/api/newsletter/potvrzeni` completes it, and
 **confirming is a POST, never the GET that opens the link**: a mail client's preview robot
 prefetches links, and a GET would manufacture the very consent the double opt-in exists to
@@ -421,27 +438,6 @@ deleted with her browser history. That is not evidence.
 
 ### Still open — known legal gaps
 
-- **Tlačítko „Odstoupit od smlouvy“ (§ 1830a o. z.) is missing and is already in
-  force** (19. 6. 2026). It must be reachable without logging in, be a two-step
-  confirmation, and send an automatic confirmation with date and time. Today
-  [api/reklamace](src/app/api/reklamace/route.ts) requires a login, so a guest order
-  has no way to withdraw at all — the schema is ready (`Reklamace.token`,
-  `Reklamace.email`, `potvrzeniOdeslanoAt`) but the flow is not built.
-- `Reklamace.lhutaDo` is stored and backfilled but nothing computes it on new rows
-  and no admin view warns before the 30-day deadline (§ 19 odst. 3) expires.
-- No retention job: contact messages, stock notifications, audit log and `ipObjednavky`
-  are kept forever, which breaches storage limitation (čl. 5 odst. 1 písm. e).
-- No data-portability export (čl. 20 GDPR).
-- The invoice PDF does not yet print the VAT breakdown or `zapisVRejstriku`, so a
-  VAT-registered shop's invoice is not a valid daňový doklad (§ 29 zák. o DPH).
-- Accessibility (zák. č. 424/2023 Sb., in force since 28. 6. 2025) applies unless the
-  business is a microenterprise — fewer than 10 employees **and** turnover under
-  2 mil. EUR, both at once.
-- **Terms are stored as a version label, not as text.** `Settings.verzePodminek` is
-  snapshotted onto every order, but [obchodni-podminky](<src/app/(shop)/obchodni-podminky/page.tsx>)
-  is hardcoded JSX — so the label points at wording nothing preserves. Proving *what* she
-  agreed to needs the terms moved into the database and the order referencing a stored
-  content snapshot, the way `OrderItem.cenaVDobeNakupu` already freezes the price.
 - If product **reviews** are ever added, the Omnibus amendment requires saying whether each
   one comes from a verified purchase, and bans publishing only the positive ones. There is
   no review feature today, so nothing is in breach — but the model needs an order link
@@ -451,6 +447,60 @@ deleted with her browser history. That is not evidence.
   in at checkout, so it stays out of `PriceHistory` on purpose — but the moment a code is
   advertised on the product page, it becomes part of the offered price and has to be
   recorded as one.
+- **Settings the owner has to fill in, not code.** `adresaProVraceni`, `emailProGdpr`,
+  `zapisVRejstriku` and the real company identification are read from `Settings` everywhere
+  they appear. Every page degrades honestly while they are empty — the withdrawal
+  confirmation promises to send the return address by e-mail instead of inventing one —
+  but until they are filled in, the legal texts are incomplete. Same for the `[DOPLNIT]`
+  placeholders in [dokumenty/](dokumenty/).
+- **Accessibility (zák. č. 424/2023 Sb.) does not apply**: a microenterprise is exempt when
+  it has fewer than 10 employees **and** turnover under 2 mil. EUR, and this shop is under
+  both. It is not a permanent answer — see [dokumenty/pristupnost.md](dokumenty/pristupnost.md),
+  which records the reasoning and what would have to be built if turnover crosses the line.
+
+## Legal work done in 2026-08 — what to not undo
+
+- **`/odstoupeni` is the § 1830a flow** and its shape is prescribed, not stylistic: reachable
+  **without logging in** (footer, order confirmation, confirmation e-mail), **two steps**
+  (recap, then confirm), and an automatic confirmation carrying **date and time of receipt**.
+  The time comes from the server and is fixed once (`prijeti`) so the database row and the
+  e-mail cannot disagree. `potvrzeniOdeslanoAt` is set only **after** the job is queued —
+  setting it first would mark as confirmed something the customer never received.
+- **Two public keys, never the order number alone.** `verejnyToken`, or order number **plus**
+  e-mail. Numbers run in sequence, so the number by itself would let anyone page through
+  other people's purchases. `najitObjednavkuKlicem` in [odstoupeni.ts](src/lib/odstoupeni.ts)
+  is shared by withdrawal and complaints on purpose — two copies of an authorization check
+  drift, and here the drift means opening someone else's order.
+- **Guests can file complaints too** (`/reklamace`, and `/api/reklamace` without a session).
+  Rights from defective performance do not depend on having an account. When a session
+  *does* exist it wins: `orderId` is checked against `userId` and the public key is ignored,
+  otherwise a logged-in customer could pass a foreign token and bypass her own check.
+- **Legal deadlines live in [lhuty.ts](src/lib/lhuty.ts)**, nowhere else. `lzeOdstoupit(null)`
+  returns **true** — a not-yet-delivered order can still be withdrawn from (§ 1829 odst. 1),
+  the clock simply has not started. `Reklamace.lhutaDo` is computed at creation in **both**
+  paths (customer form and admin), because most complaints are entered by the owner and a
+  deadline watch that skips those watches nothing.
+- **Terms are stored text, not a label.** [PravniDokument](prisma/schema.prisma) is
+  **append-only** like `PriceHistory`: a new wording is a new version, never an edit. The
+  admin endpoint has no PUT and no DELETE, and that is the feature. `Order.verzePodminek`
+  is resolved from the effective stored version (`verzeProObjednavku`), not from the
+  hand-maintained `Settings.verzePodminek` label — that label was the weak point, because
+  forgetting to bump it silently pointed orders at wording the customer never saw. It
+  survives only as the fallback for an empty table.
+  `/obchodni-podminky?verze=…` renders the historical wording; that link is the whole point.
+- **Retention runs nightly** ([retence.ts](src/lib/retence.ts), 3:20). The periods are in
+  code with the reason for each, not in `.env` — they are legal decisions. What it must
+  **never** touch: orders and invoices (accounting law outranks storage limitation), and
+  consent records for newsletter and terms (čl. 7 odst. 1 needs them provable). Only
+  `COOKIES` consents age out. Covered by
+  [retence.integration.test.ts](src/lib/retence.integration.test.ts), including the
+  "what must remain" half.
+- **`/api/ucet/export`** answers čl. 20 in JSON — machine-readable is the requirement, so a
+  PDF would not do. It deliberately omits the password hash and cookie-consent rows: the
+  cookie subject id is random precisely so it cannot be tied to a person, and joining it to
+  an account for the export would manufacture that link.
+- **The invoice prints the VAT breakdown** from the order snapshot (`sazbaDph`, `dphHaleru`),
+  never from today's settings, and only for a VAT payer. A non-payer must not show VAT at all.
 
 ## Orders — rules that are easy to break
 

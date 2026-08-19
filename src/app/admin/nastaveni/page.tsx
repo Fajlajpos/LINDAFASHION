@@ -44,6 +44,7 @@ interface Nastaveni {
   zapisVRejstriku: string | null;
   sazbaDph: number;
   adresaProVraceni: string | null;
+  dodaciLhutaDnu: number;
   emailProGdpr: string | null;
   verzePodminek: string;
 }
@@ -69,6 +70,7 @@ const PRAZDNE: Nastaveni = {
   zapisVRejstriku: null,
   sazbaDph: 21,
   adresaProVraceni: null,
+  dodaciLhutaDnu: 3,
   emailProGdpr: null,
   verzePodminek: '1',
 };
@@ -414,6 +416,35 @@ export default function AdminNastaveniPage() {
                 na text, který zákaznice nikdy neviděla.
               </p>
               {chybaPole('verzePodminek')}
+            </div>
+
+            {/*
+              Doba dodání. Číslo, ne věta: text se skládá v `popisDodaciLhuty()`,
+              takže detail produktu, pokladna i podmínky říkají totéž. Ručně
+              psaná věta na třech místech se rozejde první změnou.
+            */}
+            <div>
+              <label htmlFor="dodaciLhutaDnu" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                Doba dodání (pracovní dny)
+              </label>
+              <input
+                id="dodaciLhutaDnu"
+                type="number"
+                min={1}
+                max={90}
+                step={1}
+                disabled={ukladam}
+                value={n.dodaciLhutaDnu}
+                onChange={(e) => setN({ ...n, dodaciLhutaDnu: Number(e.target.value) })}
+                aria-describedby="dodaciLhutaDnu-napoveda"
+                className={POLE}
+              />
+              <p id="dodaciLhutaDnu-napoveda" className="mt-1 text-[11px] text-linda-espresso/70">
+                Za kolik pracovních dnů zboží skladem odesíláte. § 1820 odst. 1 písm. h)
+                občanského zákoníku ukládá dobu dodání sdělit <strong className="font-semibold">před</strong>{' '}
+                objednáním – zobrazuje se u produktu i v pokladně.
+              </p>
+              {chybaPole('dodaciLhutaDnu')}
             </div>
           </div>
         </section>

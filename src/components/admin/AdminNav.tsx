@@ -10,6 +10,7 @@ import {
   Inbox,
   LayoutDashboard,
   Package,
+  Scale,
   Settings,
   ShoppingBag,
   Tag,
@@ -87,6 +88,7 @@ const SEKCE: { titulek: string; id: string; polozky: Polozka[] }[] = [
       // Nadpis stránky je „Zákaznice“, menu říkalo „Zákazníci“.
       { nazev: 'Zákaznice', href: '/admin/zakaznici', Ikona: Users },
       { nazev: 'Nastavení webu', href: '/admin/nastaveni', Ikona: Settings },
+      { nazev: 'Právní dokumenty', href: '/admin/pravni-dokumenty', Ikona: Scale },
       { nazev: 'Záznam změn', href: '/admin/zaznamy', Ikona: History },
     ],
   },

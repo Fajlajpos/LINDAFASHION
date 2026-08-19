@@ -77,6 +77,51 @@ describe('sestavitEmail', () => {
     expect(email!.html).toContain('http://localhost:3000/produkt/hedvabne-saty');
   });
 
+  /**
+   * Potvrzení odstoupení je jediný e-mail, jehož **obsah je zákonná
+   * náležitost** (§ 1830a o. z.): musí nést datum a čas přijetí. Testuje se
+   * proto věcně, ne jen „něco se vykreslilo".
+   */
+  describe('potvrzení odstoupení od smlouvy', () => {
+    const prijato = '2026-06-30T22:30:00.000Z';
+
+    it('uvádí datum a čas v české zóně, ne v UTC', () => {
+      const email = sestavitEmail('odstoupeni-potvrzeni', {
+        cisloObjednavky: '2026-00042',
+        prijatoAt: prijato,
+      });
+
+      // 22:30 UTC je v Praze už 1. července 00:30 (letní čas). Kontejner běží
+      // v UTC, takže bez `timeZone: 'Europe/Prague'` by potvrzení uvádělo
+      // předchozí den – a u lhůty počítané na dny je to rozdíl, který
+      // rozhoduje o tom, jestli bylo odstoupení včasné.
+      expect(email!.html).toContain('1. 7. 2026');
+      expect(email!.text).toContain('00:30');
+    });
+
+    it('nese číslo objednávky a poučení o čtrnáctidenní lhůtě na odeslání zboží', () => {
+      const email = sestavitEmail('odstoupeni-potvrzeni', {
+        cisloObjednavky: '2026-00042',
+        prijatoAt: prijato,
+        adresaProVraceni: 'Sklad, Dlouhá 1, Praha',
+      });
+
+      expect(email!.predmet).toContain('2026-00042');
+      expect(email!.html).toContain('Sklad, Dlouhá 1, Praha');
+      expect(email!.text).toContain('14 dnů');
+    });
+
+    it('bez adresy pro vrácení slíbí pokyny e-mailem, žádnou si nevymyslí', () => {
+      const email = sestavitEmail('odstoupeni-potvrzeni', {
+        cisloObjednavky: '2026-00042',
+        prijatoAt: prijato,
+      });
+
+      expect(email!.html).toContain('pokyny');
+      expect(email!.text).toContain('pokyny');
+    });
+  });
+
   it('každá šablona má neprázdnou textovou i HTML verzi', () => {
     const typy = [
       'obnova-hesla',
@@ -89,6 +134,7 @@ describe('sestavitEmail', () => {
       'newsletter-potvrzeni',
       'nova-zprava-z-formulare',
       'nova-reklamace',
+      'odstoupeni-potvrzeni',
     ];
 
     for (const typ of typy) {
