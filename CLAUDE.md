@@ -514,6 +514,15 @@ deleted with her browser history. That is not evidence.
   PDF would not do. It deliberately omits the password hash and cookie-consent rows: the
   cookie subject id is random precisely so it cannot be tied to a person, and joining it to
   an account for the export would manufacture that link.
+- **`/admin/doklady` is how an inspection gets answered.** ČOI and ÚOOÚ send a letter
+  with one question and a deadline; the answer is a **printout about that one thing**,
+  never a database dump — a dump would hand over every other customer's data and breach
+  minimisation while answering a question about one person. The page prints the price
+  evidence for one product (§ 12a, with a `kDatu` so a *past* window can be proven, which
+  is what they actually ask about) and every consent held for one e-mail (čl. 7 odst. 1).
+  Both endpoints are **read-only on purpose**: evidence you can edit proves nothing.
+  Cookie consents are keyed by a random id and are deliberately **not** joined to the
+  e-mail — that join would manufacture the very link the random id avoids.
 - **The invoice prints the VAT breakdown** from the order snapshot (`sazbaDph`, `dphHaleru`),
   never from today's settings, and only for a VAT payer. A non-payer must not show VAT at all.
 

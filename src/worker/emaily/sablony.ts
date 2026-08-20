@@ -163,14 +163,14 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Nastavení nového hesla',
           odstavec(oslovení) +
-            odstavec('požádali jste o nové heslo k účtu LINDA FASHION. Odkaz níže platí <strong>jednu hodinu</strong> a dá se použít jen jednou.') +
-            tlacitko('Nastavit nové heslo', odkaz) +
-            odstavec(
-              `Kdyby tlačítko nefungovalo, zkopírujte si do prohlížeče tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
-            ) +
-            odstavec(
-              '<strong>O nic jste nežádali?</strong> Pak tenhle e-mail v klidu smažte – bez kliknutí na odkaz se vaše heslo nezmění.'
-            )
+          odstavec('požádali jste o nové heslo k účtu LINDA FASHION. Odkaz níže platí <strong>jednu hodinu</strong> a dá se použít jen jednou.') +
+          tlacitko('Nastavit nové heslo', odkaz) +
+          odstavec(
+            `Kdyby tlačítko nefungovalo, zkopírujte si do prohlížeče tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
+          ) +
+          odstavec(
+            '<strong>O nic jste nežádali?</strong> Pak tenhle e-mail v klidu smažte – bez kliknutí na odkaz se vaše heslo nezmění.'
+          )
         ),
         text: [
           'Dobrý den,',
@@ -212,15 +212,15 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Děkujeme za objednávku',
           odstavec('Dobrý den,') +
-            odstavec('vaši objednávku jsme přijali a pustíme se do ní. Jakmile ji předáme dopravci, dáme vám vědět.') +
-            panel(radky) +
-            tlacitko('Zobrazit objednávku', odkaz) +
-            odstavec(
-              'Platíte-li převodem, najdete platební údaje i QR platbu na stránce objednávky. Zboží odesíláme po připsání částky.'
-            ) +
-            odstavec(
-              `Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu – <a href="${odkazOdstoupeni}" style="color:${BARVY.cognac};">odstoupit od smlouvy</a> jde přímo z tohoto odkazu, přihlašovat se nemusíte.`
-            )
+          odstavec('vaši objednávku jsme přijali a pustíme se do ní. Jakmile ji předáme dopravci, dáme vám vědět.') +
+          panel(radky) +
+          tlacitko('Zobrazit objednávku', odkaz) +
+          odstavec(
+            'Platíte-li převodem, najdete platební údaje i QR platbu na stránce objednávky. Zboží odesíláme po připsání částky.'
+          ) +
+          odstavec(
+            `Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu – <a href="${odkazOdstoupeni}" style="color:${BARVY.cognac};">odstoupit od smlouvy</a> jde přímo z tohoto odkazu, přihlašovat se nemusíte.`
+          )
         ),
         text: [
           'Dobrý den,',
@@ -252,12 +252,12 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           NADPIS_STAVU[stav] ?? 'Změna stavu objednávky',
           odstavec('Dobrý den,') +
-            odstavec(`vaše objednávka <strong>${e(cislo)}</strong> ${e(POPIS_STAVU[stav] ?? 'změnila stav')}.`) +
-            panel(radky) +
-            (zasilka
-              ? odstavec('Podle čísla zásilky si zásilku najdete na webu dopravce.')
-              : '') +
-            tlacitko('Přehled objednávek', `${web}/muj-ucet`)
+          odstavec(`vaše objednávka <strong>${e(cislo)}</strong> ${e(POPIS_STAVU[stav] ?? 'změnila stav')}.`) +
+          panel(radky) +
+          (zasilka
+            ? odstavec('Podle čísla zásilky si zásilku najdete na webu dopravce.')
+            : '') +
+          tlacitko('Přehled objednávek', `${web}/muj-ucet`)
         ),
         text: [
           'Dobrý den,',
@@ -280,11 +280,11 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Je to zpátky skladem',
           odstavec('Dobrý den,') +
-            odstavec(`hlídali jste si <strong>${e(nazev)}</strong> – právě je znovu k dispozici.`) +
-            tlacitko('Zobrazit zboží', odkaz) +
-            odstavec(
-              'Kousků bývá málo, tak s nákupem neváhejte. Tuhle zprávu posíláme jen jednou; na další naskladnění si hlídání nastavte znovu.'
-            )
+          odstavec(`hlídali jste si <strong>${e(nazev)}</strong> – právě je znovu k dispozici.`) +
+          tlacitko('Zobrazit zboží', odkaz) +
+          odstavec(
+            'Kousků bývá málo, tak s nákupem neváhejte. Tuhle zprávu posíláme jen jednou; na další naskladnění si hlídání nastavte znovu.'
+          )
         ),
         text: [
           'Dobrý den,',
@@ -305,12 +305,12 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Ještě jedno kliknutí',
           odstavec('Dobrý den,') +
-            odstavec('do odběru novinek vás zapíšeme, jakmile potvrdíte, že e-mail patří opravdu vám.') +
-            tlacitko('Potvrdit odběr', odkaz) +
-            odstavec(
-              `Kdyby tlačítko nefungovalo, otevřete tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
-            ) +
-            odstavec('Pokud jste se nepřihlašovali, nedělejte nic – bez potvrzení vám nic posílat nebudeme.')
+          odstavec('do odběru novinek vás zapíšeme, jakmile potvrdíte, že e-mail patří opravdu vám.') +
+          tlacitko('Potvrdit odběr', odkaz) +
+          odstavec(
+            `Kdyby tlačítko nefungovalo, otevřete tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
+          ) +
+          odstavec('Pokud jste se nepřihlašovali, nedělejte nic – bez potvrzení vám nic posílat nebudeme.')
         ),
         text: [
           'Dobrý den,',
@@ -331,8 +331,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Váš košík na vás čeká',
           odstavec('Dobrý den,') +
-            odstavec('nechali jste u nás plný košík. Držíme vám ho, ale zboží nerezervujeme – u posledních kousků rozhoduje, kdo dokončí nákup dřív.') +
-            tlacitko('Dokončit nákup', odkaz)
+          odstavec('nechali jste u nás plný košík. Držíme vám ho, ale zboží nerezervujeme – u posledních kousků rozhoduje, kdo dokončí nákup dřív.') +
+          tlacitko('Dokončit nákup', odkaz)
         ),
         text: ['Dobrý den,', '', 'nechali jste u nás plný košík:', odkaz, '', 'Zboží v košíku nerezervujeme.'].join(
           '\n'
@@ -349,8 +349,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Posledních pár kousků',
           odstavec('Dobrý den,') +
-            odstavec(`z <strong>${e(nazev)}</strong> ve vašem košíku zbývá jen pár kusů.`) +
-            tlacitko('Dokončit nákup', odkaz)
+          odstavec(`z <strong>${e(nazev)}</strong> ve vašem košíku zbývá jen pár kusů.`) +
+          tlacitko('Dokončit nákup', odkaz)
         ),
         text: ['Dobrý den,', '', `z ${nazev} ve vašem košíku zbývá jen pár kusů.`, odkaz].join('\n'),
       };
@@ -367,8 +367,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
             ['Od', String(data.od ?? '')],
             ['Předmět', String(data.predmet ?? '(bez předmětu)')],
           ]) +
-            odstavec('Celé znění je v administraci – tenhle e-mail je jen upozornění, obsah zprávy se posílá nešifrovaně.') +
-            tlacitko('Otevřít v administraci', odkaz)
+          odstavec('Celé znění je v administraci – tenhle e-mail je jen upozornění, obsah zprávy se posílá nešifrovaně.') +
+          tlacitko('Otevřít v administraci', odkaz)
         ),
         text: [
           'Nová zpráva z kontaktního formuláře.',
@@ -410,7 +410,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         ? (data.polozky as Array<{ nazev?: unknown; velikost?: unknown; mnozstvi?: unknown }>)
         : [];
 
-      /* Nadpis seznamu rozlišuje celou objednávku od částečného vrácení.
+      hu      /* Nadpis seznamu rozlišuje celou objednávku od částečného vrácení.
          „Zboží z objednávky" u částečného odstoupení vypadá, jako by se
          vracelo všechno – a potvrzení je doklad, ne shrnutí. */
       const celaObjednavka = data.celaObjednavka === true;
@@ -418,13 +418,13 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
 
       const seznamHtml = polozky.length
         ? '<ul style="margin:0 0 14px 0;padding-left:20px;">' +
-          polozky
-            .map(
-              (i) =>
-                `<li style="font-size:14px;color:#6B5B4F;">${e(i.nazev)} (${e(i.velikost)}) – ${e(i.mnozstvi)} ks</li>`
-            )
-            .join('') +
-          '</ul>'
+        polozky
+          .map(
+            (i) =>
+              `<li style="font-size:14px;color:#6B5B4F;">${e(i.nazev)} (${e(i.velikost)}) – ${e(i.mnozstvi)} ks</li>`
+          )
+          .join('') +
+        '</ul>'
         : '';
 
       const seznamText = polozky.map((i) => `  • ${String(i.nazev)} (${String(i.velikost)}) – ${String(i.mnozstvi)} ks`);
@@ -434,23 +434,23 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Odstoupení od smlouvy přijato',
           odstavec('Dobrý den,') +
-            odstavec(
-              'potvrzujeme, že jsme přijali vaše odstoupení od kupní smlouvy. Tenhle e-mail je zároveň dokladem o tom, kdy odstoupení dorazilo – uschovejte si ho prosím.'
-            ) +
-            panel([
-              ['Objednávka', cislo],
-              ['Přijato', kdy],
-            ]) +
-            (seznamHtml ? odstavec(`<strong>${nadpisSeznamu}</strong>`) + seznamHtml : '') +
-            (data.duvod ? odstavec(`<strong>Vaše poznámka:</strong> ${e(data.duvod)}`) : '') +
-            odstavec(
-              adresa
-                ? `Zboží prosím odešlete zpět na adresu:<br><strong>${e(adresa)}</strong><br>Nejpozději do 14 dnů od tohohle odstoupení.`
-                : 'Ozveme se vám s pokyny, kam zboží poslat. Odeslat ho potřebujete nejpozději do 14 dnů od tohohle odstoupení.'
-            ) +
-            odstavec(
-              'Peníze vám vrátíme do 14 dnů od doručení odstoupení. Můžeme s vrácením počkat, dokud zboží nedorazí zpět nebo dokud nedoložíte jeho odeslání.'
-            )
+          odstavec(
+            'potvrzujeme, že jsme přijali vaše odstoupení od kupní smlouvy. Tenhle e-mail je zároveň dokladem o tom, kdy odstoupení dorazilo – uschovejte si ho prosím.'
+          ) +
+          panel([
+            ['Objednávka', cislo],
+            ['Přijato', kdy],
+          ]) +
+          (seznamHtml ? odstavec(`<strong>${nadpisSeznamu}</strong>`) + seznamHtml : '') +
+          (data.duvod ? odstavec(`<strong>Vaše poznámka:</strong> ${e(data.duvod)}`) : '') +
+          odstavec(
+            adresa
+              ? `Zboží prosím odešlete zpět na adresu:<br><strong>${e(adresa)}</strong><br>Nejpozději do 14 dnů od tohohle odstoupení.`
+              : 'Ozveme se vám s pokyny, kam zboží poslat. Odeslat ho potřebujete nejpozději do 14 dnů od tohohle odstoupení.'
+          ) +
+          odstavec(
+            'Peníze vám vrátíme do 14 dnů od doručení odstoupení. Můžeme s vrácením počkat, dokud zboží nedorazí zpět nebo dokud nedoložíte jeho odeslání.'
+          )
         ),
         text: [
           'Dobrý den,',
@@ -502,8 +502,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         html: obalka(
           'Platbu máme',
           odstavec('Dobrý den,') +
-            odstavec(`platbu k objednávce <strong>${e(cislo)}</strong> jsme přijali. Zboží připravíme k odeslání.`) +
-            tlacitko('Přehled objednávek', `${web}/muj-ucet`)
+          odstavec(`platbu k objednávce <strong>${e(cislo)}</strong> jsme přijali. Zboží připravíme k odeslání.`) +
+          tlacitko('Přehled objednávek', `${web}/muj-ucet`)
         ),
         text: ['Dobrý den,', '', `platbu k objednávce ${cislo} jsme přijali.`, `${web}/muj-ucet`].join('\n'),
       };
