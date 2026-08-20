@@ -410,7 +410,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         ? (data.polozky as Array<{ nazev?: unknown; velikost?: unknown; mnozstvi?: unknown }>)
         : [];
 
-      hu      /* Nadpis seznamu rozlišuje celou objednávku od částečného vrácení.
+      /* Nadpis seznamu rozlišuje celou objednávku od částečného vrácení.
          „Zboží z objednávky" u částečného odstoupení vypadá, jako by se
          vracelo všechno – a potvrzení je doklad, ne shrnutí. */
       const celaObjednavka = data.celaObjednavka === true;
