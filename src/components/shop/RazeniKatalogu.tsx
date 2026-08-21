@@ -3,6 +3,7 @@
 import React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowUpDown } from 'lucide-react';
+import { Vyber } from '@/components/ui/Vyber';
 import type { Razeni } from '@/lib/katalog';
 
 const MOZNOSTI: Array<{ hodnota: Razeni; popisek: string }> = [
@@ -37,22 +38,18 @@ export function RazeniKatalogu({ aktualni }: { aktualni: Razeni }) {
 
   return (
     <div className="flex items-center gap-2">
-      <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
-      <label htmlFor="razeni" className="sr-only">
-        Řazení produktů
-      </label>
-      <select
+      <Vyber
         id="razeni"
-        value={aktualni}
-        onChange={(e) => zmenit(e.target.value)}
-        className="min-h-touch cursor-pointer rounded-lg bg-linda-cream px-2 text-xs text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu"
-      >
-        {MOZNOSTI.map((m) => (
-          <option key={m.hodnota} value={m.hodnota}>
-            {m.popisek}
-          </option>
-        ))}
-      </select>
+        varianta="vystouply"
+        ariaLabel="Řazení produktů"
+        hodnota={aktualni}
+        moznosti={MOZNOSTI}
+        onZmena={zmenit}
+        ikona={
+          <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+        }
+        trida="min-w-[13.5rem]"
+      />
     </div>
   );
 }

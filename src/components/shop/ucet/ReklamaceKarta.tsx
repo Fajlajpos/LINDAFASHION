@@ -5,6 +5,7 @@ import { Loader2, PackageOpen, RotateCcw } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { Hlaska, OblastFormulare } from '@/components/ui/PoleFormulare';
 import { STAV_REKLAMACE, formatDatum } from '@/lib/objednavka-popisky';
+import { Vyber } from '@/components/ui/Vyber';
 
 export interface ObjednavkaProReklamaci {
   id: string;
@@ -27,9 +28,6 @@ interface Reklamace {
 
 /** Celá objednávka se v `<select>` vybírá touhle hodnotou, ne prázdným řetězcem. */
 const CELA_OBJEDNAVKA = 'cela';
-
-const TRIDY_VYBERU =
-  'min-h-touch w-full cursor-pointer rounded-xl bg-linda-cream px-4 text-xs text-linda-espresso shadow-neuSm transition-shadow hover:shadow-neu disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * Reklamace a vrácení zboží.
@@ -146,27 +144,29 @@ export function ReklamaceKarta({
                 >
                   Objednávka
                 </label>
-                <select
+                <Vyber
                   id="reklamace-objednavka"
-                  required
-                  value={orderId}
+                  povinne
+                  hodnota={orderId}
                   disabled={odesila}
-                  onChange={(e) => {
-                    setOrderId(e.target.value);
+                  onZmena={(hodnota) => {
+                    setOrderId(hodnota);
                     setOrderItemId(CELA_OBJEDNAVKA);
                   }}
-                  aria-invalid={poleChyby.orderId ? true : undefined}
-                  className={TRIDY_VYBERU}
-                >
-                  <option value="">Vyberte objednávku…</option>
-                  {zpusobile.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.cisloObjednavky}
-                    </option>
-                  ))}
-                </select>
+                  zastupnyText="Vyberte objednávku…"
+                  ariaDescribedBy={poleChyby.orderId ? 'reklamace-objednavka-chyba' : undefined}
+                  trida="w-full"
+                  moznosti={zpusobile.map((o) => ({
+                    hodnota: o.id,
+                    popisek: o.cisloObjednavky,
+                  }))}
+                />
                 {poleChyby.orderId && (
-                  <p role="alert" className="mt-1.5 text-[11px] font-medium text-red-800">
+                  <p
+                    id="reklamace-objednavka-chyba"
+                    role="alert"
+                    className="mt-1.5 text-[11px] font-medium text-red-800"
+                  >
                     {poleChyby.orderId}
                   </p>
                 )}
@@ -179,21 +179,21 @@ export function ReklamaceKarta({
                 >
                   Čeho se týká
                 </label>
-                <select
+                <Vyber
                   id="reklamace-polozka"
-                  value={orderItemId}
+                  hodnota={orderItemId}
                   disabled={odesila || vybrana === null}
-                  onChange={(e) => setOrderItemId(e.target.value)}
-                  aria-describedby="reklamace-polozka-napoveda"
-                  className={TRIDY_VYBERU}
-                >
-                  <option value={CELA_OBJEDNAVKA}>Celá objednávka</option>
-                  {vybrana?.polozky.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nazev} · {p.velikost}
-                    </option>
-                  ))}
-                </select>
+                  onZmena={setOrderItemId}
+                  ariaDescribedBy="reklamace-polozka-napoveda"
+                  trida="w-full"
+                  moznosti={[
+                    { hodnota: CELA_OBJEDNAVKA, popisek: 'Celá objednávka' },
+                    ...(vybrana?.polozky ?? []).map((p) => ({
+                      hodnota: p.id,
+                      popisek: `${p.nazev} · ${p.velikost}`,
+                    })),
+                  ]}
+                />
                 <p
                   id="reklamace-polozka-napoveda"
                   className="mt-1.5 text-[11px] text-linda-espresso/70"

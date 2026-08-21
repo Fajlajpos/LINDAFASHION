@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle, Loader2, Save } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { STAV_OBJEDNAVKY, STAV_PLATBY } from '@/lib/objednavka-popisky';
+import { Vyber } from '@/components/ui/Vyber';
 
 interface Props {
   orderId: string;
@@ -128,38 +129,28 @@ export function SpravaObjednavky({ orderId, stav, stavPlatby, cisloZasilky, polo
             <label htmlFor="stav" className="mb-1 block text-xs font-semibold text-linda-espresso">
               Stav zpracování
             </label>
-            <select
+            <Vyber
               id="stav"
-              value={novyStav}
+              hodnota={novyStav}
               disabled={uklada}
-              onChange={(e) => setNovyStav(e.target.value)}
-              className={`${POLE} cursor-pointer`}
-            >
-              {STAVY.map((s) => (
-                <option key={s} value={s}>
-                  {STAV_OBJEDNAVKY[s]?.text ?? s}
-                </option>
-              ))}
-            </select>
+              onZmena={setNovyStav}
+              trida="w-full"
+              moznosti={STAVY.map((s) => ({ hodnota: s, popisek: STAV_OBJEDNAVKY[s]?.text ?? s }))}
+            />
           </div>
 
           <div>
             <label htmlFor="stavPlatby" className="mb-1 block text-xs font-semibold text-linda-espresso">
               Stav platby
             </label>
-            <select
+            <Vyber
               id="stavPlatby"
-              value={novyStavPlatby}
+              hodnota={novyStavPlatby}
               disabled={uklada}
-              onChange={(e) => setNovyStavPlatby(e.target.value)}
-              className={`${POLE} cursor-pointer`}
-            >
-              {STAVY_PLATBY.map((s) => (
-                <option key={s} value={s}>
-                  {STAV_PLATBY[s] ?? s}
-                </option>
-              ))}
-            </select>
+              onZmena={setNovyStavPlatby}
+              trida="w-full"
+              moznosti={STAVY_PLATBY.map((s) => ({ hodnota: s, popisek: STAV_PLATBY[s] ?? s }))}
+            />
           </div>
         </div>
 
@@ -208,36 +199,38 @@ export function SpravaObjednavky({ orderId, stav, stavPlatby, cisloZasilky, polo
               <label htmlFor="typReklamace" className="mb-1 block text-xs font-semibold text-linda-espresso">
                 Typ
               </label>
-              <select
+              <Vyber
                 id="typReklamace"
-                value={typReklamace}
+                hodnota={typReklamace}
                 disabled={zakladaReklamaci}
-                onChange={(e) => setTypReklamace(e.target.value as 'REKLAMACE' | 'VRACENI')}
-                className={`${POLE} cursor-pointer`}
-              >
-                <option value="REKLAMACE">Reklamace (vada zboží)</option>
-                <option value="VRACENI">Vrácení (odstoupení do 14 dnů)</option>
-              </select>
+                onZmena={(hodnota) => setTypReklamace(hodnota as 'REKLAMACE' | 'VRACENI')}
+                trida="w-full"
+                moznosti={[
+                  { hodnota: 'REKLAMACE', popisek: 'Reklamace', poznamka: 'Vada zboží' },
+                  {
+                    hodnota: 'VRACENI',
+                    popisek: 'Vrácení',
+                    poznamka: 'Odstoupení od smlouvy do 14 dnů',
+                  },
+                ]}
+              />
             </div>
 
             <div>
               <label htmlFor="polozka" className="mb-1 block text-xs font-semibold text-linda-espresso">
                 Které položky se týká
               </label>
-              <select
+              <Vyber
                 id="polozka"
-                value={polozkaId}
+                hodnota={polozkaId}
                 disabled={zakladaReklamaci}
-                onChange={(e) => setPolozkaId(e.target.value)}
-                className={`${POLE} cursor-pointer`}
-              >
-                <option value="">Celá objednávka</option>
-                {polozky.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.popis}
-                  </option>
-                ))}
-              </select>
+                onZmena={setPolozkaId}
+                trida="w-full"
+                moznosti={[
+                  { hodnota: '', popisek: 'Celá objednávka' },
+                  ...polozky.map((p) => ({ hodnota: p.id, popisek: p.popis })),
+                ]}
+              />
             </div>
           </div>
 

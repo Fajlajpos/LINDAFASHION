@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle, Loader2, Wrench } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { OblastFormulare, PoleFormulare, Hlaska } from '@/components/ui/PoleFormulare';
 import { DNU_NA_REKLAMACI } from '@/lib/lhuty';
+import { Vyber } from '@/components/ui/Vyber';
 
 /**
  * Reklamace vady **bez přihlášení**.
@@ -160,22 +161,28 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
           >
             Které zboží reklamujete?
           </label>
-          <select
+          <Vyber
             id="reklamace-polozka"
-            value={polozkaId}
+            hodnota={polozkaId}
             disabled={nacitam}
-            onChange={(e) => setPolozkaId(e.target.value)}
-            className="min-h-touch w-full cursor-pointer rounded-xl bg-linda-sandLight px-4 py-2.5 text-xs text-linda-espresso shadow-neuInsetSm disabled:opacity-60"
-          >
-            <option value="">Celá objednávka</option>
-            {objednavka.polozky.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nazev} · {p.velikost} ({p.mnozstvi} ks)
-              </option>
-            ))}
-          </select>
+            onZmena={setPolozkaId}
+            trida="w-full"
+            ariaDescribedBy={chybyPoli.orderItemId ? 'reklamace-polozka-chyba' : undefined}
+            moznosti={[
+              { hodnota: '', popisek: 'Celá objednávka' },
+              ...objednavka.polozky.map((p) => ({
+                hodnota: p.id,
+                popisek: `${p.nazev} · ${p.velikost}`,
+                poznamka: `${p.mnozstvi} ks`,
+              })),
+            ]}
+          />
           {chybyPoli.orderItemId && (
-            <p role="alert" className="mt-1.5 text-[11px] font-medium text-red-800">
+            <p
+              id="reklamace-polozka-chyba"
+              role="alert"
+              className="mt-1.5 text-[11px] font-medium text-red-800"
+            >
               {chybyPoli.orderItemId}
             </p>
           )}

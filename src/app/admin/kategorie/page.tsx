@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, FolderTree, Loader2, Plus, Trash2 } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
+import { Vyber } from '@/components/ui/Vyber';
 
 interface Kategorie {
   id: string;
@@ -138,22 +139,19 @@ export default function AdminKategoriePage() {
             <label htmlFor="novy-rodic" className="mb-1 block text-xs font-semibold text-linda-espresso">
               Nadřazená kategorie
             </label>
-            <select
+            <Vyber
               id="novy-rodic"
               disabled={pridavam}
-              value={novyRodic}
-              onChange={(e) => setNovyRodic(e.target.value)}
-              className="min-h-touch w-full cursor-pointer rounded-xl bg-linda-sandLight px-4 py-2.5 text-xs text-linda-espresso shadow-neuInsetSm disabled:opacity-60"
-            >
-              <option value="">Žádná (hlavní kategorie)</option>
-              {kategorie
-                .filter((k) => !k.parentId)
-                .map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.nazev}
-                  </option>
-                ))}
-            </select>
+              hodnota={novyRodic}
+              onZmena={setNovyRodic}
+              trida="w-full"
+              moznosti={[
+                { hodnota: '', popisek: 'Žádná (hlavní kategorie)' },
+                ...kategorie
+                  .filter((k) => !k.parentId)
+                  .map((k) => ({ hodnota: k.id, popisek: k.nazev })),
+              ]}
+            />
           </div>
         </div>
 

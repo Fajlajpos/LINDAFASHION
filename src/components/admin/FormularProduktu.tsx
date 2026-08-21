@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, Star, Trash2, Upload } from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
+import { Vyber } from '@/components/ui/Vyber';
 
 /**
  * Formulář produktu pro obě situace – zakládání i editaci.
@@ -425,22 +426,20 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             <label htmlFor="kategorie" className="mb-1 block font-semibold text-linda-espresso">
               Kategorie *
             </label>
-            <select
+            <Vyber
               id="kategorie"
-              required
+              povinne
               disabled={odesilam || nacitamKategorie}
-              value={form.categoryId}
-              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              className={`${POLE} cursor-pointer`}
-            >
-              {nacitamKategorie && <option value="">Načítám kategorie…</option>}
-              {!nacitamKategorie && kategorie.length === 0 && <option value="">Nejdřív založte kategorii</option>}
-              {kategorie.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.parent ? `${k.parent.nazev} → ${k.nazev}` : k.nazev}
-                </option>
-              ))}
-            </select>
+              hodnota={form.categoryId}
+              onZmena={(hodnota) => setForm({ ...form, categoryId: hodnota })}
+              trida="w-full"
+              /* Prázdný seznam si `Vyber` zakáže sám – zbývá říct proč. */
+              zastupnyText={nacitamKategorie ? 'Načítám kategorie…' : 'Nejdřív založte kategorii'}
+              moznosti={kategorie.map((k) => ({
+                hodnota: k.id,
+                popisek: k.parent ? `${k.parent.nazev} → ${k.nazev}` : k.nazev,
+              }))}
+            />
             {chybaPole('categoryId')}
           </div>
 

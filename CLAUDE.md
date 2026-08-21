@@ -174,6 +174,22 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 - Server Components by default; `'use client'` only where interactivity requires it.
 - `next/image` for all images, never `<img>`. Lucide for icons, never emoji.
+- **No native `<select>` — use [Vyber.tsx](src/components/ui/Vyber.tsx).** The trigger styles
+  fine, but the *dropped-down list is drawn by the operating system*: a grey Windows menu with
+  a blue bar, system font and square corners, in the middle of the cream relief. `appearance:
+  none` cannot reach it and `<option>` takes almost no styling anywhere. `Vyber` renders the
+  list itself in the same vocabulary as the search suggestions (raised `cream` card, active
+  item sunk into it), through a portal so it is never clipped by an ancestor, and it opens
+  upward when the window has no room below. The portal is **`position: absolute` in document
+  coordinates, never `fixed`** — a fixed menu has to be dragged back to its field on every
+  scroll event, and the browser scrolls on the compositor thread, so it visibly swam around
+  the field no matter how the chasing was written. Anchored in the document, the page scrolls
+  menu and field together in one movement. Scrolling further than a nudge then **closes** the
+  menu — the field itself disappears under the sticky header (`z-40`) while the menu above it
+  (`z-50`) would stay hanging over the header, attached to nothing. Keyboard follows the WAI-ARIA
+  select-only combobox: arrows, Home/End, Enter, Escape and typeahead. Native `required`
+  disappears with the native element — the server check (`{ chyba, pole }`) is what enforces
+  the field, `povinne` only sets `aria-required`.
 - Czech copy throughout, including `aria-label`s.
 - Czech number formatting: `.toLocaleString('cs-CZ')`.
 

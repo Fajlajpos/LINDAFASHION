@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertCircle, FileText, Loader2, Lock, Plus, Scale } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { Hlaska } from '@/components/ui/PoleFormulare';
+import { Vyber } from '@/components/ui/Vyber';
 
 /**
  * Právní dokumenty – archiv znění, ne editor.
@@ -159,19 +160,14 @@ export default function AdminPravniDokumentyPage() {
               <label htmlFor="druh" className="mb-1 block text-xs font-semibold text-linda-espresso">
                 Dokument
               </label>
-              <select
+              <Vyber
                 id="druh"
-                value={druh}
+                hodnota={druh}
                 disabled={ukladam}
-                onChange={(e) => setDruh(e.target.value)}
-                className={`cursor-pointer ${POLE}`}
-              >
-                {DRUHY.map((d) => (
-                  <option key={d.klic} value={d.klic}>
-                    {d.nazev}
-                  </option>
-                ))}
-              </select>
+                onZmena={setDruh}
+                trida="w-full"
+                moznosti={DRUHY.map((d) => ({ hodnota: d.klic, popisek: d.nazev }))}
+              />
               {chybaPole('druh')}
             </div>
 

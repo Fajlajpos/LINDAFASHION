@@ -6,6 +6,7 @@ import { AlertCircle, AlertTriangle, CalendarClock, Loader2 } from 'lucide-react
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { STAV_REKLAMACE } from '@/lib/objednavka-popisky';
 import { DNU_NA_REKLAMACI, stavLhuty, zbyvaDnu } from '@/lib/lhuty';
+import { Vyber } from '@/components/ui/Vyber';
 
 interface Reklamace {
   id: string;
@@ -265,19 +266,17 @@ export default function AdminReklamacePage() {
                   <label htmlFor={`stav-${r.id}`} className="text-[11px] font-semibold text-linda-espresso">
                     Změnit stav:
                   </label>
-                  <select
+                  <Vyber
                     id={`stav-${r.id}`}
-                    value={r.stav}
+                    hodnota={r.stav}
                     disabled={meniId === r.id}
-                    onChange={(e) => void zmenitStav(r, e.target.value)}
-                    className="min-h-touch cursor-pointer rounded-lg bg-linda-sandLight px-3 text-xs text-linda-espresso shadow-neuInsetSm disabled:opacity-60"
-                  >
-                    {STAVY.map((s) => (
-                      <option key={s} value={s}>
-                        {STAV_REKLAMACE[s]?.text ?? s}
-                      </option>
-                    ))}
-                  </select>
+                    onZmena={(hodnota) => void zmenitStav(r, hodnota)}
+                    trida="w-full sm:w-56"
+                    moznosti={STAVY.map((s) => ({
+                      hodnota: s,
+                      popisek: STAV_REKLAMACE[s]?.text ?? s,
+                    }))}
+                  />
                   {meniId === r.id && (
                     <Loader2 className="h-4 w-4 animate-spin text-linda-cognac" aria-hidden="true" />
                   )}
