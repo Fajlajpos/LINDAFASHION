@@ -89,8 +89,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     /* Karta má stejnou barvu jako stránka – od podkladu ji dělí jen reliéf.
-       Rámeček by hranu ohraničil podruhé, proto tu není. */
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream shadow-neu transition-all duration-300 hover:shadow-neuLg">
+       Rámeček by hranu ohraničil podruhé, proto tu není.
+
+       Karta s fotkou nese hlubší stín (`neuFoto`). Není to rozmar: stín se
+       vedle karty **čte jako propad** proti jejímu okraji, a produktová
+       fotografie je u okraje tmavší (~209) než stín `neu` (~228). Ten propad
+       tedy vůbec nevznikne a vedle karty s fotkou není vidět nic, přestože je
+       stín vykreslený úplně stejně jako u karty bez fotky. Zástupná plocha
+       končí světle (~238) a stín `neu` jí stačí, proto si ho nechává –
+       kdyby dostala `neuFoto`, byl by na ní naopak přehnaný. Podrobné
+       naměřené hodnoty jsou u tokenu v `tailwind.config.ts`. */
+    <div
+      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream transition-all duration-300 ${
+        obrazekUrl ? 'shadow-neuFoto hover:shadow-neuFotoLg' : 'shadow-neu hover:shadow-neuLg'
+      }`}
+    >
       {/* Badges */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
         {doporuceny && (
@@ -176,13 +189,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         className="block relative aspect-[3/4] bg-linda-cream overflow-hidden"
       >
         {obrazekUrl ? (
-          <Image
-            src={obrazekUrl}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+          <>
+            <Image
+              src={obrazekUrl}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+            {/* Světelný spád přes nahranou fotografii – přidá se sám každému
+                produktu s obrázkem, nic se nikde nenastavuje.
+
+                Zástupná plocha níž má takový přechod od začátku a právě ten
+                jí dává tvar; fotka bez něj vedle ní leží jako plochý obdélník
+                nalepený na kartu. Odstín i síla jsou v tokenu `nikaFoto`.
+
+                Vlastní vrstva nad snímkem, ne jeho vlastnost: `object-cover`
+                fotku při najetí zvětšuje, kdežto tahle vrstva se **neškáluje**
+                – světlo tedy zůstává na kartě a pohybuje se jen snímek pod
+                ním. Kdyby se zvětšovala s fotkou, jel by s ní i spád a efekt
+                by se rozjel k jednomu rohu.
+
+                `pointer-events-none`, aby vrstva nebrala kliknutí odkazu pod
+                sebou, a `aria-hidden`, protože nenese žádnou informaci. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-nikaFoto"
+            />
+          </>
         ) : (
           /* Zástupná plocha bez fotografie.
              Dřív tu byla ikonka jiskřiček a pod ní dvakrát název značky –

@@ -51,6 +51,34 @@ const config: Config = {
         serif: ['var(--font-cormorant)', 'Cormorant Garamond', 'Georgia', 'serif'],
         sans: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'Inter', 'sans-serif'],
       },
+      backgroundImage: {
+        /* Světelný spád přes produktovou fotografii na kartě v katalogu.
+
+           Kopíruje tvar přechodu, kterým je podložená zástupná plocha bez
+           fotografie (`from-sandLight via-cream to-sand/60`): mírně tmavší
+           levý horní roh, nejsvětlejší střed, teple ztmavený pravý dolní
+           roh. Fotka díky tomu přestane být plochý obdélník a obě varianty
+           karty vypadají jako jeden materiál. Směr `to bottom right`, světlo
+           zleva shora jako všude v reliéfu.
+
+           **Bez bílé složky.** Přísvit v levém horním rohu vypadal na světlé
+           látce dobře, ale nad tmavým snímkem z něj byla mléčná šmouha přes
+           roh fotky – táž vada, kvůli které bílou vynechává `neuFloat`.
+           Dojem světla nese kontrast: střed zůstává nedotčený, a je tedy
+           nejsvětlejší sám o sobě.
+
+           **U hrany se neztmavuje.** Byla tu chvíli vrstva, která ztmavovala
+           pravý okraj snímku, aby fotka „končila stínem“ jako zástupná
+           plocha. Byl to omyl a škodil: stín, o který šlo, je ten, který
+           karta vrhá **vedle sebe** na stránku (`shadow-neu`). Ten je u obou
+           typů karet měřitelně stejný – čitelný je ale jen tehdy, když je
+           okraj karty světlejší než on, takže se dá vidět propad. Ztmavená
+           hrana fotky ten propad zahladila úplně. Fotku proto od okraje
+           karty odsazuje krémový lem (viz `ProductCard`), ne stín. */
+        nikaFoto:
+          'linear-gradient(to bottom right, rgba(43, 32, 25, 0.055) 0%, rgba(43, 32, 25, 0) 40%, rgba(43, 32, 25, 0.15) 100%)',
+      },
+
       boxShadow: {
         card: '0 4px 20px -2px rgba(43, 32, 25, 0.05)',
         elevated: '0 12px 30px -4px rgba(43, 32, 25, 0.08)',
@@ -71,6 +99,29 @@ const config: Config = {
         neu: '8px 8px 20px rgba(43, 32, 25, 0.10), -6px -6px 16px rgba(255, 255, 255, 0.95)',
         neuSm: '4px 4px 10px rgba(43, 32, 25, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9)',
         neuLg: '16px 16px 36px rgba(43, 32, 25, 0.12), -10px -10px 28px rgba(255, 255, 255, 1)',
+
+        /* Karta, jejíž horní část je **fotografie** (karta produktu v
+           katalogu). Stejný tvar jako `neu`, jen s mnohem hlubší tmavou
+           složkou – a je to měřená nutnost, ne zesílení pro efekt.
+
+           Stín `neu` má u hrany jas 228, kdežto produktová fotografie končí
+           u okraje typicky kolem 209. Stín je tedy **světlejší než plocha,
+           od které má oddělovat**, žádný propad nevznikne a vedle karty
+           s fotkou není vidět nic – i když je stín fyzicky vykreslený úplně
+           stejně jako u karty bez fotky. (Vedle zástupné plochy, která končí
+           světle kolem 238, tentýž stín propad 16 úrovní má, a proto ho tam
+           vidět je.)
+
+           Naměřeno: 0.18 → propad −9 (pořád nic), 0.26 → 0, 0.34 → +12, tedy
+           zhruba parita s kartou bez fotky. Odtud ta hodnota.
+
+           Bílý přísvit vlevo nahoře zůstává z `neu` beze změny: leží na
+           krémové stránce vedle karty, ne přes snímek, takže mléčná šmouha
+           tu nehrozí. */
+        neuFoto:
+          '12px 12px 30px rgba(43, 32, 25, 0.34), -6px -6px 16px rgba(255, 255, 255, 0.95)',
+        neuFotoLg:
+          '20px 20px 44px rgba(43, 32, 25, 0.38), -10px -10px 28px rgba(255, 255, 255, 1)',
 
         /* Vyvýšená plocha, která přesahuje přes fotku (rozcestník kategorií
            zanořený do heru). Bílý přísvit tu vynecháváme – nemá se do čeho
