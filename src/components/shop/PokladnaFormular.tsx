@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle, CreditCard, Loader2, MapPin, QrCode, Tag } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
+import { usePrilepenyPanel } from '@/lib/prilepeny-panel';
 import { poslatJson } from '@/lib/api-klient';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
 import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
@@ -207,6 +208,9 @@ export function PokladnaFormular({
   const [odesila, setOdesila] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
+
+  /** Kam se přilepí souhrn objednávky – viz `usePrilepenyPanel`. */
+  const souhrn = usePrilepenyPanel<HTMLDivElement>();
 
   // Kód uplatněný už v košíku se sem přenese, ať ho zákaznice nezadává dvakrát.
   // Autorita to není – server obojí ověřuje znovu při zakládání objednávky.
@@ -607,7 +611,16 @@ export function PokladnaFormular({
 
       {/* Souhrn */}
       <aside className="lg:col-span-5">
-        <div className="sticky top-24 space-y-5 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        {/* Bod přilepení počítá `usePrilepenyPanel` – u souhrnu vyššího než
+            okno posune `top` do záporných hodnot, takže se panel zastaví
+            spodkem nad dolním okrajem a tlačítko „Objednat a zaplatit“
+            zůstane na očích. Vysvětlení v tom souboru.
+            Přilepení až od `lg`: pod ním je souhrn běžný blok pod formulářem. */}
+        <div
+          ref={souhrn.ref}
+          style={{ top: souhrn.top }}
+          className="space-y-5 rounded-2xl bg-linda-cream p-6 shadow-neu lg:sticky"
+        >
           <h2 className="font-serif text-2xl text-linda-espresso">Souhrn objednávky</h2>
 
           <ul className="space-y-3">

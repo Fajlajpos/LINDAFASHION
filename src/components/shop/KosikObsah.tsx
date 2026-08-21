@@ -17,6 +17,7 @@ import { useCart } from '@/lib/cart-context';
 import { poslatJson } from '@/lib/api-klient';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
 import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
+import { usePrilepenyPanel } from '@/lib/prilepeny-panel';
 
 interface Props {
   /** Z administrace; `null` znamená, že doprava zdarma není nastavená. */
@@ -53,6 +54,9 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
 
   const [chybaSlevy, setChybaSlevy] = useState<string | null>(null);
   const [chybaPoukazu, setChybaPoukazu] = useState<string | null>(null);
+
+  /** Kam se přilepí shrnutí – viz `usePrilepenyPanel`. */
+  const shrnuti = usePrilepenyPanel<HTMLDivElement>();
 
   // Kódy uplatněné dřív v téhle návštěvě (třeba před přihlášením).
   useEffect(() => {
@@ -325,7 +329,14 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
 
       {/* Shrnutí */}
       <div className="lg:col-span-4">
-        <div className="sticky top-24 space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neuLg">
+        {/* Stejné přilepení jako u souhrnu v pokladně. Tenhle panel má pevný
+            počet řádků, takže okno přeroste až na nízkém notebooku – ale pak
+            by tlačítko „Pokračovat k pokladně“ nešlo doskrolovat vůbec. */}
+        <div
+          ref={shrnuti.ref}
+          style={{ top: shrnuti.top }}
+          className="space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neuLg lg:sticky"
+        >
           <h2 className="border-b border-linda-sand/60 pb-3 font-serif text-2xl text-linda-espresso">
             Shrnutí objednávky
           </h2>
