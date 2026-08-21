@@ -34,14 +34,18 @@ const NAV_LINKS = [
 const formatBadge = (count: number) => (count > 9 ? '9+' : String(count));
 
 /**
- * Stránky, kde je hlavička rovnou sbalená, i když je návštěvník na začátku
- * stránky. Detail produktu není čtení – vybírá se tu velikost, kontroluje
- * dostupnost a přidává do košíku. Vysoká lišta z toho ukrajuje první obrazovku
- * a volba velikosti spadne pod okraj. Vysoká hlavička patří k rozhlížení
- * (homepage, katalog), ne k práci s jedním kusem.
+ * Vysoká hlavička s podtitulem je uvítání – patří k příchodu na titulní
+ * stránku, kde je první obrazovka vizitka značky. Všude jinde už zákaznice
+ * něco dělá (prohlíží kolekci, vybírá velikost, vyplňuje pokladnu) a lišta
+ * je jen nářadí: 96 px na uvítání by tam ukrajovalo z obsahu a při prvním
+ * skrolu by stejně sjelo do sbaleného tvaru. Sbalený tvar je proto výchozí
+ * a rozevřený je výjimka pro `/`.
+ *
+ * Rozhoduje se podle cesty, ne podle skrolu, takže hlavička je sbalená hned
+ * v prvním vykreslení – nepřeklopí se až po namontování a stránka pod ní
+ * neposkočí.
  */
-const jeKompaktniStranka = (pathname: string | null) =>
-  Boolean(pathname?.startsWith('/produkt/'));
+const jeKompaktniStranka = (pathname: string | null) => pathname !== '/';
 
 export const Header: React.FC<HeaderProps> = ({
   user,
@@ -52,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
 
   /* Sbalený tvar drží buď skrol, nebo samotná stránka. Skrolem se pak už jen
-     nic nemění – zpátky nahoru se na detailu lišta nerozevírá. */
+     nic nemění – mimo titulní stránku se lišta zpátky nahoře nerozevírá. */
   const pathname = usePathname();
   const isCompact = isScrolled || jeKompaktniStranka(pathname);
 
@@ -85,6 +89,10 @@ export const Header: React.FC<HeaderProps> = ({
       if (frame === 0) frame = window.requestAnimationFrame(measure);
     };
 
+    // Přeměření i při změně cesty: App Router po navigaci odroluje nahoru,
+    // ale když stránka na nule už byla, žádná událost skrolu nepřijde a
+    // `isScrolled` by si drželo hodnotu z předchozí stránky – návrat na
+    // titulní by pak zůstal sbalený.
     measure();
     // passive: scroll handler nikdy nevolá preventDefault, prohlížeč tak
     // nemusí čekat a scrollování zůstává plynulé
@@ -93,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
       window.removeEventListener('scroll', handleScroll);
       if (frame !== 0) window.cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [pathname]);
 
   /* Escape zavře mobilní menu. Hledání tu schválně **není**: má Escape
      dvoukrokový (nejdřív nabídka návrhů, pak celé pole) a to rozhodnutí musí
