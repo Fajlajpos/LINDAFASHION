@@ -78,6 +78,66 @@ describe('sestavitEmail', () => {
   });
 
   /**
+   * Potvrzení objednávky není jen zdvořilost – § 1822 odst. 1 o. z. je to
+   * potvrzení smlouvy **v textové podobě**. Odkaz na web ho nenahradí: web se
+   * dá přepsat, e-mail v zákaznicině schránce ne. Poučení proto musí být
+   * v těle zprávy, ne za odkazem.
+   */
+  describe('potvrzení objednávky nese poučení, ne jen odkaz', () => {
+    const data = {
+      cisloObjednavky: '2026-00042',
+      verejnyToken: 'tok-abc-123',
+      celkovaCena: 2990,
+      verzePodminek: '2026-08-19',
+      adresaProVraceni: 'Sklad, Dlouhá 1, Praha',
+    };
+
+    it('obsahuje celé poučení o odstoupení, i v textové verzi', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', data)!;
+
+      for (const cast of [email.html, email.text]) {
+        expect(cast).toContain('14 dnů');
+        expect(cast).toMatch(/bez udání důvodu/);
+        // Náklady na vrácení: neuvedení je posouvá na prodávajícího
+        // (§ 1820 odst. 1 písm. i), takže věta nesmí vypadnout.
+        expect(cast).toMatch(/náklady na vrácení zboží nesete vy/i);
+      }
+    });
+
+    it('uvádí adresu pro vrácení, když je vyplněná', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', data)!;
+
+      expect(email.html).toContain('Sklad, Dlouhá 1, Praha');
+      expect(email.text).toContain('Sklad, Dlouhá 1, Praha');
+    });
+
+    it('bez adresy pro vrácení žádnou nevymyslí', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', {
+        ...data,
+        adresaProVraceni: undefined,
+      })!;
+
+      expect(email.text).toMatch(/adresu vám sdělíme/i);
+    });
+
+    it('odkazuje na tu verzi podmínek, se kterou zákaznice souhlasila', () => {
+      // Bez `?verze=` by odkaz po první změně znění vedl na text, který
+      // nikdy neviděla – a snímek `Order.verzePodminek` by ztratil smysl.
+      const email = sestavitEmail('potvrzeni-objednavky', data)!;
+
+      expect(email.html).toContain('verze=2026-08-19');
+      expect(email.text).toContain('verze=2026-08-19');
+    });
+
+    it('nese odkaz na odstoupení s tokenem, takže funguje i bez přihlášení', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', data)!;
+
+      expect(email.html).toContain('/odstoupeni?token=tok-abc-123');
+      expect(email.text).toContain('/odstoupeni/formular');
+    });
+  });
+
+  /**
    * Potvrzení odstoupení je jediný e-mail, jehož **obsah je zákonná
    * náležitost** (§ 1830a o. z.): musí nést datum a čas přijetí. Testuje se
    * proto věcně, ne jen „něco se vykreslilo".

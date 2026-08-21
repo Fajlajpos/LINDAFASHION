@@ -8,6 +8,7 @@ import { FRONTY, publishJob } from '@/lib/queue';
 import { NAZEV_DOPRAVY, NAZEV_PLATBY } from '@/lib/objednavka-popisky';
 import { zalozitPlatbu } from '@/lib/gopay';
 import { czkNaHalere } from '@/lib/penize';
+import { nacistNastaveni } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,16 @@ export async function POST(request: Request) {
         celkovaCena: vysledek.data.celkovaCenaKc,
         zpusobPlatby: NAZEV_PLATBY[vysledek.data.zpusobPlatby] ?? vysledek.data.zpusobPlatby,
         zpusobDopravy: NAZEV_DOPRAVY[vstup.zpusobDopravy] ?? vstup.zpusobDopravy,
+        /*
+         * Verze podmínek a adresa pro vrácení jdou do e-mailu schválně.
+         *
+         * § 1822 odst. 1 o. z. chce potvrzení smlouvy **v textové podobě**
+         * a § 1820 poučení o odstoupení. Odkaz na web to nesplní: web se dá
+         * kdykoliv přepsat, takže není trvalý nosič. E-mail v její schránce
+         * je – a proto v něm musí být samotné poučení, ne jen cesta k němu.
+         */
+        verzePodminek: vysledek.data.verzePodminek,
+        adresaProVraceni: (await nacistNastaveni()).adresaProVraceni,
       },
     });
 

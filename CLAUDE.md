@@ -514,6 +514,16 @@ deleted with her browser history. That is not evidence.
   PDF would not do. It deliberately omits the password hash and cookie-consent rows: the
   cookie subject id is random precisely so it cannot be tied to a person, and joining it to
   an account for the export would manufacture that link.
+- **The confirmation e-mail carries the withdrawal instruction itself, not a link to it.**
+  § 1822 odst. 1 wants confirmation of the contract *in text form on a durable medium*, and a
+  web page is not one — it can be rewritten, so a year later it proves nothing about what she
+  was told. The e-mail in her inbox is durable, so the full instruction lives in its body:
+  deadline, how to withdraw, refund terms, and **who pays return postage**. That last sentence
+  is not politeness — under § 1820 odst. 1 písm. i) the seller bears those costs if the buyer
+  was not told, so omitting it costs money. The same sentence therefore also sits by the order
+  button. `Order.verzePodminek` goes into the e-mail as a `?verze=` link, so she keeps a
+  pointer to the exact wording she agreed to. Covered by
+  [sablony.test.ts](src/worker/emaily/sablony.test.ts).
 - **`/admin/doklady` is how an inspection gets answered.** ČOI and ÚOOÚ send a letter
   with one question and a deadline; the answer is a **printout about that one thing**,
   never a database dump — a dump would hand over every other customer's data and breach

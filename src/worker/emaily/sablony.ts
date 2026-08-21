@@ -206,6 +206,73 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       }
       if (data.zpusobPlatby) radky.push(['Platba', String(data.zpusobPlatby)]);
       if (data.zpusobDopravy) radky.push(['Doprava', String(data.zpusobDopravy)]);
+      // Verze podmínek patří do potvrzení, ne jen do databáze: bez ní se
+      // zákaznice nedozví, s jakým zněním vlastně souhlasila.
+      if (data.verzePodminek) radky.push(['Obchodní podmínky', `verze ${String(data.verzePodminek)}`]);
+
+      const odkazPodminky = data.verzePodminek
+        ? `${web}/obchodni-podminky?verze=${encodeURIComponent(String(data.verzePodminek))}`
+        : `${web}/obchodni-podminky`;
+
+      const adresaProVraceni = data.adresaProVraceni ? String(data.adresaProVraceni) : null;
+
+      /*
+       * --- Poučení o odstoupení, § 1820 odst. 1 a § 1822 odst. 1 o. z. ---
+       *
+       * Poučení musí zákaznice dostat **v textové podobě na trvalém nosiči**.
+       * Odkaz na web to nesplňuje: web se dá kdykoliv přepsat, takže z něj
+       * po roce nedokáže doložit, co jí bylo sděleno. E-mail v její schránce
+       * trvalý nosič je – proto tu stojí celé poučení, ne jen cesta k němu.
+       *
+       * Věta o nákladech na vrácení není zdvořilost: podle § 1820 odst. 1
+       * písm. i) je nese prodávající, pokud na ně kupujícího neupozornil.
+       */
+      const pouceni =
+        odstavec('<strong>Poučení o právu odstoupit od smlouvy</strong>') +
+        odstavec(
+          'Máte právo odstoupit od smlouvy bez udání důvodu do 14 dnů ode dne, kdy vy nebo vámi ' +
+            'určená třetí osoba (jiná než dopravce) převezmete poslední kus zboží z objednávky.'
+        ) +
+        odstavec(
+          `Odstoupit stačí jednoznačným prohlášením – nejrychleji <a href="${odkazOdstoupeni}" style="color:${BARVY.cognac};">formulářem na našem webu</a> (bez přihlášení), ` +
+            `dále e-mailem, dopisem nebo <a href="${web}/odstoupeni/formular" style="color:${BARVY.cognac};">vzorovým formulářem</a>. ` +
+            'Lhůta je zachována, pokud odstoupení odešlete její poslední den. Přijetí vám potvrdíme s uvedením data a času.'
+        ) +
+        odstavec(
+          'Peníze vám vrátíme do 14 dnů od doručení odstoupení, stejným způsobem, jakým jste platila. ' +
+            'S vrácením můžeme počkat, dokud zboží neobdržíme zpět nebo dokud neprokážete, že jste ho odeslala.'
+        ) +
+        odstavec(
+          (adresaProVraceni
+            ? `Zboží nám odešlete nejpozději do 14 dnů od odstoupení na adresu <strong>${e(adresaProVraceni)}</strong>. `
+            : 'Zboží nám odešlete nejpozději do 14 dnů od odstoupení; adresu vám sdělíme e-mailem. ') +
+            '<strong>Přímé náklady na vrácení zboží nesete vy.</strong> Odpovídáte za snížení hodnoty zboží, ' +
+            'které vzniklo nakládáním s ním jinak, než je nutné k obeznámení se s jeho povahou a vlastnostmi.'
+        );
+
+      const pouceniText = [
+        'POUČENÍ O PRÁVU ODSTOUPIT OD SMLOUVY',
+        '',
+        'Máte právo odstoupit od smlouvy bez udání důvodu do 14 dnů ode dne převzetí',
+        'posledního kusu zboží z objednávky.',
+        '',
+        'Odstoupit stačí jednoznačným prohlášením – nejrychleji formulářem na webu',
+        `(bez přihlášení): ${odkazOdstoupeni}`,
+        `Vzorový formulář: ${web}/odstoupeni/formular`,
+        'Lhůta je zachována, pokud odstoupení odešlete její poslední den.',
+        'Přijetí vám potvrdíme s uvedením data a času.',
+        '',
+        'Peníze vrátíme do 14 dnů od doručení odstoupení, stejným způsobem, jakým',
+        'jste platila. Můžeme počkat, dokud zboží neobdržíme zpět nebo dokud',
+        'neprokážete, že jste ho odeslala.',
+        '',
+        adresaProVraceni
+          ? `Zboží odešlete do 14 dnů od odstoupení na adresu: ${adresaProVraceni}`
+          : 'Zboží odešlete do 14 dnů od odstoupení; adresu vám sdělíme e-mailem.',
+        'Přímé náklady na vrácení zboží nesete vy. Odpovídáte za snížení hodnoty',
+        'zboží, které vzniklo nakládáním s ním jinak, než je nutné k obeznámení se',
+        's jeho povahou a vlastnostmi.',
+      ];
 
       return {
         predmet: `Potvrzení objednávky ${cislo} – LINDA FASHION`,
@@ -218,8 +285,9 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           odstavec(
             'Platíte-li převodem, najdete platební údaje i QR platbu na stránce objednávky. Zboží odesíláme po připsání částky.'
           ) +
+          pouceni +
           odstavec(
-            `Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu – <a href="${odkazOdstoupeni}" style="color:${BARVY.cognac};">odstoupit od smlouvy</a> jde přímo z tohoto odkazu, přihlašovat se nemusíte.`
+            `Objednávka se řídí <a href="${odkazPodminky}" style="color:${BARVY.cognac};">obchodními podmínkami ve znění, se kterým jste souhlasila</a>. Tenhle odkaz vede na přesně to znění i po jeho pozdější změně – e-mail si proto uschovejte.`
           )
         ),
         text: [
@@ -233,8 +301,10 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           '',
           'Platíte-li převodem, platební údaje i QR platbu najdete na stránce objednávky.',
           '',
-          'Zboží můžete do 14 dnů od převzetí vrátit bez udání důvodu.',
-          `Odstoupení od smlouvy: ${odkazOdstoupeni}`,
+          ...pouceniText,
+          '',
+          `Obchodní podmínky ve znění, se kterým jste souhlasila: ${odkazPodminky}`,
+          'Tento e-mail si prosím uschovejte.',
         ].join('\n'),
       };
     }

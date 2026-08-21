@@ -797,9 +797,38 @@ export function PokladnaFormular({
               </p>
             )}
 
+            {/*
+              Poučení bezprostředně před tlačítkem, ne jen v podmínkách.
+
+              Odkaz dřív sliboval „podrobnosti a formulář v obchodních
+              podmínkách", kde žádný formulář nebyl – stejná vada jako na
+              potvrzovací stránce a na faktuře. Teď vede tam, kde formulář
+              opravdu je.
+
+              Věta o nákladech na vrácení tu není z opatrnosti: § 1820 odst. 1
+              písm. i) o. z. ukládá na ně upozornit **před** uzavřením smlouvy
+              a při opomenutí je nese prodávající. Je to tedy informace, která
+              když chybí, stojí peníze.
+            */}
             <p className="text-[10px] leading-relaxed text-linda-espresso/70">
-              Objednávka zavazuje k zaplacení. Od smlouvy můžete odstoupit do 14 dnů bez udání důvodu –
-              podrobnosti a formulář najdete v obchodních podmínkách.
+              Objednávka zavazuje k zaplacení. Od smlouvy můžete odstoupit do 14 dnů od převzetí
+              bez udání důvodu –{' '}
+              <Link href="/odstoupeni" target="_blank" className="font-semibold text-linda-cognac underline">
+                poučení a odstoupení
+              </Link>
+              ,{' '}
+              <Link
+                href="/odstoupeni/formular"
+                target="_blank"
+                className="font-semibold text-linda-cognac underline"
+              >
+                vzorový formulář
+              </Link>
+              . Náklady na vrácení zboží nesete vy. Reklamace řeší{' '}
+              <Link href="/reklamacni-rad" target="_blank" className="font-semibold text-linda-cognac underline">
+                reklamační řád
+              </Link>
+              .
             </p>
           </div>
 

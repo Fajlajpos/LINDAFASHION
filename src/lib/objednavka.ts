@@ -29,6 +29,15 @@ export interface VysledekObjednavky {
   celkovaCenaKc: number;
   kUhradeKc: number;
   zpusobPlatby: string;
+  /**
+   * Verze obchodních podmínek zapsaná k objednávce.
+   *
+   * Jde ven proto, aby ji potvrzovací e-mail mohl uvést. § 1822 chce potvrzení
+   * smlouvy v textové podobě – a „souhlasila s podmínkami" bez uvedení verze
+   * zákaznici neřekne, s čím vlastně. E-mail je trvalý nosič, který jí zůstane
+   * i když se znění na webu změní.
+   */
+  verzePodminek: string;
 }
 
 /** Ceny dopravy z administrace; bez vyplnění metoda není k dispozici. */
@@ -392,6 +401,7 @@ export async function vytvoritObjednavku(
         verejnyToken: objednavka.verejnyToken,
         celkovaCenaKc: halereNaCzk(rozpis.celkem),
         kUhradeKc: halereNaCzk(rozpis.kUhrade),
+        verzePodminek,
         zpusobPlatby: vstup.zpusobPlatby,
       };
     });
