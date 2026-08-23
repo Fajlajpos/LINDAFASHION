@@ -168,6 +168,18 @@ model Product {
   odpovednaOsobaAdresa String?
   odpovednaOsobaEmail  String?
 
+  /// Sídlí výrobce mimo EU? Rozhoduje o tom, jestli je odpovědná osoba
+  /// povinná (čl. 19 písm. b GPSR), a proto to musí být uložené rozhodnutí,
+  /// ne dohad. Ze `zemePuvodu` se to odvodit nedá: ta říká, kde se zboží
+  /// ušilo, ne kde sídlí ten, kdo za ně odpovídá – italská značka nechává
+  /// šít v Turecku a odpovědnou osobu nepotřebuje, turecký výrobce
+  /// vyrábějící v Itálii ano.
+  ///
+  /// Bez tohohle příznaku šlo uložit zboží od mimoevropského výrobce
+  /// s prázdnou odpovědnou osobou a nic to nezachytilo – validace uměla
+  /// říct jen „vyplňte všechna tři pole, nebo žádné".
+  vyrobceMimoEu Boolean @default(false)
+
   /// Varovné a bezpečnostní informace, které mají být připojeny k výrobku
   /// (čl. 19 GPSR) – u oděvů typicky drobné části u dětského zboží,
   /// hořlavost, teplota žehlení.

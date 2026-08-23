@@ -115,6 +115,7 @@ export default async function DetailProduktuPage({ params }: { params: { id: str
           vyrobceNazev: produkt.vyrobceNazev,
           vyrobceAdresa: produkt.vyrobceAdresa,
           vyrobceEmail: produkt.vyrobceEmail,
+          vyrobceMimoEu: produkt.vyrobceMimoEu,
           odpovednaOsobaNazev: produkt.odpovednaOsobaNazev,
           odpovednaOsobaAdresa: produkt.odpovednaOsobaAdresa,
           odpovednaOsobaEmail: produkt.odpovednaOsobaEmail,

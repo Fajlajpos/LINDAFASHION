@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { cenaSeZmenila, urcitStavSlevy, zapsatCenu } from '@/lib/cenova-historie';
-import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
+import { CHYBI_FOTKA, lzeZverejnitBezFotek, produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 import { hledaciTextProduktu } from '@/lib/vyhledavani';
 import { jePlatnyToken, cestaTmp, smazatTise } from '@/lib/uloziste';
@@ -58,7 +58,7 @@ export async function PUT(request: Request, { params }: Kontext) {
 
     const stavajici = await db.product.findUnique({
       where: { id: params.id },
-      include: { variants: { select: { id: true } } },
+      include: { variants: { select: { id: true } }, _count: { select: { images: true } } },
     });
 
     if (!stavajici) return odpovedChyba('Produkt nebyl nalezen.', 404);
@@ -124,6 +124,24 @@ export async function PUT(request: Request, { params }: Kontext) {
     const fotky = (vstup.fotky ?? []).filter((f) => jePlatnyToken(f.token));
 
     /*
+     * GPSR čl. 19 písm. c) – vyobrazení výrobku je náležitost nabídky.
+     *
+     * Počítají se i fotky, které produkt už má: formulář v režimu editace
+     * galerii neposílá (spravuje ji `SpravaFotek`), takže prázdné pole tady
+     * znamená „žádné nové“, ne „žádné vůbec“. Tohle je i cesta, kterou se
+     * koncept bez fotek zveřejňuje – zaškrtnutím „Zveřejnit v e-shopu“.
+     */
+    if (
+      !lzeZverejnitBezFotek({
+        aktivni: vstup.aktivni ?? true,
+        jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
+        pocetFotek: stavajici._count.images + fotky.length,
+      })
+    ) {
+      return odpovedChyba('Zkontrolujte prosím vyplněné údaje.', 422, { fotky: CHYBI_FOTKA });
+    }
+
+    /*
      * § 12a zákona o ochraně spotřebitele – cenová evidence.
      *
      * Pořadí je podstatné: referenční cena se musí spočítat **před** zápisem
@@ -173,6 +191,7 @@ export async function PUT(request: Request, { params }: Kontext) {
           vyrobceNazev: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceNazev?.trim() || null,
           vyrobceAdresa: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceAdresa?.trim() || null,
           vyrobceEmail: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceEmail?.trim() || null,
+          vyrobceMimoEu: vstup.jeDarkovyPoukaz ? false : (vstup.vyrobceMimoEu ?? false),
           odpovednaOsobaNazev: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaNazev?.trim() || null,
           odpovednaOsobaAdresa: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaAdresa?.trim() || null,
           odpovednaOsobaEmail: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaEmail?.trim() || null,

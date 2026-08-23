@@ -4,6 +4,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { smazatVariantyObrazku } from '@/lib/sharp-image';
 import { cestaTmp, jePlatnyToken, smazatTise } from '@/lib/uloziste';
+import { CHYBI_FOTKA, lzeZverejnitBezFotek } from '@/lib/validations/produkt';
 
 interface Kontext {
   params: { id: string };
@@ -69,6 +70,30 @@ export async function DELETE(request: Request, { params }: Kontext) {
     });
 
     if (!obrazek) return odpovedChyba('Fotka nebyla nalezena.', 404);
+
+    /*
+     * Poslední fotku zveřejněného produktu smazat nelze.
+     *
+     * Zakládání i úprava produktu vyobrazení podle GPSR čl. 19 písm. c)
+     * hlídají, jenže tenhle endpoint stojí mimo ně – smazáním poslední fotky
+     * se dal katalog dostat přesně do stavu, který tam nesmí být, a bez
+     * jediné hlášky. Nejdřív odškrtnout „Zveřejnit v e-shopu“.
+     */
+    const produkt = await db.product.findUnique({
+      where: { id: obrazek.productId },
+      select: { aktivni: true, jeDarkovyPoukaz: true, _count: { select: { images: true } } },
+    });
+
+    if (
+      produkt &&
+      !lzeZverejnitBezFotek({
+        aktivni: produkt.aktivni,
+        jeDarkovyPoukaz: produkt.jeDarkovyPoukaz,
+        pocetFotek: produkt._count.images - 1,
+      })
+    ) {
+      return odpovedChyba(CHYBI_FOTKA, 422);
+    }
 
     await smazatVariantyObrazku(obrazek.id);
     if (obrazek.originalSoubor && jePlatnyToken(obrazek.originalSoubor)) {

@@ -54,6 +54,45 @@ export function urcitHlavni(fotky: Array<{ jeHlavni?: boolean }>): number {
   return oznacena === -1 ? 0 : oznacena;
 }
 
+/**
+ * Hláška u produktu, který má jít do katalogu bez jediné fotky.
+ * Vlastní konstanta, protože ji potřebuje POST i PUT a rozejít se nesmí.
+ */
+export const CHYBI_FOTKA =
+  'Zveřejněný produkt musí mít alespoň jednu fotografii – GPSR ji u nabídky na dálku vyžaduje ' +
+  '(čl. 19). Přidejte fotku, nebo produkt uložte jako koncept.';
+
+/**
+ * Smí produkt do katalogu?
+ *
+ * Čl. 19 písm. c) GPSR žádá u nabídky na dálku údaje umožňující identifikaci
+ * výrobku **„včetně jeho vyobrazení“** – fotka není doplněk, je to zákonná
+ * náležitost nabídky. Kontrola nemůže být v `produktSchema`: při editaci se
+ * fotky spravují zvlášť (`SpravaFotek`) a prázdné pole v požadavku znamená
+ * „žádné nové“, ne „produkt žádné nemá“. Počet existujících proto musí
+ * dodat endpoint.
+ *
+ * Poukaz je vyjmutý ze stejného důvodu jako zbytek GPSR – není to výrobek.
+ * Koncept taky: nezveřejněné zboží se nikomu nenabízí.
+ */
+export function lzeZverejnitBezFotek(p: {
+  aktivni: boolean;
+  jeDarkovyPoukaz: boolean;
+  pocetFotek: number;
+}): boolean {
+  return !p.aktivni || p.jeDarkovyPoukaz || p.pocetFotek > 0;
+}
+
+/** Kolik ze tří údajů o odpovědné osobě je vyplněných – 0, nebo 3, nikdy mezi tím. */
+function pocetUdajuOdpovedneOsoby(d: {
+  odpovednaOsobaNazev?: string | null;
+  odpovednaOsobaAdresa?: string | null;
+  odpovednaOsobaEmail?: string | null;
+}): number {
+  return [d.odpovednaOsobaNazev, d.odpovednaOsobaAdresa, d.odpovednaOsobaEmail].filter((c) => !!c?.trim())
+    .length;
+}
+
 export const produktSchema = z
   .object({
     nazev: z.string().min(2, 'Název musí mít alespoň 2 znaky.').max(200),
@@ -102,6 +141,13 @@ export const produktSchema = z
       .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), {
         message: 'Zadejte platný e-mail výrobce.',
       }),
+
+    /**
+     * Sídlí výrobce mimo EU? Rozhoduje o povinnosti odpovědné osoby
+     * (čl. 19 písm. b GPSR) – viz `refine` níž. Ze země původu se to
+     * odvodit nedá, ta popisuje místo výroby, ne sídlo odpovědného subjektu.
+     */
+    vyrobceMimoEu: z.boolean().optional().default(false),
 
     odpovednaOsobaNazev: z.string().max(200).optional().nullable(),
     odpovednaOsobaAdresa: z.string().max(300).optional().nullable(),
@@ -165,23 +211,27 @@ export const produktSchema = z
     path: ['slozeniMaterialu'],
   })
   /*
-   * Odpovědná osoba v EU (čl. 16 GPSR) se vyžaduje jen u výrobce mimo EU.
-   * Když je vyplněná jen částečně, je to skoro jistě nedopatření – údaj,
-   * který na stránce vyjde jako „jméno bez adresy“, povinnost nesplní.
+   * Odpovědná osoba v EU (čl. 16 GPSR). Když je vyplněná jen částečně, je to
+   * skoro jistě nedopatření – údaj, který na stránce vyjde jako „jméno bez
+   * adresy“, povinnost nesplní.
    */
-  .refine(
-    (d) => {
-      const vyplneno = [d.odpovednaOsobaNazev, d.odpovednaOsobaAdresa, d.odpovednaOsobaEmail].filter(
-        (c) => !!c?.trim()
-      ).length;
-      return vyplneno === 0 || vyplneno === 3;
-    },
-    {
-      message:
-        'U odpovědné osoby v EU vyplňte název, adresu i e-mail – nebo nechte všechna tři pole prázdná.',
-      path: ['odpovednaOsobaNazev'],
-    }
-  )
+  .refine((d) => pocetUdajuOdpovedneOsoby(d) !== 1 && pocetUdajuOdpovedneOsoby(d) !== 2, {
+    message:
+      'U odpovědné osoby v EU vyplňte název, adresu i e-mail – nebo nechte všechna tři pole prázdná.',
+    path: ['odpovednaOsobaNazev'],
+  })
+  /*
+   * A tohle je ta vlastní povinnost: čl. 19 písm. b) GPSR žádá odpovědnou
+   * osobu usazenou v EU vždy, když výrobce v Unii nesídlí. Bez téhle kontroly
+   * byla prázdná odpovědná osoba pořád platná odpověď a zboží od
+   * mimoevropského dodavatele šlo zveřejnit bez kontaktu, na který se má
+   * spotřebitel i dozorový orgán obracet.
+   */
+  .refine((d) => d.jeDarkovyPoukaz || !d.vyrobceMimoEu || pocetUdajuOdpovedneOsoby(d) === 3, {
+    message:
+      'Výrobce sídlí mimo EU – vyplňte odpovědnou osobu usazenou v EU (název, adresu i e-mail). Čl. 19 GPSR ji v takovém případě vyžaduje.',
+    path: ['odpovednaOsobaNazev'],
+  })
   .refine(
     (d) => {
       // Varianty se rozlišují podle velikosti (u poukazu podle částky) –

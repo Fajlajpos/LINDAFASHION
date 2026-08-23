@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
-import { produktSchema, urcitHlavni } from '@/lib/validations/produkt';
+import { CHYBI_FOTKA, lzeZverejnitBezFotek, produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
 import { hledaciTextProduktu } from '@/lib/vyhledavani';
 import { jePlatnyToken } from '@/lib/uloziste';
@@ -103,6 +103,18 @@ export async function POST(request: Request) {
     // Hlavní je právě jedna, i kdyby jich prohlížeč označil víc nebo žádnou.
     const hlavni = urcitHlavni(fotky);
 
+    // GPSR čl. 19 písm. c) – nabídka na dálku musí obsahovat vyobrazení
+    // výrobku. Bez tohohle šel produkt zveřejnit s prázdnou galerií.
+    if (
+      !lzeZverejnitBezFotek({
+        aktivni: vstup.aktivni ?? true,
+        jeDarkovyPoukaz: vstup.jeDarkovyPoukaz ?? false,
+        pocetFotek: fotky.length,
+      })
+    ) {
+      return odpovedChyba('Zkontrolujte prosím vyplněné údaje.', 422, { fotky: CHYBI_FOTKA });
+    }
+
     /*
      * § 12a zákona o ochraně spotřebitele. Nový produkt evidenci nemá, takže
      * referenční cenou pro případnou slevu je jeho základní cena – viz
@@ -140,6 +152,7 @@ export async function POST(request: Request) {
         vyrobceNazev: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceNazev?.trim() || null,
         vyrobceAdresa: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceAdresa?.trim() || null,
         vyrobceEmail: vstup.jeDarkovyPoukaz ? null : vstup.vyrobceEmail?.trim() || null,
+        vyrobceMimoEu: vstup.jeDarkovyPoukaz ? false : (vstup.vyrobceMimoEu ?? false),
         odpovednaOsobaNazev: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaNazev?.trim() || null,
         odpovednaOsobaAdresa: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaAdresa?.trim() || null,
         odpovednaOsobaEmail: vstup.jeDarkovyPoukaz ? null : vstup.odpovednaOsobaEmail?.trim() || null,

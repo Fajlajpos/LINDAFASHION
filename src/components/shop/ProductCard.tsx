@@ -91,19 +91,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     /* Karta má stejnou barvu jako stránka – od podkladu ji dělí jen reliéf.
        Rámeček by hranu ohraničil podruhé, proto tu není.
 
-       Karta s fotkou nese hlubší stín (`neuFoto`). Není to rozmar: stín se
-       vedle karty **čte jako propad** proti jejímu okraji, a produktová
-       fotografie je u okraje tmavší (~209) než stín `neu` (~228). Ten propad
-       tedy vůbec nevznikne a vedle karty s fotkou není vidět nic, přestože je
-       stín vykreslený úplně stejně jako u karty bez fotky. Zástupná plocha
-       končí světle (~238) a stín `neu` jí stačí, proto si ho nechává –
-       kdyby dostala `neuFoto`, byl by na ní naopak přehnaný. Podrobné
-       naměřené hodnoty jsou u tokenu v `tailwind.config.ts`. */
-    <div
-      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream transition-all duration-300 ${
-        obrazekUrl ? 'shadow-neuFoto hover:shadow-neuFotoLg' : 'shadow-neu hover:shadow-neuLg'
-      }`}
-    >
+       **Stín je stejný u karty s fotkou i bez ní** – `neu` jako každá jiná
+       vyvýšená plocha na webu. Žádná odchylka pro fotky, žádná podmínka.
+
+       Byly tu na to postupně dva vlastní tokeny a ani jeden neobstál.
+       Vycházely z úvahy, že se stín čte jako propad proti okraji karty, a
+       protože fotka končí u okraje tmavá, propad prý nevznikne. Jenže stín
+       nedopadá na fotku, dopadá vedle karty na papír, a tam se dvě sousední
+       karty v mřížce porovnávají navzájem. Naměřeno na `/produkty`: krytí
+       0.34 srazilo podklad na 187 proti 223 u sousedky, což vedle každé
+       karty s fotkou udělalo tmavý pruh.
+
+       A hlavně: okraj fotky měřil 99 u tmavých šatů a 197 u světlého
+       svetru. Veličina, kterou to mělo dorovnávat, se s každým nahraným
+       snímkem mění, takže jedna pevná hodnota je správně nanejvýš pro jednu
+       fotku. Kdyby hrana snímku někdy vadila, patří to řešit u hrany –
+       krémovým lemem kolem fotky – ne stínem, který leží vedle karty. */
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream shadow-neu transition-all duration-300 hover:shadow-neuLg">
       {/* Badges */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
         {doporuceny && (

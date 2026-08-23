@@ -69,12 +69,10 @@ const config: Config = {
 
            **U hrany se neztmavuje.** Byla tu chvíli vrstva, která ztmavovala
            pravý okraj snímku, aby fotka „končila stínem“ jako zástupná
-           plocha. Byl to omyl a škodil: stín, o který šlo, je ten, který
-           karta vrhá **vedle sebe** na stránku (`shadow-neu`). Ten je u obou
-           typů karet měřitelně stejný – čitelný je ale jen tehdy, když je
-           okraj karty světlejší než on, takže se dá vidět propad. Ztmavená
-           hrana fotky ten propad zahladila úplně. Fotku proto od okraje
-           karty odsazuje krémový lem (viz `ProductCard`), ne stín. */
+           plocha. Byl to omyl: stín, o který jde, karta vrhá **vedle sebe**
+           na stránku (`shadow-neu`), a ten je u obou typů karet stejný.
+           Ztmavená hrana snímku k němu nic nepřidá, jen ubere fotce světlo
+           přesně tam, kde na ni zákaznice kouká. */
         nikaFoto:
           'linear-gradient(to bottom right, rgba(43, 32, 25, 0.055) 0%, rgba(43, 32, 25, 0) 40%, rgba(43, 32, 25, 0.15) 100%)',
       },
@@ -100,28 +98,26 @@ const config: Config = {
         neuSm: '4px 4px 10px rgba(43, 32, 25, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9)',
         neuLg: '16px 16px 36px rgba(43, 32, 25, 0.12), -10px -10px 28px rgba(255, 255, 255, 1)',
 
-        /* Karta, jejíž horní část je **fotografie** (karta produktu v
-           katalogu). Stejný tvar jako `neu`, jen s mnohem hlubší tmavou
-           složkou – a je to měřená nutnost, ne zesílení pro efekt.
+        /* Tady dvakrát stál vlastní hlubší stín pro kartu s fotografií
+           (`neuFoto`, `neuFotoLg`) a podruhé je pryč natrvalo. Karta
+           v katalogu nese `neu` jako každá jiná vyvýšená plocha.
 
-           Stín `neu` má u hrany jas 228, kdežto produktová fotografie končí
-           u okraje typicky kolem 209. Stín je tedy **světlejší než plocha,
-           od které má oddělovat**, žádný propad nevznikne a vedle karty
-           s fotkou není vidět nic – i když je stín fyzicky vykreslený úplně
-           stejně jako u karty bez fotky. (Vedle zástupné plochy, která končí
-           světle kolem 238, tentýž stín propad 16 úrovní má, a proto ho tam
-           vidět je.)
+           Úvaha za tím tokenem byla, že se stín čte jako propad proti okraji
+           karty: fotka končí u okraje tmavá, stín `neu` je světlejší, takže
+           propad nevznikne. Vada je v tom, že stín nedopadá na fotku, ale
+           vedle karty na papír – a v mřížce se sousední karty porovnávají
+           navzájem, ne každá se svým okrajem. Naměřeno na `/produkty`,
+           nejtmavší bod stínu vpravo od karty (papír má 241):
 
-           Naměřeno: 0.18 → propad −9 (pořád nic), 0.26 → 0, 0.34 → +12, tedy
-           zhruba parita s kartou bez fotky. Odtud ta hodnota.
+             `neu` 0.10          223    ← karta bez fotky
+             0.17                213    sotva znát
+             0.34                187    tmavý pruh vedle karty s fotkou
 
-           Bílý přísvit vlevo nahoře zůstává z `neu` beze změny: leží na
-           krémové stránce vedle karty, ne přes snímek, takže mléčná šmouha
-           tu nehrozí. */
-        neuFoto:
-          '12px 12px 30px rgba(43, 32, 25, 0.34), -6px -6px 16px rgba(255, 255, 255, 0.95)',
-        neuFotoLg:
-          '20px 20px 44px rgba(43, 32, 25, 0.38), -10px -10px 28px rgba(255, 255, 255, 1)',
+           A dorovnat to nejde ani principiálně: okraj fotky měřil 99
+           u tmavých šatů a 197 u světlého svetru, takže jedna pevná hodnota
+           je správně nanejvýš pro jeden snímek. Kdyby hrana fotky vadila,
+           řeší se to u hrany (krémový lem kolem snímku), ne stínem vedle
+           karty.
 
         /* Vyvýšená plocha, která přesahuje přes fotku (rozcestník kategorií
            zanořený do heru). Bílý přísvit tu vynecháváme – nemá se do čeho

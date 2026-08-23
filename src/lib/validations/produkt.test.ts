@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nahranaFotkaSchema, produktSchema, urcitHlavni } from './produkt';
+import { lzeZverejnitBezFotek, nahranaFotkaSchema, produktSchema, urcitHlavni } from './produkt';
 
 /*
  * Základní platný produkt.
@@ -170,5 +170,92 @@ describe('produktSchema – zákonné údaje o výrobku', () => {
   it('odpovědná osoba je nepovinná, když není vyplněná vůbec', () => {
     // Výrobce v EU žádnou odpovědnou osobu mít nemusí.
     expect(produktSchema.safeParse(zaklad).success).toBe(true);
+  });
+});
+
+/*
+ * Čl. 19 písm. b) GPSR: u výrobce mimo Unii musí být uvedena odpovědná osoba
+ * usazená v EU. Dokud schéma znalo jen pravidlo „všechna tři pole, nebo
+ * žádné“, byla prázdná odpovědná osoba vždycky platná odpověď – zboží od
+ * mimoevropského dodavatele tak šlo zveřejnit bez kontaktu, na který se má
+ * spotřebitelka i dozor obracet.
+ */
+describe('produktSchema – odpovědná osoba u výrobce mimo EU', () => {
+  const mimoEu = {
+    ...zaklad,
+    vyrobceNazev: 'Anadolu Tekstil A.Ş.',
+    vyrobceAdresa: 'Atatürk Cd. 44, 34000 Istanbul, Turecko',
+    vyrobceEmail: 'export@anadolu.com.tr',
+    vyrobceMimoEu: true,
+  };
+
+  const odpovednaOsoba = {
+    odpovednaOsobaNazev: 'Dovozce s.r.o.',
+    odpovednaOsobaAdresa: 'Pařížská 12, 110 00 Praha 1',
+    odpovednaOsobaEmail: 'gpsr@dovozce.cz',
+  };
+
+  it('odmítne zboží od výrobce mimo EU bez odpovědné osoby', () => {
+    const vysledek = produktSchema.safeParse(mimoEu);
+
+    expect(vysledek.success).toBe(false);
+    if (!vysledek.success) {
+      expect(vysledek.error.errors.some((e) => e.path[0] === 'odpovednaOsobaNazev')).toBe(true);
+    }
+  });
+
+  it('přijme zboží od výrobce mimo EU s úplnou odpovědnou osobou', () => {
+    expect(produktSchema.safeParse({ ...mimoEu, ...odpovednaOsoba }).success).toBe(true);
+  });
+
+  it('odmítne odpovědnou osobu vyplněnou jen zčásti i u výrobce mimo EU', () => {
+    const vysledek = produktSchema.safeParse({ ...mimoEu, odpovednaOsobaNazev: 'Dovozce s.r.o.' });
+
+    expect(vysledek.success).toBe(false);
+  });
+
+  it('u dárkového poukazu se odpovědná osoba nevyžaduje ani s příznakem mimo EU', () => {
+    // Poukaz není výrobek ve smyslu GPSR – stejná výjimka jako u výrobce.
+    const vysledek = produktSchema.safeParse({
+      nazev: 'Dárkový poukaz',
+      popis: 'Poukaz na nákup.',
+      categoryId: 'cat1',
+      cena: 1000,
+      jeDarkovyPoukaz: true,
+      vyrobceMimoEu: true,
+      varianty: [{ velikost: '1000 Kč', skladem: 99 }],
+    });
+
+    expect(vysledek.success).toBe(true);
+  });
+
+  it('bez příznaku zůstává výchozí hodnota false', () => {
+    const vysledek = produktSchema.parse(zaklad);
+    expect(vysledek.vyrobceMimoEu).toBe(false);
+  });
+});
+
+/*
+ * Čl. 19 písm. c) GPSR žádá u nabídky na dálku údaje umožňující identifikaci
+ * výrobku „včetně jeho vyobrazení“. Fotka tedy není doplněk – bez ní se
+ * zboží nesmí nabízet.
+ */
+describe('lzeZverejnitBezFotek', () => {
+  it('nepustí zveřejněné zboží bez jediné fotky', () => {
+    expect(lzeZverejnitBezFotek({ aktivni: true, jeDarkovyPoukaz: false, pocetFotek: 0 })).toBe(false);
+  });
+
+  it('se zveřejněnou fotkou projde', () => {
+    expect(lzeZverejnitBezFotek({ aktivni: true, jeDarkovyPoukaz: false, pocetFotek: 1 })).toBe(true);
+  });
+
+  it('koncept fotku mít nemusí', () => {
+    // Nezveřejněné zboží se nikomu nenabízí – rozpracovaný produkt se musí
+    // dát uložit, jinak se práce na něm nedá přerušit.
+    expect(lzeZverejnitBezFotek({ aktivni: false, jeDarkovyPoukaz: false, pocetFotek: 0 })).toBe(true);
+  });
+
+  it('dárkový poukaz fotku mít nemusí', () => {
+    expect(lzeZverejnitBezFotek({ aktivni: true, jeDarkovyPoukaz: true, pocetFotek: 0 })).toBe(true);
   });
 });

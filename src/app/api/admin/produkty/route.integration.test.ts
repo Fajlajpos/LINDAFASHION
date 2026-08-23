@@ -63,6 +63,14 @@ function produkt(categoryId: string, fotky: Array<{ token: string; puvodniNazev:
     vyrobceAdresa: 'Via Roma 12, 50123 Firenze, Itálie',
     vyrobceEmail: 'info@bellini.it',
 
+    /*
+     * Zveřejněné zboží musí nést vyobrazení (GPSR čl. 19 písm. c), takže
+     * kousek bez fotek je z podstaty koncept. Kdyby fixture zůstala natvrdo
+     * `aktivni: true`, testy o cenové evidenci by padaly na kontrole fotek
+     * a vypadalo by to, že je rozbitá evidence.
+     */
+    aktivni: fotky.length > 0,
+
     varianty: [{ velikost: 'M', skladem: 3 }],
     fotky,
   };
@@ -155,6 +163,30 @@ describe('POST /api/admin/produkty', () => {
     expect(fotky).toHaveLength(1);
     expect(fotky[0].originalSoubor).toMatch(/^[a-f0-9]{32}\.jpg$/);
     expect(fotky[0].jeHlavni).toBe(true);
+  });
+
+  /*
+   * Čl. 19 písm. c) GPSR: nabídka na dálku musí obsahovat vyobrazení výrobku.
+   * Do zavedení téhle kontroly šel produkt zveřejnit s prázdnou galerií –
+   * v katalogu se pak ukázal se zástupným symbolem a nabídka nebyla úplná.
+   */
+  it('nedovolí zveřejnit produkt bez jediné fotky', async () => {
+    const kat = await kategorie();
+    const odpoved = await POST(pozadavek({ ...produkt(kat.id, []), aktivni: true }));
+
+    expect(odpoved.status).toBe(422);
+    expect(((await odpoved.json()) as { pole?: Record<string, string> }).pole?.fotky).toBeTruthy();
+    expect(await db.product.count()).toBe(0);
+  });
+
+  it('rozpracovaný produkt bez fotek uložit lze', async () => {
+    // Koncept se nikomu nenabízí, takže povinnost se na něj nevztahuje –
+    // jinak by se práce na produktu nedala přerušit.
+    const kat = await kategorie();
+    const odpoved = await POST(pozadavek({ ...produkt(kat.id, []), aktivni: false }));
+
+    expect(odpoved.status).toBe(201);
+    expect(await db.product.count({ where: { aktivni: false } })).toBe(1);
   });
 
   it('odmítne neexistující kategorii', async () => {

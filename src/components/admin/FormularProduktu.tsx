@@ -4,9 +4,21 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowDown, ArrowUp, Loader2, Plus, Star, Trash2, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  Factory,
+  Loader2,
+  Plus,
+  Star,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
 import { Vyber } from '@/components/ui/Vyber';
+import type { UlozenyVyrobce } from '@/app/api/admin/vyrobci/route';
 
 /**
  * Formulář produktu pro obě situace – zakládání i editaci.
@@ -52,6 +64,7 @@ export interface PocatecniProdukt {
   vyrobceNazev: string | null;
   vyrobceAdresa: string | null;
   vyrobceEmail: string | null;
+  vyrobceMimoEu: boolean;
   odpovednaOsobaNazev: string | null;
   odpovednaOsobaAdresa: string | null;
   odpovednaOsobaEmail: string | null;
@@ -133,12 +146,62 @@ function prvniVarianta(): VariantaFormular {
 const POLE =
   'w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5 text-linda-espresso disabled:opacity-60';
 
+/** Hodnota, kterou `Vyber` používá pro „nevybráno“ – prázdný řetězec by kolidoval s názvem. */
+const RUCNE = '__rucne__';
+
+interface RozbalovaciProps {
+  nadpis: string;
+  popis?: string;
+  /** Bloky, ve kterých už něco je, se otevřou samy – ale jen při prvním vykreslení. */
+  vychoziOtevreno?: boolean;
+  /** Obal bloku. Výchozí je vyvýšená karta; uvnitř varianty stačí předěl čarou. */
+  trida?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Skládací blok pro pole, která u většiny kousků zůstanou prázdná.
+ *
+ * Nativní `<details>`, ne stav v Reactu: umí klávesnici, odečítač obrazovky
+ * i hledání ve stránce – prohlížeč zavřený blok při Ctrl+F sám otevře, což
+ * si vlastní implementace vynutit nedokáže.
+ *
+ * `open` se čte jen jednou (`useState` s počáteční hodnotou). Kdyby se počítal
+ * při každém vykreslení, blok by se majitelce zavřel pod rukama ve chvíli,
+ * kdy poslední pole vymaže.
+ */
+function Rozbalovaci({ nadpis, popis, vychoziOtevreno = false, trida, children }: RozbalovaciProps) {
+  const [otevrenoNaZacatku] = useState(vychoziOtevreno);
+
+  return (
+    <details
+      open={otevrenoNaZacatku}
+      className={`group ${trida ?? 'rounded-xl bg-linda-cream p-4 shadow-neuSm'}`}
+    >
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-3 text-xs [&::-webkit-details-marker]:hidden">
+        <span>
+          <span className="font-semibold text-linda-espresso">{nadpis}</span>
+          {popis && <span className="mt-0.5 block text-[11px] text-linda-espresso/70">{popis}</span>}
+        </span>
+        <ChevronDown
+          className="h-4 w-4 shrink-0 text-linda-cognac transition-transform duration-200 group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div className="mt-3 space-y-4">{children}</div>
+    </details>
+  );
+}
+
 export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props) {
   const router = useRouter();
   const jeEditace = Boolean(produkt);
 
   const [kategorie, setKategorie] = useState<Kategorie[]>([]);
   const [nacitamKategorie, setNacitamKategorie] = useState(true);
+
+  /** Výrobci už použití v katalogu – jen předvyplnění, produkty se na ně nenavazují. */
+  const [vyrobci, setVyrobci] = useState<UlozenyVyrobce[]>([]);
 
   const [form, setForm] = useState({
     nazev: produkt?.nazev ?? '',
@@ -156,6 +219,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     vyrobceNazev: produkt?.vyrobceNazev ?? '',
     vyrobceAdresa: produkt?.vyrobceAdresa ?? '',
     vyrobceEmail: produkt?.vyrobceEmail ?? '',
+    vyrobceMimoEu: produkt?.vyrobceMimoEu ?? false,
     odpovednaOsobaNazev: produkt?.odpovednaOsobaNazev ?? '',
     odpovednaOsobaAdresa: produkt?.odpovednaOsobaAdresa ?? '',
     odpovednaOsobaEmail: produkt?.odpovednaOsobaEmail ?? '',
@@ -194,10 +258,40 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       setNacitamKategorie(false);
     })();
 
+    /*
+     * Výrobci jsou pohodlí, ne podmínka uložení – když se seznam nenačte,
+     * formulář jen nenabídne předvyplnění a pole se vyplní ručně. Chyba se
+     * proto nikam nehlásí, aby nepřebila skutečnou chybu z kategorií.
+     */
+    void (async () => {
+      const vysledek = await nacist<{ vyrobci: UlozenyVyrobce[] }>('/api/admin/vyrobci');
+      if (!zruseno && vysledek.ok) setVyrobci(vysledek.data.vyrobci);
+    })();
+
     return () => {
       zruseno = true;
     };
   }, []);
+
+  /** Předvyplní celý blok výrobce podle dřív uloženého kousku. */
+  const pouzitVyrobce = (nazev: string) => {
+    const v = vyrobci.find((x) => x.nazev === nazev);
+    if (!v) return;
+
+    setForm((p) => ({
+      ...p,
+      vyrobceNazev: v.nazev,
+      vyrobceAdresa: v.adresa,
+      vyrobceEmail: v.email,
+      vyrobceMimoEu: v.mimoEu,
+      odpovednaOsobaNazev: v.odpovednaOsobaNazev ?? '',
+      odpovednaOsobaAdresa: v.odpovednaOsobaAdresa ?? '',
+      odpovednaOsobaEmail: v.odpovednaOsobaEmail ?? '',
+      // Země původu je u téhož dodavatele skoro vždycky stejná, ale je to
+      // údaj o zboží, ne o výrobci – proto se doplní jen do prázdného pole.
+      zemePuvodu: p.zemePuvodu || (v.zemePuvodu ?? ''),
+    }));
+  };
 
   /** Odkazy na náhledy, ať je po odchodu z formuláře uvolníme všechny. */
   const nahledy = useRef<string[]>([]);
@@ -318,9 +412,16 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       vyrobceNazev: form.vyrobceNazev || null,
       vyrobceAdresa: form.vyrobceAdresa || null,
       vyrobceEmail: form.vyrobceEmail || null,
-      odpovednaOsobaNazev: form.odpovednaOsobaNazev || null,
-      odpovednaOsobaAdresa: form.odpovednaOsobaAdresa || null,
-      odpovednaOsobaEmail: form.odpovednaOsobaEmail || null,
+      vyrobceMimoEu: form.vyrobceMimoEu,
+      /*
+       * U výrobce z EU se odpovědná osoba neposílá, i kdyby v poli něco
+       * zbylo po dřívějším vyplnění. Blok je v takovém případě skrytý, takže
+       * hodnota, kterou nikdo nevidí, by se jinak tiše dostala na stránku
+       * produktu jako platný kontakt podle čl. 16 GPSR.
+       */
+      odpovednaOsobaNazev: (form.vyrobceMimoEu && form.odpovednaOsobaNazev) || null,
+      odpovednaOsobaAdresa: (form.vyrobceMimoEu && form.odpovednaOsobaAdresa) || null,
+      odpovednaOsobaEmail: (form.vyrobceMimoEu && form.odpovednaOsobaEmail) || null,
       bezpecnostniUpozorneni: form.bezpecnostniUpozorneni || null,
       ean: form.ean || null,
       cisloSarze: form.cisloSarze || null,
@@ -534,56 +635,20 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
         </div>
       </div>
 
-      {!form.jeDarkovyPoukaz && (
-        <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-xl text-linda-espresso">Materiál &amp; pokyny pro péči</h2>
-
-          <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2">
-            <div>
-              <label htmlFor="material" className="mb-1 block font-semibold text-linda-espresso">
-                Materiál
-              </label>
-              <input
-                id="material"
-                type="text"
-                disabled={odesilam}
-                value={form.material}
-                onChange={(e) => setForm({ ...form, material: e.target.value })}
-                placeholder="Např. 100% přírodní italské hedvábí"
-                className={POLE}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="udrzba" className="mb-1 block font-semibold text-linda-espresso">
-                Údržba a péče
-              </label>
-              <input
-                id="udrzba"
-                type="text"
-                disabled={odesilam}
-                value={form.udrzba}
-                onChange={(e) => setForm({ ...form, udrzba: e.target.value })}
-                placeholder="Např. šetrné ruční praní na 30 °C"
-                className={POLE}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/*
-        Zákonné údaje o výrobku.
-        Vlastní sekce, ne přívažek k materiálu: jsou to údaje, bez kterých
-        se zboží nesmí nabízet, a formulář to má dát najevo.
+        Materiál na jednom místě.
+        Složení a volný popis stály dřív v samostatných sekcích přes půl
+        formuláře od sebe, takže druhý zápis vypadal jako omylem zdvojený
+        první. Vedle sebe je vidět, že jsou to dvě různé věci: procenta
+        vyžaduje zákon, prózu čte zákaznice.
       */}
       {!form.jeDarkovyPoukaz && (
         <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
           <div>
-            <h2 className="font-serif text-xl text-linda-espresso">Zákonné údaje o výrobku</h2>
+            <h2 className="font-serif text-xl text-linda-espresso">Materiál a péče</h2>
             <p className="mt-1 text-xs text-linda-espresso/70">
-              Vyžaduje nařízení EU 2023/988 (GPSR) a nařízení EU 1007/2011 o textilu. Bez nich
-              produkt nelze uložit – zboží bez údajů o výrobci se nesmí nabízet.
+              Materiálové složení vyžaduje nařízení EU 1007/2011 o textilu – bez něj produkt nelze
+              uložit. Zbylá dvě pole jsou volný popis a jsou nepovinná.
             </p>
           </div>
 
@@ -604,7 +669,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             />
             <p id="slozeniMaterialu-napoveda" className="mt-1 text-[11px] text-linda-espresso/70">
               V procentech hmotnosti, sestupně. Volný popis („jemný praný len“) patří do pole
-              Materiál výš – zákon vyžaduje procenta.
+              Materiál níž – zákon vyžaduje procenta.
             </p>
             {chybyPoli.slozeniMaterialu && (
               <p className="mt-1 text-[11px] font-medium text-linda-cognac">{chybyPoli.slozeniMaterialu}</p>
@@ -633,6 +698,93 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               knoflíků. Složení vláken tuhle povinnost nesplní – popisuje jen textilní část.
             </span>
           </label>
+
+          <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2">
+            <div>
+              <label htmlFor="material" className="mb-1 block font-semibold text-linda-espresso">
+                Materiál – volný popis
+              </label>
+              <input
+                id="material"
+                type="text"
+                disabled={odesilam}
+                value={form.material}
+                onChange={(e) => setForm({ ...form, material: e.target.value })}
+                placeholder="Např. jemný praný len"
+                className={POLE}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="udrzba" className="mb-1 block font-semibold text-linda-espresso">
+                Údržba a péče
+              </label>
+              <input
+                id="udrzba"
+                type="text"
+                disabled={odesilam}
+                value={form.udrzba}
+                onChange={(e) => setForm({ ...form, udrzba: e.target.value })}
+                placeholder="Např. šetrné ruční praní na 30 °C"
+                className={POLE}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Výrobce podle GPSR.
+        Vlastní sekce, ne přívažek k materiálu: bez těchhle údajů se zboží
+        nesmí nabízet, a formulář to má dát najevo.
+      */}
+      {!form.jeDarkovyPoukaz && (
+        <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+          <div>
+            <h2 className="font-serif text-xl text-linda-espresso">Výrobce</h2>
+            <p className="mt-1 text-xs text-linda-espresso/70">
+              Vyžaduje nařízení EU 2023/988 (GPSR). Bez údajů o výrobci produkt nelze uložit –
+              zboží bez nich se nesmí nabízet.
+            </p>
+          </div>
+
+          {/*
+            Butik odebírá od hrstky dodavatelů, takže se tři pole přepisovala
+            u každého kousku znovu. Nabídka je jen předvyplnění: produkt si
+            údaje nese dál sám, aby platily i po tom, co dodavatel skončí.
+          */}
+          {vyrobci.length > 0 && (
+            <div className="text-xs">
+              <label htmlFor="ulozeny-vyrobce" className="mb-1 block font-semibold text-linda-espresso">
+                Převzít od dříve zadaného výrobce
+              </label>
+              <Vyber
+                id="ulozeny-vyrobce"
+                trida="w-full"
+                disabled={odesilam}
+                ikona={<Factory className="h-3.5 w-3.5" aria-hidden="true" />}
+                hodnota={vyrobci.some((v) => v.nazev === form.vyrobceNazev) ? form.vyrobceNazev : RUCNE}
+                onZmena={(hodnota) =>
+                  hodnota === RUCNE
+                    ? setForm((p) => ({
+                        ...p,
+                        vyrobceNazev: '',
+                        vyrobceAdresa: '',
+                        vyrobceEmail: '',
+                        vyrobceMimoEu: false,
+                        odpovednaOsobaNazev: '',
+                        odpovednaOsobaAdresa: '',
+                        odpovednaOsobaEmail: '',
+                      }))
+                    : pouzitVyrobce(hodnota)
+                }
+                moznosti={[
+                  { hodnota: RUCNE, popisek: 'Nový výrobce – vyplnit ručně' },
+                  ...vyrobci.map((v) => ({ hodnota: v.nazev, popisek: v.nazev, poznamka: v.adresa })),
+                ]}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
             <div>
@@ -694,19 +846,40 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
           </div>
 
           {/*
-            Odpovědná osoba se vyplňuje jen u výrobce mimo EU. U italského
-            dodavatele zůstává prázdná – proto je v recesu, ne mezi povinnými poli.
+            Sídlo výrobce rozhoduje o povinnosti odpovědné osoby (čl. 19 písm. b
+            GPSR), takže se na to musí zeptat formulář. Dokud to nikdo nevěděl,
+            byla prázdná odpovědná osoba vždycky platná odpověď – u dodavatele
+            mimo Unii ale povinnost neplní a zboží se nesmí nabízet.
+
+            U českého i italského dodavatele je tím zároveň o tři pole míň.
           */}
-          <div className="space-y-4 rounded-2xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-linda-sandLight p-4 text-xs shadow-neuInsetSm">
+            <input
+              type="checkbox"
+              disabled={odesilam}
+              checked={form.vyrobceMimoEu}
+              onChange={(e) => setForm({ ...form, vyrobceMimoEu: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
+            />
+            <span className="text-linda-espresso/85">
+              <strong className="font-semibold text-linda-espresso">Výrobce sídlí mimo EU</strong>
+              <br />
+              Pak je potřeba i odpovědná osoba usazená v Unii – dovozce nebo zplnomocněný zástupce,
+              na kterého se obrací zákaznice i dozorový orgán (čl. 16 GPSR).
+            </span>
+          </label>
+
+          {form.vyrobceMimoEu && (
+          <div className="space-y-4 rounded-xl bg-linda-cream p-4 shadow-neuSm">
             <p className="text-[11px] text-linda-espresso/80">
-              <strong className="font-semibold">Odpovědná osoba v EU</strong> – vyplňte pouze tehdy,
-              když výrobce nesídlí v Evropské unii (čl. 16 GPSR). Buď všechna tři pole, nebo žádné.
+              <strong className="font-semibold">Odpovědná osoba v EU</strong> – povinná, protože
+              výrobce nesídlí v Evropské unii. Vyplňte všechna tři pole.
             </p>
 
             <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
               <div>
                 <label htmlFor="odpovednaOsobaNazev" className="mb-1 block font-semibold text-linda-espresso">
-                  Název
+                  Název <span className="text-linda-cognac">*</span>
                 </label>
                 <input
                   id="odpovednaOsobaNazev"
@@ -721,7 +894,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
 
               <div>
                 <label htmlFor="odpovednaOsobaAdresa" className="mb-1 block font-semibold text-linda-espresso">
-                  Adresa
+                  Adresa <span className="text-linda-cognac">*</span>
                 </label>
                 <input
                   id="odpovednaOsobaAdresa"
@@ -729,13 +902,14 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                   disabled={odesilam}
                   value={form.odpovednaOsobaAdresa}
                   onChange={(e) => setForm({ ...form, odpovednaOsobaAdresa: e.target.value })}
+                  aria-invalid={chybyPoli.odpovednaOsobaNazev ? true : undefined}
                   className={POLE}
                 />
               </div>
 
               <div>
                 <label htmlFor="odpovednaOsobaEmail" className="mb-1 block font-semibold text-linda-espresso">
-                  E-mail
+                  E-mail <span className="text-linda-cognac">*</span>
                 </label>
                 <input
                   id="odpovednaOsobaEmail"
@@ -743,16 +917,33 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                   disabled={odesilam}
                   value={form.odpovednaOsobaEmail}
                   onChange={(e) => setForm({ ...form, odpovednaOsobaEmail: e.target.value })}
+                  aria-invalid={chybyPoli.odpovednaOsobaNazev ? true : undefined}
                   className={POLE}
                 />
               </div>
             </div>
 
             {chybyPoli.odpovednaOsobaNazev && (
-              <p className="text-[11px] font-medium text-linda-cognac">{chybyPoli.odpovednaOsobaNazev}</p>
+              <p role="alert" className="text-[11px] font-medium text-linda-cognac">
+                {chybyPoli.odpovednaOsobaNazev}
+              </p>
             )}
           </div>
+          )}
 
+          {/*
+            Zbytek GPSR čl. 19 je nepovinný: výrobek identifikuje název, typ
+            a fotka, další značení má jen část zboží. Vybalené to vypadalo
+            jako čtyři další povinnosti a formulář kvůli tomu působil dvakrát
+            delší, než ve skutečnosti je.
+          */}
+          <Rozbalovaci
+            nadpis="Další značení a upozornění"
+            popis="EAN, šarže, země původu, bezpečnostní věty – nepovinné, vyplňte, co výrobek nese"
+            vychoziOtevreno={Boolean(
+              form.ean || form.cisloSarze || form.zemePuvodu || form.bezpecnostniUpozorneni
+            )}
+          >
           <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
             <div>
               <label htmlFor="ean" className="mb-1 block font-semibold text-linda-espresso">
@@ -812,15 +1003,29 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               className={POLE}
             />
             <p className="mt-1 text-[11px] text-linda-espresso/70">
-              Nepovinné. Vyplňte, pokud výrobek nese varování na visačce nebo obalu (čl. 19 GPSR).
+              Vyplňte, pokud výrobek nese varování na visačce nebo obalu (čl. 19 GPSR). Česky –
+              nařízení žádá jazyk, kterému zákaznice rozumí.
             </p>
           </div>
+          </Rozbalovaci>
         </div>
       )}
 
       {!skrytNahravaniFotek && (
         <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
-          <h2 className="font-serif text-xl text-linda-espresso">Fotografie</h2>
+          <div>
+            <h2 className="font-serif text-xl text-linda-espresso">
+              Fotografie{!form.jeDarkovyPoukaz && <span className="text-linda-cognac"> *</span>}
+            </h2>
+            {!form.jeDarkovyPoukaz && (
+              <p className="mt-1 text-xs text-linda-espresso/70">
+                Vyobrazení výrobku je náležitost nabídky na dálku (čl. 19 GPSR), ne ozdoba. Bez
+                fotky lze produkt uložit jen jako koncept.
+              </p>
+            )}
+          </div>
+
+          {chybaPole('fotky')}
 
           <div className="space-y-2 rounded-2xl border-2 border-dashed border-linda-sand p-6 text-center">
             {nahravam ? (
@@ -1034,7 +1239,19 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               </div>
 
               {!form.jeDarkovyPoukaz && (
-                <div className="grid grid-cols-2 gap-3 border-t border-linda-sand/40 pt-2 sm:grid-cols-4">
+                /*
+                  Čtyři míry krát pět velikostí je dvacet políček, která
+                  u většiny kousků zůstanou prázdná – a přitom to byla ta část
+                  formuláře, kvůli které vypadal nekonečně. Rozbalený zůstává
+                  blok tam, kde už míry jsou.
+                */
+                <Rozbalovaci
+                  nadpis="Míry této velikosti"
+                  popis="Nepovinné – pomáhají zákaznici vybrat velikost a snižují vratky"
+                  trida="border-t border-linda-sand/40 pt-2"
+                  vychoziOtevreno={Boolean(v.obvodHrudniku || v.obvodPasu || v.obvodBoku || v.delka)}
+                >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {(
                     [
                       ['obvodHrudniku', 'Obvod hrudníku', '88–92 cm'],
@@ -1064,6 +1281,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                     </div>
                   ))}
                 </div>
+                </Rozbalovaci>
               )}
             </div>
           ))}

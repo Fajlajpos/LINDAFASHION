@@ -398,9 +398,26 @@ started**, and the seller must be able to prove it (ČOI fine up to 5 000 000 K�
 - **GPSR**, nařízení (EU) 2023/988: manufacturer name, postal address and e-mail are
   **required** by `produktSchema` — not just by the form, because a hand-built request
   would otherwise create a product that is unlawful from the first second. An EU
-  responsible person (čl. 16) is required only for a non-EU manufacturer, and must be
-  filled in **completely or not at all** — a name without an address satisfies nothing
-  and reads on the page like a real record.
+  responsible person (čl. 16) must be filled in **completely or not at all** — a name
+  without an address satisfies nothing and reads on the page like a real record.
+- **`Product.vyrobceMimoEu` is what makes the responsible person enforceable.** Čl. 19
+  písm. b) requires one whenever the manufacturer is not established in the Union, and
+  until this flag existed the schema could not express that: "all three fields or none"
+  meant an empty responsible person was always a valid answer, so goods from a
+  non-EU supplier published without the contact the regulation exists to provide.
+  It cannot be derived from `zemePuvodu` — that says where the goods were made, not
+  where the party answerable for them is seated.
+- **A published product must carry a photo** (čl. 19 písm. c: identification "including a
+  picture of it"). `lzeZverejnitBezFotek` is checked by POST, by PUT — where existing
+  images count, because the edit form manages the gallery separately and sends an empty
+  array meaning "no new ones" — and by the image DELETE endpoint, which otherwise let the
+  last photo of a live product go with no warning at all. A draft (`aktivni = false`) and
+  a gift card are exempt.
+- **`/api/admin/vyrobci` only prefills the form.** The GPSR data stays copied onto every
+  product on purpose — it is a particular of the offer, not a lookup, and must survive the
+  supplier being removed. But a boutique buys from a handful of suppliers, so six fields
+  were being retyped for every single piece. The endpoint offers the last wording used for
+  each manufacturer; nothing joins products to a shared row.
 - **Textile**, nařízení (EU) 1007/2011: `slozeniMaterialu` holds the fibre composition
   in percentages ("55 % len, 45 % bavlna"). It is deliberately separate from
   `material`, which is free marketing prose ("jemný praný len") and does **not**
