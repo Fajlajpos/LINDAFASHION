@@ -50,6 +50,29 @@ function adresaWebu(): string {
 }
 
 /**
+ * Odkaz na detail objednávky.
+ *
+ * Parametr se jmenuje `t`, ne `token` – tak ho čte
+ * [potvrzovací stránka](src/app/(shop)/pokladna/potvrzeni/page.tsx) i zbytek
+ * aplikace. Rozejít se s ní znamená, že tlačítko v e-mailu skončí na 404,
+ * a zrovna tenhle e-mail je pro objednávku bez registrace jediná cesta
+ * k platebním údajům i k odstoupení od smlouvy.
+ *
+ * Bez tokenu zbývá `/muj-ucet`, což má smysl jen pro registrovanou zákaznici –
+ * host se tam nedostane. Proto token předávají **všechny** úlohy, které se
+ * týkají konkrétní objednávky, ne jen potvrzení nákupu.
+ */
+function odkazNaObjednavku(token: string | null): string {
+  const web = adresaWebu();
+  return token ? `${web}/pokladna/potvrzeni?t=${encodeURIComponent(token)}` : `${web}/muj-ucet`;
+}
+
+/** `verejnyToken` z dat úlohy, nebo `null`, když ho volající neposlal. */
+function tokenZDat(data: Record<string, unknown>): string | null {
+  return data.verejnyToken ? String(data.verejnyToken) : null;
+}
+
+/**
  * Obálka zprávy: hlavička se značkou, tělo a patička.
  *
  * Tabulkový layout není nedbalost – Outlook (Word render engine) neumí
@@ -186,8 +209,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
 
     case 'potvrzeni-objednavky': {
       const cislo = String(data.cisloObjednavky ?? '');
-      const token = data.verejnyToken ? String(data.verejnyToken) : null;
-      const odkaz = token ? `${web}/pokladna/potvrzeni?token=${encodeURIComponent(token)}` : `${web}/muj-ucet`;
+      const token = tokenZDat(data);
+      const odkaz = odkazNaObjednavku(token);
 
       /*
        * Odkaz na odstoupení od smlouvy patří přímo do potvrzení objednávky.
@@ -313,6 +336,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       const cislo = String(data.cisloObjednavky ?? '');
       const stav = String(data.stav ?? '');
       const zasilka = data.cisloZasilky ? String(data.cisloZasilky) : null;
+      const odkaz = odkazNaObjednavku(tokenZDat(data));
 
       const radky: Array<[string, string]> = [['Číslo objednávky', cislo]];
       if (zasilka) radky.push(['Číslo zásilky', zasilka]);
@@ -327,7 +351,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           (zasilka
             ? odstavec('Podle čísla zásilky si zásilku najdete na webu dopravce.')
             : '') +
-          tlacitko('Přehled objednávek', `${web}/muj-ucet`)
+          tlacitko('Zobrazit objednávku', odkaz)
         ),
         text: [
           'Dobrý den,',
@@ -335,7 +359,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           `vaše objednávka ${cislo} ${POPIS_STAVU[stav] ?? 'změnila stav'}.`,
           zasilka ? `Číslo zásilky: ${zasilka}` : '',
           '',
-          `Přehled objednávek: ${web}/muj-ucet`,
+          `Detail objednávky: ${odkaz}`,
         ]
           .filter(Boolean)
           .join('\n'),
@@ -566,6 +590,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
 
     case 'platba-prijata': {
       const cislo = String(data.cisloObjednavky ?? '');
+      const odkaz = odkazNaObjednavku(tokenZDat(data));
 
       return {
         predmet: `Platba k objednávce ${cislo} přijata – LINDA FASHION`,
@@ -573,9 +598,127 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           'Platbu máme',
           odstavec('Dobrý den,') +
           odstavec(`platbu k objednávce <strong>${e(cislo)}</strong> jsme přijali. Zboží připravíme k odeslání.`) +
-          tlacitko('Přehled objednávek', `${web}/muj-ucet`)
+          tlacitko('Zobrazit objednávku', odkaz)
         ),
-        text: ['Dobrý den,', '', `platbu k objednávce ${cislo} jsme přijali.`, `${web}/muj-ucet`].join('\n'),
+        text: ['Dobrý den,', '', `platbu k objednávce ${cislo} jsme přijali.`, `Detail objednávky: ${odkaz}`].join('\n'),
+      };
+    }
+
+    /*
+     * Kódy zakoupených dárkových poukazů.
+     *
+     * Bez téhle zprávy končily vydané poukazy slepou uličkou: worker je po
+     * zaplacení založil v databázi a nikdo se je nedozvěděl – administrace je
+     * nevypisovala a e-mail neexistoval. Zákaznice zaplatila za kód, který
+     * nikdy neviděla.
+     *
+     * Kódy jdou do těla zprávy, ne za odkaz. Poukaz je platidlo na doručitele;
+     * odkaz na stránku s kódem by z něj udělal něco, co se dá přeposlat dál
+     * i poté, co ho zákaznice předá obdarované.
+     */
+    case 'poukazy-vydane': {
+      const cislo = String(data.cisloObjednavky ?? '');
+      const kody = Array.isArray(data.kody) ? data.kody.map(String) : [];
+      if (kody.length === 0) return null;
+
+      const jedenKus = kody.length === 1;
+      const platnost = data.platnyDo ? String(data.platnyDo) : null;
+
+      const seznam = kody
+        .map(
+          (kod) =>
+            `<tr><td style="padding:10px 0;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:700;letter-spacing:2px;text-align:center;color:${BARVY.espresso};">${e(kod)}</td></tr>`
+        )
+        .join('');
+
+      return {
+        predmet: jedenKus
+          ? `Váš dárkový poukaz – LINDA FASHION`
+          : `Vaše dárkové poukazy (${kody.length}×) – LINDA FASHION`,
+        html: obalka(
+          jedenKus ? 'Váš dárkový poukaz' : 'Vaše dárkové poukazy',
+          odstavec('Dobrý den,') +
+          odstavec(
+            jedenKus
+              ? `k objednávce <strong>${e(cislo)}</strong> jsme vystavili dárkový poukaz. Kód níž stačí zadat v pokladně.`
+              : `k objednávce <strong>${e(cislo)}</strong> jsme vystavili <strong>${kody.length} dárkové poukazy</strong>. Každý kód platí samostatně a zadává se v pokladně.`
+          ) +
+          `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${BARVY.sandLight};border-radius:12px;padding:12px 20px;margin:20px 0;">${seznam}</table>` +
+          odstavec(
+            platnost
+              ? `Poukaz můžete uplatnit do <strong>${e(platnost)}</strong>. Nevyčerpaný zůstatek zůstává na kódu i po částečném použití.`
+              : 'Poukaz nemá omezenou platnost. Nevyčerpaný zůstatek zůstává na kódu i po částečném použití.'
+          ) +
+          odstavec('Kód nikam nepřeposílejte – kdo ho zná, může ho uplatnit.')
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          jedenKus
+            ? `k objednávce ${cislo} jsme vystavili dárkový poukaz.`
+            : `k objednávce ${cislo} jsme vystavili ${kody.length} dárkové poukazy.`,
+          '',
+          ...kody.map((kod) => `  ${kod}`),
+          '',
+          platnost
+            ? `Poukaz uplatníte v pokladně do ${platnost}.`
+            : 'Poukaz uplatníte v pokladně, platnost není omezená.',
+          'Nevyčerpaný zůstatek zůstává na kódu i po částečném použití.',
+          'Kód nikam nepřeposílejte – kdo ho zná, může ho uplatnit.',
+        ].join('\n'),
+      };
+    }
+
+    /*
+     * Vyřízení reklamace nebo vrácení.
+     *
+     * § 19 odst. 3 zák. č. 634/1992 Sb. dává prodávajícímu třicet dnů na
+     * vyřízení **a na vyrozumění**. Do téhle chvíle administrace stav jen
+     * přepnula a nikam nic neposlala; zákaznice bez účtu – a ta smí reklamovat
+     * stejně jako registrovaná – tak neměla jak výsledek zjistit vůbec.
+     */
+    case 'reklamace-vyrizena': {
+      const cislo = String(data.cisloObjednavky ?? '');
+      const jeVraceni = data.typ === 'VRACENI';
+      const uznano = data.stav === 'VYRIZENA_UZNANA';
+      const poznamka = data.poznamka ? String(data.poznamka) : null;
+      const nazev = jeVraceni ? 'Vrácení zboží' : 'Reklamace';
+
+      const radky: Array<[string, string]> = [
+        ['Objednávka', cislo],
+        ['Výsledek', uznano ? 'Uznáno' : 'Zamítnuto'],
+      ];
+
+      const zaver = uznano
+        ? jeVraceni
+          ? 'Peníze vám vrátíme do 14 dnů stejným způsobem, jakým jste platila.'
+          : 'Ozveme se vám s domluvou na opravě, výměně nebo vrácení peněz.'
+        : 'Pokud s posouzením nesouhlasíte, ozvěte se nám – spor lze řešit i mimosoudně u České obchodní inspekce (coi.cz).';
+
+      return {
+        predmet: `${nazev} k objednávce ${cislo} – vyřízeno`,
+        html: obalka(
+          `${nazev} vyřízena`,
+          odstavec('Dobrý den,') +
+          odstavec(
+            `vaši ${jeVraceni ? 'žádost o vrácení' : 'reklamaci'} k objednávce <strong>${e(cislo)}</strong> jsme vyřídili.`
+          ) +
+          panel(radky) +
+          (poznamka ? odstavec(`<strong>Vyjádření:</strong> ${e(poznamka)}`) : '') +
+          odstavec(zaver)
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          `vaši ${jeVraceni ? 'žádost o vrácení' : 'reklamaci'} k objednávce ${cislo} jsme vyřídili.`,
+          '',
+          `Výsledek: ${uznano ? 'Uznáno' : 'Zamítnuto'}`,
+          poznamka ? `Vyjádření: ${poznamka}` : '',
+          '',
+          zaver,
+        ]
+          .filter(Boolean)
+          .join('\n'),
       };
     }
 

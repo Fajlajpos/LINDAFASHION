@@ -44,6 +44,7 @@ nebo potvrzení o akceptaci podmínek.
 | 7 | Cloudflare (Turnstile, případně CDN) | zpracovatel | IP adresa, technické údaje o požadavku | ☐ nevyřešeno | |
 | 8 | Účetní / daňový poradce | zpracovatel (nebo samostatný správce) | Fakturační údaje | ☐ nevyřešeno | |
 | 9 | Zálohovací služba, pokud je jiná než hosting | zpracovatel | Kopie celé databáze | ☐ nevyřešeno | |
+| 10 | api.qrserver.com (obrázek QR platby) | samostatný správce | IP adresa zákaznice; v adrese obrázku číslo účtu, částka a variabilní symbol | ☐ nevyřešeno | |
 
 **Google a Meta se spouštějí až po souhlasu s cookies** — do té doby se z webu
 neodesílá nic (viz `src/lib/souhlas-cookies.ts`). Smlouva je ale potřeba **dřív**,

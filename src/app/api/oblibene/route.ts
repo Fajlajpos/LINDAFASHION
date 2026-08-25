@@ -40,6 +40,10 @@ async function vratitOblibene(userId: string) {
     nazev: o.product.nazev,
     cena: Number(o.product.cena),
     cenaPoSleve: o.product.cenaPoSleve === null ? null : Number(o.product.cenaPoSleve),
+    // § 12a: přeškrtnutá cena je oznámení o slevě, takže s ní musí jít
+    // i referenční cena. Bez tohohle pole karta slevu inzerovala, ale povinnou
+    // větu ani procento nezobrazila – nedoložitelná sleva.
+    nejnizsiCena30DniHaleru: o.product.nejnizsiCena30DniHaleru,
     znacka: o.product.znacka,
     kategorieNazev: o.product.category.nazev,
     obrazekUrl: o.product.images[0]?.urlMedium ?? null,

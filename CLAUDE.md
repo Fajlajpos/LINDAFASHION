@@ -56,6 +56,33 @@ Consequences worth remembering:
 - **Category links use the path `/produkty/[kategorie]`, never `?kategorie=`.** Both render
   the same `KatalogVypis`, but prefetch keys off the path: five nav items pointing at
   `/produkty?kategorie=…` look like one and the same route to the router.
+- **Anything the customer is promised comes from `Settings`, never from a constant.** Prices
+  and the free-shipping threshold had two lives: `shipping.ts` hardcoded 79/109/99 Kč and
+  "zdarma nad 2 500 Kč" for `/doprava-a-platba`, the hero and the trust bar, while the
+  checkout read `Settings` — so the shop could advertise one price and charge another, and
+  promise free shipping while `prahDopravaZdarma` was `null` and the checkout billed postage
+  every time. That is not an inconsistency, it is an unfair commercial practice, and delivery
+  cost is § 1820 odst. 1 pre-contractual information. [shipping.ts](src/lib/shipping.ts) now
+  holds descriptions only; `dostupneDopravy()` merges in the prices and drops any method
+  without one, and `popisDopravyZdarma()` returns `null` when there is no threshold so the
+  claim disappears instead of lying. Same rule for the card-payment tile: it renders only
+  when `jeNastaveno()`, exactly like the checkout.
+- **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
+  (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
+  meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every
+  production image and GA4 and the Pixel never loaded, no matter what `.env` said. The cookie
+  banner's analytics and marketing switches therefore controlled nothing. The Dockerfile
+  declares `ARG`/`ENV` before the build and both compose services pass the same `args` — the
+  same, because they share one image tag and a build with empty args would overwrite it.
+  These two are public identifiers, not secrets; real secrets still arrive at runtime.
+  Filling them in requires `--build`, not a restart.
+- **`/oblibene` is not behind login.** The whole feature is `localStorage` first — the heart
+  on a card works logged out and the header shows the count to everyone — so gating the page
+  meant a visitor collected favourites, saw "Oblíbené (3)" and got bounced to a login form
+  she could not use to reach her own list. Signing in merges the list with the server; that
+  is an improvement, not a precondition. `ProductCard` therefore stores
+  `nejnizsiCena30DniHaleru` in the favourite's snapshot too, or the page would show a
+  struck-through price — an announcement of a discount — with no § 12a reference sentence.
 - **Error boundaries:** [(shop)/error.tsx](<src/app/(shop)/error.tsx>) keeps the header and
   footer so the customer can navigate away; [app/error.tsx](src/app/error.tsx) is the
   fallback for admin/auth; [global-error.tsx](src/app/global-error.tsx) catches a failure in
@@ -235,9 +262,24 @@ konfigurace je vylučuje.
 The shop runs end to end: catalog → cart → checkout → order → invoice → admin.
 What is still missing:
 
-- **`oblibene/`** page renders from the context, which works, but was never rewritten to
-  use the server data shape returned by [api/oblibene](src/app/api/oblibene/route.ts).
+- **Changing the account e-mail is not possible.** `profilSchema` leaves it out on purpose —
+  it is the login name and the address invoices go to, so changing it needs the new mailbox
+  verified, and a few seconds at an unlocked browser would otherwise be enough to take the
+  account over. That verification flow (token table + confirmation e-mail) does not exist,
+  so today the only way to correct the address is to delete the account. Article 16 GDPR
+  wants rectification available, so this is a genuine gap, not a design choice.
 - **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
+- **No carrier integration at all.** `PACKETA_*`, `PPL_*` and `CESKA_POSTA_*` sit in
+  `.env.example` and nothing reads them — no labels, no tracking lookup; `cisloZasilky` is
+  typed in by hand. Same for `CLOUD_STORAGE_*`, `GOOGLE_MERCHANT_ID` and
+  `META_CATALOG_FEED_URL`.
+- **The newsletter can be exported, not sent.** `/api/admin/newsletter/export` hands over a
+  CSV of **confirmed, non-unsubscribed** addresses (that filter is the point — an export of
+  unconfirmed ones would be a way around the double opt-in) and logs the export to the audit
+  trail. Actually sending a campaign is somebody else's tool.
+- **Complaint status has no public page.** `Reklamace.token` is written and never read. The
+  outcome now reaches the customer by e-mail (`reklamace-vyrizena`), which is what § 19
+  odst. 3 needs, so the token is spare capacity rather than a hole.
 
 ### Other gaps
 
@@ -451,6 +493,20 @@ deleted with her browser history. That is not evidence.
   `ipPotvrzeni`). The confirming `updateMany` carries `potvrzeno: false` in its
   `where` — without it every page reload would push the consent date to today, and the
   evidence would claim she consented this morning rather than a year ago.
+- **Every newsletter opt-in goes through [newsletter.ts](src/lib/newsletter.ts).** There were
+  three doors and only one of them was lawful: the public form did the double opt-in with
+  both IPs and a `SouhlasZaznam`, while the registration checkbox and the account toggle just
+  set `User.newsletterSouhlas = true` — consent with no proof, no confirmed address, and no
+  effect at all, because sending reads `NewsletterSubscriber`. Turning it on did nothing;
+  turning it off worked. Worse, registration ran
+  `newsletterSubscriber.deleteMany({ email })` and so **destroyed** an earlier double
+  opt-in's `potvrzenoAt` / `ipPrihlaseni` / `ipPotvrzeni` — exactly what retention protects
+  and what cannot be reconstructed.
+- **`User.newsletterSouhlas` is a mirror, not a source.** It flips to `true` only in
+  `/api/newsletter/potvrzeni`, when the address is actually confirmed; the toggle and the
+  registration checkbox merely start the confirmation. Switching it **off** applies at once —
+  withdrawal must not wait for anything (čl. 7 odst. 3). `updateMany` there, because an
+  address subscribed from the footer may have no account at all.
 - **Backfilling consent is forbidden.** Old rows keep `potvrzenoAt` / `souhlasPodminkyAt`
   null on purpose. Invented proof is worse than an admitted gap.
 
@@ -461,6 +517,21 @@ deleted with her browser history. That is not evidence.
   Bump `Settings.verzePodminek` in admin after every change of wording.
 - `jePlatceDph`, `sazbaDph` and `dphHaleru` are a **snapshot**, not a lookup. Reading
   today's `Settings.jePlatceDph` would retroactively rewrite last year's invoices.
+- **So is the supplier.** `Order.dodavatelSnapshot` (Json, written at checkout, read by
+  [dodavatel.ts](src/lib/dodavatel.ts)) freezes name, IČO, DIČ, address, e-mail and
+  `zapisVRejstriku`. The same reasoning as VAT, just overlooked: the PDF is regenerated
+  every time an order is marked paid, and it used to re-read `Settings`, so moving premises
+  or changing IČO reprinted last year's document with today's header. It is **one Json, not
+  six columns**, because the supplier's identity is a single thing that has to stay together —
+  separate columns invite filling in one of them and producing a document with a new address
+  under an old IČO. `null` on rows written before the column existed; those still fall back
+  to `Settings`, and backfilling them would mean inventing what the document once said.
+- **The invoice carries the payment details when — and only when — money is still owed.**
+  Account number, IBAN, variable symbol and the amount left to pay were nowhere on it, so a
+  customer paying by transfer who closed the confirmation page had nothing to pay against.
+  They are omitted once `stavPlatby` is `ZAPLACENO`: a demand for payment on a settled order
+  is an invitation to pay twice. The withdrawal address in the footer comes from `APP_URL`,
+  not a hardcoded domain.
 - Prices in the shop include VAT, so `dphZCelkem` computes tax **from the top**:
   `celkem − celkem / (1 + sazba/100)`. `celkem × sazba` overstates 21 % VAT by a fifth.
 - `ipObjednavky` is proof of a distance contract (legitimate interest), kept shorter
@@ -586,6 +657,20 @@ deleted with her browser history. That is not evidence.
   code per piece ([vygenerovat-poukazy.ts](src/worker/jobs/vygenerovat-poukazy.ts)).
   `castkaZVarianty` deliberately requires the whole variant name to be an amount — matching
   "the first number in the string" would mint a 38 Kč card from the clothing size "M (38)".
+  **The code then has to reach somebody.** For one afternoon the job minted `GiftCard` rows
+  and that was the end of it: no admin page listed them, the order detail did not show them
+  and no e-mail existed, so the customer paid for a code nobody ever saw. The job now queues
+  `poukazy-vydane` with the codes **generated in that run** (the job is idempotent, so a
+  re-run sends nothing and she never gets the same code twice), the order detail prints them
+  for the owner to copy onto the physical card, and [/admin/poukazy](src/app/admin/poukazy/)
+  manages balances. Codes go in the message body, not behind a link — a voucher is a bearer
+  instrument and a link keeps working after she hands the card on.
+- **`/admin/poukazy` can issue and deactivate, never edit a balance.** The balance moves only
+  through the order transaction and the cancel, both with the check inside the `UPDATE`; a
+  hand-typed value would sidestep that and leave no trace of where the money went. There is
+  no DELETE either — a spent voucher is what `Order.giftCardId` points at, so deleting it
+  would erase what an accounting document was paid with. The code is always server-generated:
+  a guessable one ("VANOCE2026") is money somebody else can spend.
 - Order numbers (`2026-00001`) are derived from a per-year count; the unique index is the
   real guard against a collision under concurrency, and `vytvoritObjednavku` retries the
   whole transaction (up to 5×, each with a higher offset) when it hits one. Without the
@@ -595,10 +680,30 @@ deleted with her browser history. That is not evidence.
   friendly "zbývá jen N ks" check earlier in the transaction is for the message only; there
   is a gap between it and the write that a concurrent order fits into. Verified: six
   simultaneous orders for the last piece → one 201, five 409, stock lands on 0.
+- **The gift-card balance and the discount-code counter get the same treatment.** Both used
+  to read the row first and then write a value derived from that read — the gift card wrote
+  an absolute `zustatek`, the code checked `pocetPouziti < limitPouziti` and then
+  `increment`ed. Two concurrent orders with the same voucher therefore both read 1000, both
+  wrote 0, and a 500 Kč card paid for both baskets. Now the voucher is a guarded
+  `decrement` (`where: { id, zustatek: { gte: … } }`, assert `count === 1`) and the code
+  carries `pocetPouziti: { lt: limitPouziti }` in its `where`. Deactivating an exhausted
+  voucher is a **second** `updateMany` conditioned on `zustatek <= 0`, not an `aktivni`
+  field derived from the stale read. Covered by "při souběhu neutratí poukaz víckrát" in
+  [objednavka.integration.test.ts](src/lib/objednavka.integration.test.ts).
 - **Links that must work without a login use `Order.verejnyToken`**, never the order number.
   Numbers are sequential, so `?cislo=2026-00002` let anyone page through other people's
   name, address and purchase. This covers the confirmation page and `/api/faktura/[token]`,
   which serves the PDF out of `storage/faktury/` (`Cache-Control: private, no-store`).
+- **The confirmation page reads `?t=`, and every link must say `t`.** The order-confirmation
+  e-mail built `?token=` instead, so its "Zobrazit objednávku" button — the one thing a
+  guest has linking her to the payment details and to the withdrawal form — 404'd. The test
+  asserted the wrong parameter too, which is why it stayed green. Links are built by
+  `odkazNaObjednavku()` in [sablony.ts](src/worker/emaily/sablony.ts) so there is one
+  spelling of it.
+- **Every e-mail about an order carries `verejnyToken`.** "Změna stavu" and "platba přijata"
+  pointed at `/muj-ucet`, which a guest order can never reach — the customer landed on a
+  login form for an account she does not have. Without a token the helper still falls back
+  to `/muj-ucet`, so the token has to be in the job payload.
 - `Order.email` holds the contact address. Guest checkout has no `User`, so before this
   column the invoice for every unregistered order carried no e-mail at all.
 - PDF invoices embed **DejaVu Sans** from `assets/fonts/`. The PDF standard fonts have no

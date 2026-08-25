@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic';
  * POST /api/ucet/zmena-hesla – změna hesla přihlášené zákaznice.
  *
  * Do téhle chvíle vedla k novému heslu jediná cesta: „zapomenuté heslo"
- * s odkazem v e-mailu. Jenže odesílání e-mailů zatím není zapojené, takže
- * si heslo fakticky nešlo změnit vůbec.
+ * s odkazem v e-mailu – tedy oklikou přes schránku, ne z účtu.
  *
  * Po změně se zvýší `tokenVerze`, čímž se odhlásí všechna ostatní zařízení –
  * a hned se vystaví nová cookie, aby si zákaznice neodhlásila sama sebe.

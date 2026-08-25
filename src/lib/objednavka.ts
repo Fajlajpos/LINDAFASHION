@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 import { db } from './db';
 import { czkNaHalere, halereNaCzk, prodejniCena, spocitatObjednavku, type Halere } from './penize';
 import { dphZCelkem, nacistNastaveni } from './nastaveni';
+import { snimekDodavatele } from './dodavatel';
 import { verzeProObjednavku } from './pravni-dokumenty';
 import type { ObjednavkaVstup } from './validations/objednavka';
 
@@ -206,6 +207,8 @@ export async function vytvoritObjednavku(
       // --- 2. Slevový kód --------------------------------------------------
       let discountCodeId: string | null = null;
       let procentoSlevy = 0;
+      /** Zapamatovaný limit – kontrola vyčerpání patří až do `UPDATE` níž. */
+      let limitPouziti: number | null = null;
 
       if (vstup.slevovyKod) {
         const kod = await tx.discountCode.findUnique({ where: { kod: vstup.slevovyKod } });
@@ -224,6 +227,7 @@ export async function vytvoritObjednavku(
 
         discountCodeId = kod.id;
         procentoSlevy = kod.procentoSlevy;
+        limitPouziti = kod.limitPouziti;
       }
 
       // --- 3. Dárkový poukaz ----------------------------------------------
@@ -326,6 +330,19 @@ export async function vytvoritObjednavku(
           sazbaDph: nastaveni.jePlatceDph ? nastaveni.sazbaDph : 0,
           dphHaleru: dphZCelkem(rozpis.celkem, nastaveni),
 
+          /*
+           * Identifikace dodavatele ve stejném okamžiku, ze stejného důvodu.
+           *
+           * Doklad se přegeneruje pokaždé, když se objednávka označí jako
+           * zaplacená. Bez snímku by si při tom sáhl do aktuálního `Settings` –
+           * takže po přestěhování nebo změně IČO by loňská faktura vyšla
+           * s dnešní hlavičkou.
+           */
+          // Přetypování kvůli Prismě: `InputJsonValue` chce indexovou signaturu,
+          // kterou pojmenovaný interface nemá. Tvar hlídá `SnimekDodavatele`
+          // na vstupu do funkce, ne až tady.
+          dodavatelSnapshot: { ...snimekDodavatele(nastaveni) } as Prisma.InputJsonObject,
+
           // Snímek adresy, ne odkaz na Address – objednávka se nesmí změnit,
           // když si zákaznice adresu později upraví (sekce 7).
           dodaciJmenoPrijmeni: vstup.dodaciJmenoPrijmeni.trim(),
@@ -371,22 +388,66 @@ export async function vytvoritObjednavku(
         }
       }
 
+      /*
+       * Počitadlo slevového kódu – podmínka na vyčerpání je součástí UPDATE.
+       *
+       * Kontrola v kroku 2 je jen kvůli hlášce. Mezi ní a tímhle zápisem je
+       * mezera, do které se vejde souběžná objednávka, takže kód s limitem
+       * „50 použití" se dal uplatnit i po padesáté první. `increment` sám je
+       * atomický, ale nevyčerpanost nehlídá – tu musí říct `where`.
+       */
       if (discountCodeId) {
-        await tx.discountCode.update({
-          where: { id: discountCodeId },
+        const zmeneno = await tx.discountCode.updateMany({
+          where: {
+            id: discountCodeId,
+            // `limitPouziti` je zapamatovaná konstanta, ne druhý sloupec –
+            // Prisma dva sloupce v `where` porovnat neumí.
+            ...(limitPouziti === null ? {} : { pocetPouziti: { lt: limitPouziti } }),
+          },
           data: { pocetPouziti: { increment: 1 } },
         });
+
+        if (zmeneno.count !== 1) {
+          throw new ChybaPole('slevovyKod', 'Tento slevový kód byl mezitím vyčerpán.');
+        }
       }
 
+      /*
+       * Zůstatek poukazu – tentýž vzorec, a tady je to nejdražší.
+       *
+       * Dřív se zapisovala absolutní hodnota spočítaná ze zůstatku načteného
+       * o pár řádků výš (`zustatek: zbyva`). Dvě objednávky odeslané naráz se
+       * stejným kódem obě přečetly 1000, obě zapsaly 0 – a poukaz zaplatil
+       * obě. Klasický ztracený zápis, jen se v něm ztrácejí peníze.
+       *
+       * `decrement` s podmínkou `zustatek >= odečítaná částka` je atomický:
+       * druhá objednávka podmínku nesplní, `count` vyjde 0 a celá transakce
+       * se zruší. Je to totéž, co dělá sklad o pár řádků výš.
+       */
       if (giftCardId && rozpis.zPoukazu > 0) {
-        const zbyva = zustatekPoukazu - rozpis.zPoukazu;
-        await tx.giftCard.update({
-          where: { id: giftCardId },
-          data: {
-            zustatek: new Prisma.Decimal(halereNaCzk(zbyva)),
-            // Vyčerpaný poukaz deaktivujeme, ať se nenabízí znovu.
-            aktivni: zbyva > 0,
-          },
+        const odecist = new Prisma.Decimal(halereNaCzk(rozpis.zPoukazu));
+
+        const zmeneno = await tx.giftCard.updateMany({
+          where: { id: giftCardId, zustatek: { gte: odecist } },
+          data: { zustatek: { decrement: odecist } },
+        });
+
+        if (zmeneno.count !== 1) {
+          throw new ChybaPole(
+            'darkovyPoukaz',
+            'Zůstatek poukazu se mezitím změnil. Načtěte prosím stránku znovu.'
+          );
+        }
+
+        /*
+         * Vyčerpaný poukaz se deaktivuje, ať se nenabízí znovu. Samostatným
+         * dotazem s podmínkou na nulu, ne polem v předchozím `data`: tam by
+         * se `aktivni` odvozovalo z toho, co jsme si přečetli, tedy zase
+         * z hodnoty, kterou nám mezitím mohl někdo změnit pod rukama.
+         */
+        await tx.giftCard.updateMany({
+          where: { id: giftCardId, zustatek: { lte: new Prisma.Decimal(0) } },
+          data: { aktivni: false },
         });
       }
 

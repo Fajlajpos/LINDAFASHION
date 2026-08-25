@@ -11,6 +11,7 @@
  */
 import { db } from '../../lib/db';
 import { castkaZVarianty, vygenerovatKodPoukazu } from '../../lib/poukazy';
+import { FRONTY, publishJob } from '../../lib/queue';
 
 export interface UlohaPoukazy {
   orderId: string;
@@ -35,6 +36,9 @@ export async function vygenerovatPoukazyUloha(data: UlohaPoukazy): Promise<void>
   if (objednavka.stavPlatby !== 'ZAPLACENO') {
     return;
   }
+
+  /** Kódy vydané v tomhle běhu – posílají se zákaznici jedním e-mailem. */
+  const noveKody: string[] = [];
 
   for (const polozka of objednavka.items) {
     if (!polozka.variant.product.jeDarkovyPoukaz) continue;
@@ -68,6 +72,7 @@ export async function vygenerovatPoukazyUloha(data: UlohaPoukazy): Promise<void>
               vytvorenoZObjednavkyId: polozka.id,
             },
           });
+          noveKody.push(kod);
           break;
         } catch (err) {
           if (pokus === 4) throw err;
@@ -78,5 +83,49 @@ export async function vygenerovatPoukazyUloha(data: UlohaPoukazy): Promise<void>
     console.log(
       `[poukazy] Objednávka ${objednavka.cisloObjednavky}: vydáno ${chybi}× poukaz na ${castka} Kč.`
     );
+  }
+
+  /*
+   * --- Kód se musí dostat k zákaznici ---
+   *
+   * Do téhle chvíle úloha poukaz založila v databázi a tím to skončilo:
+   * administrace kódy nevypisovala a e-mail neexistoval. Zákaznice zaplatila
+   * za poukaz, který nikdy neviděla, a majitelka ho neměla kde opsat.
+   *
+   * Posílají se jen kódy vydané **v tomhle běhu**. Úloha je záměrně
+   * idempotentní (`chybi` počítá, co ještě chybí), takže opakované označení
+   * objednávky jako zaplacené sem podruhé nedojde a zákaznici nepřijde
+   * tentýž kód dvakrát.
+   *
+   * Selhání zařazení do fronty nesmí shodit celou úlohu – poukazy už v
+   * databázi jsou a druhý běh by je nevydal znovu, takže by je opakování
+   * jen zbytečně hledalo. Kódy se proto v takovém případě zaloguje.
+   */
+  if (noveKody.length > 0) {
+    const kontakt = objednavka.email ?? null;
+
+    if (!kontakt) {
+      console.warn(
+        `[poukazy] Objednávka ${objednavka.cisloObjednavky} nemá kontaktní e-mail. Kódy: ${noveKody.join(', ')}`
+      );
+      return;
+    }
+
+    try {
+      await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'poukazy-vydane',
+        to: kontakt,
+        subject:
+          noveKody.length === 1
+            ? 'Váš dárkový poukaz – LINDA FASHION'
+            : `Vaše dárkové poukazy (${noveKody.length}×) – LINDA FASHION`,
+        data: { cisloObjednavky: objednavka.cisloObjednavky, kody: noveKody },
+      });
+    } catch (err) {
+      console.error(
+        `[poukazy] Nepodařilo se zařadit e-mail s kódy pro ${objednavka.cisloObjednavky}. Kódy: ${noveKody.join(', ')}`,
+        err
+      );
+    }
   }
 }

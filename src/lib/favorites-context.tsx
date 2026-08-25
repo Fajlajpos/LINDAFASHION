@@ -21,6 +21,18 @@ export interface FavoriteItem {
   nazev: string;
   cena: number;
   cenaPoSleve?: number | null;
+
+  /**
+   * Nejnižší cena za 30 dnů před slevou (§ 12a zák. č. 634/1992 Sb.).
+   *
+   * Otisk ji musí nést stejně jako cenu samotnou. Bez ní vykreslila karta na
+   * `/oblibene` přeškrtnutou původní cenu – tedy oznámení o slevě – ale větu
+   * o referenční ceně ani procento už ne, protože `ProductCard` bez tohohle
+   * čísla obojí vědomě potlačí. Povinnost přitom platí u **každého** oznámení
+   * slevy, ne jen v katalogu.
+   */
+  nejnizsiCena30DniHaleru?: number | null;
+
   znacka?: string | null;
   kategorieNazev?: string | null;
   obrazekUrl?: string | null;

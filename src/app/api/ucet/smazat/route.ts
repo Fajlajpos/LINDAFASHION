@@ -104,6 +104,23 @@ export async function POST(request: Request) {
       db.contactMessage.deleteMany({ where: { email: uzivatel.email } }),
     ]);
 
+    /*
+     * --- Co e-mail naopak nese dál, a proč ---
+     *
+     * `Order.email` a `Reklamace.email` se **nemažou**. Obojí je vázané na
+     * účetní doklad nebo na uplatněné právo z vadného plnění, tedy na zpracování
+     * s jiným právním titulem než souhlas – čl. 17 odst. 3 písm. b) a e) GDPR.
+     * Bez adresy by navíc nešlo objednávku spárovat s reklamací, kterou k ní
+     * zákaznice podala, a doklad by přestal být úplný.
+     *
+     * Rozdíl proti `ContactMessage` a `StockNotification` výš je právě v tom:
+     * ty žádný takový titul nemají, drží se ze zájmu, a ten žádostí o výmaz
+     * zaniká.
+     *
+     * `SouhlasZaznam` se taky nemaže – čl. 7 odst. 1 chce, aby souhlas zůstal
+     * doložitelný i po jeho odvolání. Do lhůty ho pošle až retence.
+     */
+
     odhlasit();
 
     return odpovedOk({

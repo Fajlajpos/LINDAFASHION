@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, FileText, MapPin, User } from 'lucide-react';
+import { ArrowLeft, FileText, Gift, MapPin, User } from 'lucide-react';
 import { db } from '@/lib/db';
 import { SpravaObjednavky } from '@/components/admin/SpravaObjednavky';
 import {
@@ -24,7 +24,16 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
       giftCard: { select: { kod: true } },
       items: {
         include: {
-          variant: { include: { product: { select: { nazev: true, slug: true } } } },
+          variant: {
+            include: { product: { select: { nazev: true, slug: true, jeDarkovyPoukaz: true } } },
+          },
+          // Poukazy vydané k téhle položce. Worker je po zaplacení zakládal,
+          // ale nikdo je nikdy neviděl – administrace je nevypisovala a
+          // e-mail neexistoval. Majitelka je potřebuje opsat na kartu.
+          vygenerovanePoukazy: {
+            select: { kod: true, castka: true, zustatek: true, aktivni: true },
+            orderBy: { createdAt: 'asc' },
+          },
         },
       },
       reklamace: {
@@ -42,6 +51,26 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
   };
 
   const zPoukazu = objednavka.castkaZGiftCard === null ? 0 : Number(objednavka.castkaZGiftCard);
+
+  /*
+   * Poukazy, které tahle objednávka **vydala** (koupené jako zboží). Nemá to
+   * nic společného s `giftCard` výš – ten je poukaz, kterým se objednávka
+   * platila. Bez tohohle výpisu končily vydané kódy slepou uličkou: vznikly
+   * v databázi a nikdo se je nedozvěděl.
+   */
+  const vydanePoukazy = objednavka.items.flatMap((p) =>
+    p.vygenerovanePoukazy.map((poukaz) => ({
+      ...poukaz,
+      produkt: p.variant.product.nazev,
+    }))
+  );
+
+  // Objednávka obsahuje poukaz jako zboží, ale kódy ještě nevznikly – vydávají
+  // se až po zaplacení, takže prázdný seznam u nezaplacené objednávky je
+  // normální stav, ne chyba. Rozlišit se to musí, jinak by sekce buď mlčela
+  // úplně, nebo strašila u každé čerstvé objednávky.
+  const cekaNaVydani =
+    vydanePoukazy.length === 0 && objednavka.items.some((p) => p.variant.product.jeDarkovyPoukaz);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-12">
@@ -183,6 +212,55 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
           </p>
         )}
       </section>
+
+      {/* Vydané dárkové poukazy (sekce 6.11).
+          Zákaznici chodí kódy e-mailem, tenhle výpis je pro majitelku –
+          opisuje je na fyzickou kartu, kterou přikládá k zásilce. */}
+      {(vydanePoukazy.length > 0 || cekaNaVydani) && (
+        <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+          <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
+            <Gift className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+            Vydané dárkové poukazy
+          </h2>
+
+          {cekaNaVydani ? (
+            <p className="rounded-xl bg-linda-sandLight p-3 text-xs text-linda-espresso/85 shadow-neuInsetSm">
+              Poukaz je platidlo, takže se vydává až po zaplacení. Jakmile
+              objednávku označíte jako zaplacenou, kódy se vygenerují a zákaznici
+              odejdou e-mailem.
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-2 text-xs">
+                {vydanePoukazy.map((poukaz) => (
+                  <li
+                    key={poukaz.kod}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-linda-sandLight px-4 py-3 shadow-neuInsetSm"
+                  >
+                    <span className="font-mono text-sm font-semibold tracking-widest text-linda-espresso">
+                      {poukaz.kod}
+                    </span>
+                    <span className="text-linda-espresso/70">
+                      {Number(poukaz.castka).toLocaleString('cs-CZ')} Kč
+                      {Number(poukaz.zustatek) !== Number(poukaz.castka) && (
+                        <> · zbývá {Number(poukaz.zustatek).toLocaleString('cs-CZ')} Kč</>
+                      )}
+                      {!poukaz.aktivni && <> · neaktivní</>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-linda-espresso/70">
+                Kódy zákaznici odešel e-mail. Zůstatky spravujete v{' '}
+                <Link href="/admin/poukazy" className="font-semibold text-linda-cognac underline">
+                  přehledu poukazů
+                </Link>
+                .
+              </p>
+            </>
+          )}
+        </section>
+      )}
 
       {/* Reklamace u této objednávky (sekce 6.10) */}
       {objednavka.reklamace.length > 0 && (

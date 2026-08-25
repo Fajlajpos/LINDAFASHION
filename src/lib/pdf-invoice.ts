@@ -50,6 +50,22 @@ export interface PodkladFaktury {
     email: string | null;
   };
 
+  /**
+   * Údaje k úhradě. `null` u zaplacené objednávky i u platby kartou.
+   *
+   * Doklad je jediná věc, kterou zákaznice po nákupu jistě má; číslo účtu
+   * a variabilní symbol na něm chyběly, takže kdo zavřel potvrzovací stránku,
+   * neměl podle čeho zaplatit. Vyzývat k platbě u už uhrazené objednávky je
+   * ale návod k platbě druhé – proto se blok tiskne jen tehdy, když se opravdu
+   * čeká na peníze.
+   */
+  platebniUdaje: {
+    cisloUctu: string | null;
+    iban: string | null;
+    variabilniSymbol: string;
+    kUhradeHaleru: Halere;
+  } | null;
+
   polozky: PolozkaFaktury[];
   dopravaHaleru: Halere;
   slevaHaleru: Halere;
@@ -91,6 +107,18 @@ async function nacistFonty() {
 
 function castka(halere: Halere): string {
   return `${halereNaCzk(halere).toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kč`;
+}
+
+/**
+ * Adresa formuláře pro odstoupení, bez schématu (`lindafashion.cz/odstoupeni`).
+ *
+ * V patičce stála natvrdo, takže po změně domény by doklad posílal zákaznici
+ * jinam, než kde web běží. `APP_URL` je tentýž zdroj, ze kterého skládají
+ * odkazy e-maily i strukturovaná data.
+ */
+function adresaOdstoupeni(): string {
+  const zaklad = (process.env.APP_URL || 'https://lindafashion.cz').replace(/\/+$/, '');
+  return `${zaklad.replace(/^https?:\/\//, '')}/odstoupeni`;
 }
 
 const NAZEV_PLATBY: Record<string, string> = {
@@ -244,6 +272,38 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
       align: 'right',
     });
 
+  /*
+   * --- Údaje k úhradě ---
+   *
+   * Blok vlevo, pod položkami, ne vpravo pod souhrnem: souhrn se čte jako
+   * uzavřený výpočet a přilepený návod k platbě by v něm vypadal jako další
+   * řádek částky. Tiskne se jen u nezaplaceného převodu (viz `platebniUdaje`).
+   *
+   * `y` se počítá od spodní hrany souhrnu, aby se blok nepřekryl s dlouhou
+   * objednávkou; patička sedí na pevných 760, takže je kam růst.
+   */
+  const platba = podklad.platebniUdaje;
+
+  if (platba && (platba.cisloUctu || platba.iban)) {
+    const yPlatba = Math.max(y + 24, 560);
+
+    doc.font('tucny').fontSize(10).fillColor(ESPRESSO).text('Údaje k úhradě', 50, yPlatba);
+
+    const radky: Array<[string, string]> = [];
+    if (platba.cisloUctu) radky.push(['Číslo účtu', platba.cisloUctu]);
+    if (platba.iban) radky.push(['IBAN', platba.iban]);
+    radky.push(['Variabilní symbol', platba.variabilniSymbol]);
+    radky.push(['Částka k úhradě', castka(platba.kUhradeHaleru)]);
+
+    let yRadek = yPlatba + 18;
+
+    for (const [popisek, hodnota] of radky) {
+      doc.font('bezny').fontSize(9).fillColor(SEDA).text(popisek, 50, yRadek, { width: 120 });
+      doc.font('bezny').fontSize(9).fillColor(ESPRESSO).text(hodnota, 175, yRadek, { width: 200 });
+      yRadek += 14;
+    }
+  }
+
   // --- Patička s poučením (u zásilkového prodeje povinné, sekce 11) ---
   doc
     .font('bezny')
@@ -254,7 +314,9 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
          zákaznici do obchodních podmínek „pro vzorový formulář", který v nich
          nebyl – nesplněná povinnost schovaná v poučení o jejím splnění. */
       'Od kupní smlouvy lze odstoupit do 14 dnů od převzetí zboží bez udání důvodu, ' +
-        'a to i bez přihlášení na lindafashion.cz/odstoupeni. ' +
+        // Doména se bere z `APP_URL`, ne natvrdo: odkaz musí vést tam, kde web
+        // opravdu běží, jinak posílá zákaznici na cizí nebo neexistující adresu.
+        `a to i bez přihlášení na ${adresaOdstoupeni()}. ` +
         'Tamtéž najdete poučení i vzorový formulář podle nařízení vlády č. 363/2013 Sb. ' +
         'Reklamace se řídí reklamačním řádem a občanským zákoníkem.',
       50,

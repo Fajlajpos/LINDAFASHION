@@ -7,6 +7,7 @@ import { TrustBar } from '@/components/shop/home/TrustBar';
 import { Newsletter } from '@/components/shop/home/Newsletter';
 import { Reveal } from '@/components/shop/home/Reveal';
 import { Sev } from '@/components/shop/home/Sev';
+import { nacistNastaveni } from '@/lib/nastaveni';
 
 /**
  * Domovská stránka.
@@ -17,10 +18,16 @@ import { Sev } from '@/components/shop/home/Sev';
  *
  * Obsah sekcí žije v `src/lib/home-data.ts`, komponenty samotné jsou bez dat.
  */
-export default function HomePage() {
+export default async function HomePage() {
+  /* Práh dopravy zdarma se propisuje do heru i do pruhu s jistotami. Obojí
+     ho mělo natvrdo jako 2 500 Kč, zatímco skutečná hodnota žije v `Settings`
+     a klidně chybí – homepage pak slibovala poštovné zdarma, které pokladna
+     neúčtovala. */
+  const nastaveni = await nacistNastaveni();
+
   return (
     <div className="pb-20">
-      <HeroSplit />
+      <HeroSplit prahDopravaZdarma={nastaveni.prahDopravaZdarma} />
 
       {/* Karta se zespoda zanořuje do heru záporným marginem, odsazení si
           proto řeší sama. Bez `Reveal`: je nad ohybem, kde by naskakování
@@ -57,7 +64,7 @@ export default function HomePage() {
 
         <div className="space-y-10 sm:space-y-14">
           <Reveal>
-            <TrustBar />
+            <TrustBar prahDopravaZdarma={nastaveni.prahDopravaZdarma} />
           </Reveal>
 
           <Reveal>

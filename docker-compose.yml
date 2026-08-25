@@ -30,6 +30,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # `NEXT_PUBLIC_*` se vpéká do bundlu při buildu, ne za běhu – přes
+      # `env_file` níž by se ke klientovi nikdy nedostalo. Hodnoty bere Compose
+      # z `.env` vedle sebe, takže se nikde nedublují.
+      args:
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
     image: linda-fashion:latest
     container_name: linda_web
     restart: unless-stopped
@@ -66,9 +72,15 @@ services:
 
   worker:
     # Stejný image jako web – nestaví se podruhé, jen se jinak spustí.
+    # Build args musí být totožné s `web`: obě služby sdílejí jeden tag, takže
+    # build s prázdnými argumenty by tomu předchozímu přepsal image bundlem
+    # bez měřicích ID.
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
     image: linda-fashion:latest
     container_name: linda_worker
     restart: unless-stopped

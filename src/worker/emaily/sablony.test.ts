@@ -54,8 +54,74 @@ describe('sestavitEmail', () => {
       celkovaCena: 2490,
     });
 
-    expect(email!.html).toContain('/pokladna/potvrzeni?token=tajny-token');
+    // Parametr se jmenuje `t`, protože tak ho čte potvrzovací stránka.
+    // Tenhle test dřív tvrdil `?token=`, což byl přesně ten překlep, který
+    // zákaznici z e-mailu posílal na 404 – zelený test ho držel při životě.
+    expect(email!.html).toContain('/pokladna/potvrzeni?t=tajny-token');
     expect(email!.html).not.toContain('/pokladna/potvrzeni?cislo=');
+    expect(email!.html).not.toContain('/pokladna/potvrzeni?token=');
+  });
+
+  it('e-maily k objednávce vedou hosta na token, ne na účet', () => {
+    // Objednávka bez registrace žádný `/muj-ucet` nemá – odkaz tam by ji
+    // poslal na přihlášení, které nikdy nedokončí.
+    for (const typ of ['zmena-stavu-objednavky', 'platba-prijata'] as const) {
+      const email = sestavitEmail(typ, {
+        cisloObjednavky: '2026-00042',
+        verejnyToken: 'tajny-token',
+        stav: 'EXPEDOVANA',
+      });
+
+      expect(email!.html).toContain('/pokladna/potvrzeni?t=tajny-token');
+      expect(email!.html).not.toContain('/muj-ucet');
+    }
+  });
+
+  it('bez tokenu zbývá odkaz na účet, ne prázdná adresa', () => {
+    const email = sestavitEmail('platba-prijata', { cisloObjednavky: '2026-00042' });
+
+    expect(email!.html).toContain('/muj-ucet');
+  });
+
+  it('kódy poukazů jdou do těla zprávy, ne za odkaz', () => {
+    const email = sestavitEmail('poukazy-vydane', {
+      cisloObjednavky: '2026-00042',
+      kody: ['ABCD-1234', 'EFGH-5678'],
+    });
+
+    expect(email!.html).toContain('ABCD-1234');
+    expect(email!.html).toContain('EFGH-5678');
+    expect(email!.text).toContain('ABCD-1234');
+    expect(email!.predmet).toContain('2×');
+  });
+
+  it('bez kódů se poukazová zpráva vůbec nesestaví', () => {
+    // Prázdný seznam by znamenal e-mail „vystavili jsme vám poukazy“ bez
+    // jediného kódu. Raději nic než zpráva, kvůli které zákaznice píše zpět.
+    expect(sestavitEmail('poukazy-vydane', { cisloObjednavky: '2026-00042', kody: [] })).toBeNull();
+  });
+
+  it('vyřízená reklamace nese výsledek i vyjádření', () => {
+    const zamitnuta = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'REKLAMACE',
+      stav: 'VYRIZENA_ZAMITNUTA',
+      poznamka: 'Vada vznikla mechanickým poškozením.',
+    });
+
+    expect(zamitnuta!.html).toContain('Zamítnuto');
+    expect(zamitnuta!.html).toContain('Vada vznikla mechanickým poškozením.');
+    // Poučení o mimosoudním řešení sporu patří právě k zamítnutí.
+    expect(zamitnuta!.html).toContain('coi.cz');
+
+    const uznana = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'VRACENI',
+      stav: 'VYRIZENA_UZNANA',
+    });
+
+    expect(uznana!.html).toContain('Uznáno');
+    expect(uznana!.html).toContain('14 dnů');
   });
 
   it('změna stavu si upřesní předmět podle stavu objednávky', () => {

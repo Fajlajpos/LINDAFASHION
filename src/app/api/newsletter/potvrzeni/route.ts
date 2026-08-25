@@ -147,6 +147,21 @@ export async function POST(request: Request) {
         ip,
         userAgent: request.headers.get('user-agent'),
       });
+
+      /*
+       * Zaškrtávátko v účtu se překlápí až tady, ne při jeho přepnutí.
+       *
+       * Souhlas vzniká tímhle kliknutím – kdyby ho účet hlásil dřív, tvrdil by
+       * zákaznici, že novinky odebírá, zatímco adresa ještě není potvrzená
+       * a rozesílka na ni nesmí. Účet je zrcadlo odběru, ne jeho druhý zdroj.
+       *
+       * `updateMany`, protože k adrese nemusí existovat žádný účet (přihlášení
+       * z patičky bez registrace) – `update` by na tom spadl.
+       */
+      await db.user.updateMany({
+        where: { email: odberatel.email },
+        data: { newsletterSouhlas: true },
+      });
     }
 
     return odpovedOk({

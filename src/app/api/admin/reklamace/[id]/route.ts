@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
+import { FRONTY, publishJob } from '@/lib/queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,6 +164,38 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     const vracenoNaSklad = vysledek === 'vraceno';
+
+    /*
+     * --- Vyrozumění zákaznice (§ 19 odst. 3 zák. č. 634/1992 Sb.) ---
+     *
+     * Zákon dává třicet dnů na vyřízení **a na vyrozumění**; marným uplynutím
+     * vzniká právo odstoupit od smlouvy. Administrace přitom stav jen přepnula
+     * a nikam nic neposílala. Přihlášená zákaznice si výsledek našla v účtu,
+     * ale reklamovat smí i ta bez registrace – a ta neměla jak zjistit vůbec
+     * nic. Lhůta běžela a odpověď se k ní nedostala.
+     *
+     * Posílá se jen u konečného stavu: „řeší se" není výsledek a zpráva o něm
+     * by byla šum, který zákaznice po třetím e-mailu přestane číst.
+     *
+     * `reklamace.email` je první v pořadí – nese ho i objednávka bez účtu.
+     */
+    if (jeFinalni(vstup.stav)) {
+      const kontakt = reklamace.email ?? reklamace.order.email ?? null;
+
+      if (kontakt) {
+        await publishJob(FRONTY.ODESLAT_EMAIL, {
+          typ: 'reklamace-vyrizena',
+          to: kontakt,
+          subject: `${reklamace.typ === 'VRACENI' ? 'Vrácení' : 'Reklamace'} k objednávce ${reklamace.order.cisloObjednavky} – vyřízeno`,
+          data: {
+            cisloObjednavky: reklamace.order.cisloObjednavky,
+            typ: reklamace.typ,
+            stav: vstup.stav,
+            poznamka: vstup.poznamkaAdmina,
+          },
+        });
+      }
+    }
 
     await zapsatDoAuditu(admin.email, 'reklamace.vyrizena', 'Reklamace', params.id, {
       nazev: reklamace.order.cisloObjednavky,

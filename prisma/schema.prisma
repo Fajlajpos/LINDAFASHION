@@ -401,6 +401,25 @@ model Order {
   datumExpedice DateTime?
   datumDoruceni DateTime?
 
+  /// --- Dodavatel: údaje v době vystavení dokladu ---
+  ///
+  /// Tentýž důvod jako u `jePlatceDph` o kus níž, jen se na něj zapomnělo.
+  /// Název firmy, IČO, DIČ, adresa a zápis v rejstříku se na fakturu čtou
+  /// z `Settings`, tedy z **dnešního** stavu. Doklad se přitom přegeneruje
+  /// pokaždé, když se objednávka označí jako zaplacená – takže po přestěhování
+  /// nebo změně údajů vyjde starý doklad s novou hlavičkou. Účetní doklad se
+  /// zpětně měnit nesmí ani v tomhle.
+  ///
+  /// Je to jeden `Json`, ne šest sloupců, schválně: identifikace dodavatele
+  /// je jedna věc, která musí zůstat pohromadě. Rozpad na sloupce svádí
+  /// k tomu doplnit jen některý z nich a vyrobit doklad, kde je nová adresa
+  /// u starého IČO.
+  ///
+  /// `null` u řádků založených dřív, než sloupec existoval – generátor faktury
+  /// pro ně sáhne do `Settings` jako dosud. Doplňovat je zpětně by znamenalo
+  /// vymyslet si, co na dokladu tehdy stálo.
+  dodavatelSnapshot Json?
+
   /// --- DPH: stav v době nákupu, ne dnešní ---
   ///
   /// `Settings.jePlatceDph` je aktuální stav e-shopu. Kdyby se majitelka
@@ -587,6 +606,18 @@ model SouhlasZaznam {
 enum TypSouhlasu {
   COOKIES
   NEWSLETTER
+
+  /// Do `SouhlasZaznam` se **nezapisuje** a je to záměr, ne opomenutí.
+  ///
+  /// Souhlas s obchodními podmínkami drží sama objednávka
+  /// (`souhlasPodminkyAt` + `verzePodminek`), protože bez vazby na konkrétní
+  /// objednávku by byl k ničemu – doložit se musí, s čím zákaznice souhlasila
+  /// při *tomhle* nákupu. Podklady pro kontrolu ho odtamtud i čtou
+  /// (`/api/admin/doklady/souhlasy`).
+  ///
+  /// Hodnota zůstává kvůli řádkům, které by tudy mohly přibýt v budoucnu
+  /// (souhlas mimo objednávku), a kvůli retenci, která takové záznamy
+  /// schválně nemaže.
   OBCHODNI_PODMINKY
 }
 

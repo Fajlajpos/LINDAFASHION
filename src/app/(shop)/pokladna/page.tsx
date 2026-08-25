@@ -5,31 +5,13 @@ import { jeNastaveno } from '@/lib/gopay';
 import { overitUzivatele } from '@/lib/auth';
 import { nacistAdresy } from '@/lib/adresy';
 import { nacistNastaveni, popisDodaciLhuty, popisDph, zpravaODovolene } from '@/lib/nastaveni';
+import { dostupneDopravy } from '@/lib/shipping';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Pokladna | LINDA FASHION',
   robots: { index: false, follow: false },
-};
-
-/** Popisy dopravců; ceny se berou z administrace (sekce 6.8). */
-const POPISY: Record<string, { nazev: string; popis: string; vyzadujeVydejniMisto: boolean }> = {
-  zasilkovna: {
-    nazev: 'Zásilkovna – výdejní místo nebo Z-BOX',
-    popis: 'Doručení na vybrané výdejní místo nebo do samoobslužného Z-BOXu.',
-    vyzadujeVydejniMisto: true,
-  },
-  ppl: {
-    nazev: 'PPL – doručení na adresu',
-    popis: 'Kurýr doveze zásilku až k vašim dveřím.',
-    vyzadujeVydejniMisto: false,
-  },
-  ceska_posta: {
-    nazev: 'Česká pošta – Balík Do ruky',
-    popis: 'Doručení na uvedenou doručovací adresu.',
-    vyzadujeVydejniMisto: false,
-  },
 };
 
 export default async function PokladnaPage() {
@@ -47,15 +29,10 @@ export default async function PokladnaPage() {
 
   // Nabídneme jen dopravce, kterým majitelka nastavila cenu. Bez ceny
   // nemůžeme objednávku spočítat, takže metoda do pokladny nepatří.
-  const ceny: Record<string, number | null> = {
-    zasilkovna: nastaveni.cenaDopravyZasilkovna,
-    ppl: nastaveni.cenaDopravyPPL,
-    ceska_posta: nastaveni.cenaDopravyCeskaPosta,
-  };
-
-  const dopravy: MoznostDopravy[] = Object.entries(POPISY)
-    .filter(([id]) => ceny[id] != null)
-    .map(([id, popis]) => ({ id, cena: ceny[id] as number, ...popis }));
+  // Seznam i popisy jsou sdílené se stránkou „Doprava a platba" – dvě kopie
+  // se rozešly v názvech dopravců a informační stránka slibovala jiné ceny,
+  // než pokladna účtovala.
+  const dopravy: MoznostDopravy[] = dostupneDopravy(nastaveni);
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">

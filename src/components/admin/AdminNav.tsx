@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   AlertTriangle,
   FolderTree,
+  Gift,
   History,
   Inbox,
   LayoutDashboard,
@@ -80,6 +81,7 @@ const SEKCE: { titulek: string; id: string; polozky: Polozka[] }[] = [
       { nazev: 'Produkty', href: '/admin/produkty', Ikona: ShoppingBag },
       { nazev: 'Kategorie', href: '/admin/kategorie', Ikona: FolderTree },
       { nazev: 'Slevové kódy', href: '/admin/slevove-kody', Ikona: Tag },
+      { nazev: 'Dárkové poukazy', href: '/admin/poukazy', Ikona: Gift },
     ],
   },
   {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Inbox, Mail, MailCheck, MailOpen } from 'lucide-react';
+import { Clock, Download, Inbox, Mail, MailCheck, MailOpen } from 'lucide-react';
 import { db } from '@/lib/db';
 import { OznacitVyrizene } from '@/components/admin/OznacitVyrizene';
 import { Strankovani, cisloStranky } from '@/components/ui/Strankovani';
@@ -175,10 +175,28 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
       </section>
 
       <section id="odberatele" className="space-y-4 scroll-mt-6">
-        <h2 className="flex items-center gap-2 font-serif text-2xl text-linda-espresso">
-          <Mail className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
-          Odběratelé newsletteru
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-serif text-2xl text-linda-espresso">
+            <Mail className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
+            Odběratelé newsletteru
+          </h2>
+
+          {/* Rozesílka v e-shopu není, takže bez exportu se sesbírané souhlasy
+              nedaly použít vůbec. Vyváží se jen potvrzené a neodhlášené adresy –
+              rozesílat na nepotvrzené se nesmí a export nemá být cesta, jak
+              double opt-in obejít. */}
+          {pocetPotvrzenych > 0 && (
+            <a
+              href="/api/admin/newsletter/export"
+              download
+              className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Stáhnout CSV
+              <span className="sr-only"> – {pocetPotvrzenych} potvrzených adres</span>
+            </a>
+          )}
+        </div>
 
         {pocetOdberatelu === 0 ? (
           <div className="rounded-2xl bg-linda-cream p-10 text-center shadow-neu">

@@ -39,7 +39,9 @@ import { MediaFrame } from './MediaFrame';
  * Pod `lg` jde fotka nahoru v poměru 4:3 (na 375 px se z ní použije skoro celá
  * šířka zdroje – nikde není ostřejší) a stěna s textem pod ni.
  */
-export const HeroSplit: React.FC = () => (
+export const HeroSplit: React.FC<{ prahDopravaZdarma: number | null }> = ({
+  prahDopravaZdarma,
+}) => (
   <section aria-label="Nová kolekce" className="relative w-full bg-linda-cream">
     {/* Výšku určuje `min-height`, nikdy `height` s `max-height`.
         Ta dvojice tu byla a byla to past: text ve sloupci je vysoký 736 px,
@@ -171,13 +173,24 @@ export const HeroSplit: React.FC = () => (
 
           {/* Nákupní jistoty jen jako jeden tichý řádek – tytéž položky nese
               `TrustBar` níž na stránce, opakovat celý výčet dvakrát nemá smysl.
-              Nezlomitelné mezery drží „2 500 Kč“ i „14 dnů“ pohromadě. */}
+
+              Práh dopravy zdarma přichází z administrace. Stál tu natvrdo jako
+              „nad 2 500 Kč“, jenže `Settings.prahDopravaZdarma` může být prázdný
+              a pokladna pak poštovné účtuje vždycky – hero tedy slibovalo něco,
+              co objednávka nesplnila. Bez nastaveného prahu se řádek vynechá.
+
+              Nezlomitelnou mezeru v částce vkládá `toLocaleString('cs-CZ')`,
+              u „14 dnů“ je zapsaná přímo. */}
           <div className="mt-10 flex max-w-sm flex-wrap items-center gap-x-5 gap-y-2 border-t border-linda-sand pt-6 text-xs text-linda-espresso/75">
-            <span className="inline-flex items-center gap-2">
-              <Truck className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
-              Doprava zdarma nad 2 500 Kč
-            </span>
-            <span aria-hidden="true" className="hidden h-3 w-px bg-linda-sand sm:block" />
+            {prahDopravaZdarma !== null && (
+              <>
+                <span className="inline-flex items-center gap-2">
+                  <Truck className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
+                  Doprava zdarma nad {prahDopravaZdarma.toLocaleString('cs-CZ')} Kč
+                </span>
+                <span aria-hidden="true" className="hidden h-3 w-px bg-linda-sand sm:block" />
+              </>
+            )}
             <span className="inline-flex items-center gap-2">
               <Package className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
               Vrácení do 14 dnů

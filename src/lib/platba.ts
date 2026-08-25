@@ -117,7 +117,12 @@ export async function vyhodnotitPlatbu(platbaId: string): Promise<VysledekPlatby
       typ: 'platba-prijata',
       to: objednavka.email,
       subject: `Platba k objednávce ${objednavka.cisloObjednavky} přijata – LINDA FASHION`,
-      data: { cisloObjednavky: objednavka.cisloObjednavky },
+      // Token je tu proto, aby odkaz v e-mailu fungoval i objednávce bez
+      // registrace – ta na `/muj-ucet` nikdy nedohlédne.
+      data: {
+        cisloObjednavky: objednavka.cisloObjednavky,
+        verejnyToken: objednavka.verejnyToken,
+      },
     });
   }
 

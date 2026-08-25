@@ -31,6 +31,24 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# --- Veřejná ID měřicích skriptů musí být k dispozici UŽ TEĎ ---
+#
+# `NEXT_PUBLIC_*` Next vpéká do klientského bundlu při `next build`, ne za
+# běhu. Runtime `env_file: .env` v docker-compose je proto na tyhle dvě
+# proměnné krátký a `.dockerignore` navíc `.env` z build kontextu vylučuje –
+# GA4 ani Meta Pixel se tedy v kontejneru nenačetly nikdy, ať v `.env` stálo
+# cokoliv. Přepínače „analytické" a „marketingové" v cookie liště tak řídily
+# prázdno.
+#
+# Předávají se jako `build.args` (viz docker-compose.yml). Tajemství to nejsou:
+# obojí je veřejný identifikátor, který stejně skončí ve zdrojáku stránky.
+# Skutečná tajemství se do image dál nepečou a chodí runtimem.
+ARG NEXT_PUBLIC_GA_ID=""
+ARG NEXT_PUBLIC_META_PIXEL_ID=""
+ENV NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID
+ENV NEXT_PUBLIC_META_PIXEL_ID=$NEXT_PUBLIC_META_PIXEL_ID
+
 # `npm run build` = prisma generate + next build + tsc workeru do dist/
 RUN npm run build
 

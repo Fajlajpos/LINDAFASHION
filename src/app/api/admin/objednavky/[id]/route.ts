@@ -130,8 +130,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return odpovedChyba('Stav objednávky se mezitím změnil. Načtěte prosím stránku znovu.', 409);
     }
 
-    // Zákaznici dáme vědět o změně stavu (sekce 6.4). Bez SMTP se zpráva
-    // zatím jen zaloguje.
+    // Zákaznici dáme vědět o změně stavu (sekce 6.4). Bez vyplněného SMTP
+    // se zpráva jen zaloguje ve workeru.
     //
     // `objednavka.email` je první v pořadí – objednávka bez registrace nemá
     // `user`, takže jí do téhle chvíle žádná zpráva o stavu nechodila vůbec.
@@ -142,7 +142,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         typ: 'zmena-stavu-objednavky',
         to: kontakt,
         subject: `Objednávka ${objednavka.cisloObjednavky} – změna stavu`,
-        data: { cisloObjednavky: objednavka.cisloObjednavky, stav: vstup.stav, cisloZasilky: vstup.cisloZasilky },
+        // `verejnyToken` je jediná adresa, na které si objednávku otevře
+        // i zákaznice bez účtu – bez něj vedl e-mail o expedici na
+        // přihlašovací formulář, který host nemá jak projít.
+        data: {
+          cisloObjednavky: objednavka.cisloObjednavky,
+          verejnyToken: objednavka.verejnyToken,
+          stav: vstup.stav,
+          cisloZasilky: vstup.cisloZasilky,
+        },
       });
     }
 

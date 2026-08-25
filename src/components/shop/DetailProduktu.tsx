@@ -460,6 +460,9 @@ export function DetailProduktu({
                   nazev: produkt.nazev,
                   cena: produkt.cena,
                   cenaPoSleve: produkt.cenaPoSleve,
+                  // Referenční cena jde do otisku spolu se slevou – jinak by
+                  // ji karta na `/oblibene` inzerovala bez doložení (§ 12a).
+                  nejnizsiCena30DniHaleru: produkt.nejnizsiCena30DniHaleru,
                   znacka: produkt.znacka,
                   kategorieNazev: produkt.kategorieNazev,
                   obrazekUrl: produkt.fotky[0]?.url ?? null,

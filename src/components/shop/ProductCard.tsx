@@ -150,6 +150,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             nazev,
             cena,
             cenaPoSleve,
+            // Bez referenční ceny by karta na `/oblibene` inzerovala slevu,
+            // kterou nemá čím doložit (§ 12a). Otisk musí nést obojí.
+            nejnizsiCena30DniHaleru,
             znacka,
             kategorieNazev,
             obrazekUrl,

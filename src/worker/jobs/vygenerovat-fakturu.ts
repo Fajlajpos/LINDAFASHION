@@ -8,7 +8,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { db } from '../../lib/db';
 import { vytvoritFakturuPdf, type PolozkaFaktury } from '../../lib/pdf-invoice';
-import { czkNaHalere, prodejniCena } from '../../lib/penize';
+import { czkNaHalere } from '../../lib/penize';
+import { precistSnimekDodavatele, snimekDodavatele } from '../../lib/dodavatel';
 
 export interface UlohaFaktura {
   orderId: string;
@@ -52,19 +53,58 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
   const sleva = czkNaHalere(objednavka.slevaCastka);
   const doprava = czkNaHalere(objednavka.cenaDopravy);
 
+  /*
+   * --- Dodavatel: snímek z objednávky, ne dnešní nastavení ---
+   *
+   * Doklad se přegeneruje pokaždé, když se objednávka označí jako zaplacená.
+   * Dřív si při tom sáhl do aktuálního `Settings`, takže po přestěhování nebo
+   * změně IČO vyšla loňská faktura s dnešní hlavičkou – u `jePlatceDph` se ta
+   * past hlídala, u identifikace dodavatele se na ni zapomnělo.
+   *
+   * `Settings` zbývá jako záloha pro objednávky založené dřív, než sloupec
+   * existoval. Dopisovat jim snímek zpětně by znamenalo vymyslet si, co na
+   * tehdejším dokladu stálo.
+   */
+  const dodavatel =
+    precistSnimekDodavatele(objednavka.dodavatelSnapshot) ??
+    (nastaveni ? snimekDodavatele(nastaveni) : null);
+
+  /*
+   * --- Platební údaje ---
+   *
+   * U nezaplaceného převodu patří na doklad číslo účtu a variabilní symbol.
+   * Chyběly tam: byly jen na potvrzovací stránce, takže zákaznice, která
+   * zavřela okno, neměla podle čeho zaplatit. Faktura je to, co jí zůstane.
+   *
+   * U zaplacené objednávky se nevytisknou – vyzývat k platbě něco, co je
+   * uhrazené, je návod k druhé platbě.
+   */
+  const cekaNaPlatbu = objednavka.stavPlatby !== 'ZAPLACENO';
+  const prevodem = objednavka.zpusobPlatby === 'bankovni_prevod';
+
   const pdf = await vytvoritFakturuPdf({
     cisloObjednavky: objednavka.cisloObjednavky,
     datumVystaveni: objednavka.createdAt,
     dodavatel: {
-      nazev: nastaveni?.nazevFirmy || 'LINDA FASHION',
-      ico: nastaveni?.icoFirmy ?? null,
-      dic: nastaveni?.dicFirmy ?? null,
-      adresa: nastaveni?.adresaFirmy ?? null,
-      email: nastaveni?.emailFirmy ?? null,
+      nazev: dodavatel?.nazev || 'LINDA FASHION',
+      ico: dodavatel?.ico ?? null,
+      dic: dodavatel?.dic ?? null,
+      adresa: dodavatel?.adresa ?? null,
+      email: dodavatel?.email ?? null,
       // Snímek z objednávky, ne dnešní nastavení – doklad se zpětně nemění.
       jePlatceDph: objednavka.jePlatceDph,
-      zapisVRejstriku: nastaveni?.zapisVRejstriku ?? null,
+      zapisVRejstriku: dodavatel?.zapisVRejstriku ?? null,
     },
+    platebniUdaje:
+      cekaNaPlatbu && prevodem
+        ? {
+            cisloUctu: process.env.BANK_ACCOUNT_NUMBER?.trim() || null,
+            iban: process.env.BANK_IBAN?.trim() || null,
+            // Stejný postup jako na potvrzovací stránce – jen číslice.
+            variabilniSymbol: objednavka.cisloObjednavky.replace(/\D/g, ''),
+            kUhradeHaleru: celkem - zPoukazu,
+          }
+        : null,
     odberatel: {
       jmeno: objednavka.dodaciJmenoPrijmeni,
       ulice: objednavka.dodaciUlice,

@@ -33,7 +33,13 @@ export type TypEmailu =
   | 'skladem-znovu'
   | 'newsletter-potvrzeni'
   | 'nova-zprava-z-formulare'
-  | 'nova-reklamace';
+  | 'nova-reklamace'
+  // Chyběly tu, přestože je `sablony.ts` umí a endpointy je posílají. Union
+  // se tím rozešel se skutečností a přestal být tím, k čemu je: seznamem,
+  // proti kterému překladač pozná překlep v názvu typu.
+  | 'odstoupeni-potvrzeni'
+  | 'reklamace-vyrizena'
+  | 'poukazy-vydane';
 
 export interface UlohaEmail {
   typ: TypEmailu;

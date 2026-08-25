@@ -92,7 +92,11 @@ export function jeStejnyPuvod(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return true; // stejný původ / non-browser klient origin neposílá
 
-  const povolene = [process.env.APP_URL, process.env.NEXTAUTH_URL].filter(Boolean) as string[];
+  // `NEXTAUTH_URL` tu bylo jako druhý zdroj, jenže NextAuth se v projektu
+  // nepoužívá (session je vlastní JWT v HttpOnly cookie) a v `.env.example`
+  // ta proměnná není. Byl to pozůstatek, který jen naznačoval nastavení,
+  // jež nikde neexistuje.
+  const povolene = [process.env.APP_URL].filter(Boolean) as string[];
   const host = request.headers.get('host');
   if (host) {
     povolene.push(`http://${host}`, `https://${host}`);

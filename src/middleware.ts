@@ -15,8 +15,18 @@ import { SESSION_COOKIE, overitSessionToken } from './lib/session';
 /** Vyžaduje přihlášení i roli ADMIN. */
 const ADMIN_CESTY = ['/admin', '/api/admin'];
 
-/** Vyžaduje jen přihlášení. */
-const PRIHLASENE_CESTY = ['/muj-ucet', '/oblibene'];
+/**
+ * Vyžaduje jen přihlášení.
+ *
+ * `/oblibene` tu schválně **není**. Oblíbené se drží v `localStorage` a
+ * srdíčko na kartě funguje i bez účtu (viz `favorites-context.tsx`) – hlavička
+ * dokonce nepřihlášené zákaznici ukazuje počítadlo uložených kousků. Za
+ * přihlášením ta stránka znamenala, že si zákaznice naklikala výběr, viděla
+ * „Oblíbené (3)" a klik na ně ji poslal na přihlašovací formulář, ze kterého
+ * se ke svému vlastnímu seznamu nedostala. Po přihlášení se seznam se serverem
+ * sloučí, ale to je vylepšení, ne podmínka.
+ */
+const PRIHLASENE_CESTY = ['/muj-ucet'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

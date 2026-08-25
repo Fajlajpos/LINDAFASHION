@@ -17,8 +17,10 @@ interface Profil {
  *
  * Do téhle chvíle si zákaznice nemohla změnit ani překlep ve jméně: údaje
  * šly zapsat jedině při registraci nebo z administrace. Heslo se dalo změnit
- * výhradně přes „zapomenuté heslo", jehož odkaz chodí e-mailem – a odesílání
- * e-mailů zatím zapojené není, takže si ho fakticky nešlo změnit vůbec.
+ * výhradně přes „zapomenuté heslo", tedy oklikou přes schránku.
+ *
+ * E-mail tu chybí schválně: je to přihlašovací jméno i adresa pro doklady,
+ * takže jeho změna potřebuje ověření nové schránky – viz profilSchema.
  */
 export function UdajeKarta({ profil }: { profil: Profil }) {
   const [jmeno, setJmeno] = useState(profil.jmeno ?? '');

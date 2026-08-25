@@ -3,6 +3,7 @@ import { hashPassword, prihlasit } from '@/lib/auth';
 import { registraceSchema } from '@/lib/validations/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
+import { prihlasitKOdberu } from '@/lib/newsletter';
 
 /** Sekce 10: 5 registrací za hodinu z jedné IP – brzda na spam boty. */
 const MAX_REGISTRACI = 5;
@@ -38,16 +39,42 @@ export async function POST(request: Request) {
         passwordHash: await hashPassword(vstup.heslo),
         jmeno: vstup.jmeno?.trim() || null,
         telefon: vstup.telefon?.trim() || null,
-        // Souhlas s newsletterem se u registrovaného účtu drží tady, ne
-        // v NewsletterSubscriber – ať není souhlas na dvou místech (sekce 5).
-        newsletterSouhlas: vstup.newsletterSouhlas ?? false,
+        /*
+         * Zaškrtnutí je zatím jen **projev zájmu**, ne souhlas – ten vzniká až
+         * potvrzením adresy o pár řádků níž. Kdyby tu stálo `true` rovnou,
+         * tvrdil by účet, že zákaznice novinky odebírá, zatímco na žádném
+         * seznamu by nebyla.
+         */
+        newsletterSouhlas: false,
       },
       select: { id: true, email: true, jmeno: true, role: true, tokenVerze: true },
     });
 
-    // Kdyby se stejný e-mail dřív přihlásil k newsletteru bez účtu, ať se
-    // souhlas nezdvojuje – od téhle chvíle ho drží účet.
-    await db.newsletterSubscriber.deleteMany({ where: { email: vstup.email } });
+    /*
+     * --- Souhlas s newsletterem jde stejnou cestou jako z veřejného formuláře ---
+     *
+     * Dřív tu stálo `newsletterSubscriber.deleteMany({ email })` s odůvodněním,
+     * že se souhlas nemá držet na dvou místech. Jenže tím se mazal **doklad
+     * o dřívějším double opt-inu**: `potvrzenoAt`, `ipPrihlaseni`, `ipPotvrzeni`.
+     * Přesně to, co čl. 7 odst. 1 GDPR po správci chce a co retence schválně
+     * nemaže. Registrace tak uměla tichým vedlejším účinkem zlikvidovat důkaz,
+     * který se ničím nedá nahradit.
+     *
+     * A druhá polovina téhož: zaškrtnutí vyrábělo `newsletterSouhlas = true`
+     * bez potvrzení adresy a bez záznamu. Souhlas bez důkazu, ke kterému se
+     * navíc nikdy nic nerozeslalo, protože rozesílka čte `NewsletterSubscriber`.
+     *
+     * Teď se registrace chová jako formulář v patičce – odešle potvrzovací
+     * e-mail a čeká na kliknutí.
+     */
+    if (vstup.newsletterSouhlas) {
+      await prihlasitKOdberu({
+        email: vstup.email,
+        zdroj: 'registrace',
+        ip: klientskaIp(request),
+        userAgent: request.headers.get('user-agent'),
+      });
+    }
 
     await prihlasit(user);
 

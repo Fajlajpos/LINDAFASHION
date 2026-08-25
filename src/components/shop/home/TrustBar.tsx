@@ -1,6 +1,6 @@
 import React from 'react';
 import { Truck, Package, ShieldCheck, Headset, type LucideIcon } from 'lucide-react';
-import { VYHODY, type HomeTrustItem } from '@/lib/home-data';
+import { vyhody, type HomeTrustItem } from '@/lib/home-data';
 
 /** Mapa názvů ikon z `home-data` na komponenty lucide. */
 const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
@@ -23,12 +23,29 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
  * tlačítka. Ikona stojí vedle vlastního viditelného popisku, proto je pro
  * čtečky skrytá.
  */
-export const TrustBar: React.FC = () => (
+/**
+ * `prahDopravaZdarma` přichází z `Settings` (předává ho homepage). Bez něj by
+ * se tu vrátil natvrdo zapsaný slib „doprava zdarma nad 2 500 Kč", který
+ * pokladna nemusí dodržet.
+ *
+ * Sloupců je proto tři nebo čtyři podle toho, jestli je práh nastavený –
+ * `lg:grid-cols-4` by u tří položek nechalo prázdné čtvrté pole.
+ */
+export const TrustBar: React.FC<{ prahDopravaZdarma: number | null }> = ({
+  prahDopravaZdarma,
+}) => {
+  const polozky = vyhody(prahDopravaZdarma);
+
+  return (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="rounded-2xl bg-linda-sandLight px-6 py-8 shadow-neuInset sm:px-10">
       {/* Na lg oddělují sloupce vlasové linky; `divide-x` nekreslí čáru před prvním prvkem. */}
-      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-linda-sand">
-        {VYHODY.map((vyhoda) => {
+      <ul
+        className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:divide-x lg:divide-linda-sand ${
+          polozky.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+        }`}
+      >
+        {polozky.map((vyhoda) => {
           const Ikona = IKONY[vyhoda.icon];
 
           return (
@@ -53,4 +70,5 @@ export const TrustBar: React.FC = () => (
       </ul>
     </div>
   </div>
-);
+  );
+};

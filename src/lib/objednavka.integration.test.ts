@@ -255,6 +255,45 @@ describe('vytvoritObjednavku', () => {
       expect(vysledek.ok).toBe(false);
       if (!vysledek.ok) expect(vysledek.chyba.pole?.darkovyPoukaz).toBeTruthy();
     });
+
+    /*
+     * Poukaz je platidlo, takže tohle je ta drahá strana souběhu.
+     *
+     * Zůstatek se dřív zapisoval jako absolutní hodnota spočítaná z dřívějšího
+     * čtení. Tři objednávky odeslané naráz tak všechny přečetly 500, všechny
+     * zapsaly 0 – a poukaz na pět stovek zaplatil zboží za patnáct set.
+     * Podmínka uvnitř `UPDATE` pustí dál jen tolik objednávek, kolik zůstatek
+     * unese.
+     */
+    it('při souběhu neutratí poukaz víckrát, než na kolik zní', async () => {
+      const { variantId } = await zalozitProdukt({ cena: 400, skladem: 10 });
+      await zalozitPoukaz('POUKAZ500', 500);
+
+      const pokusy = await Promise.all(
+        Array.from({ length: 3 }, () =>
+          vytvoritObjednavku(
+            vstupObjednavky([{ variantId, mnozstvi: 1 }], { darkovyPoukaz: 'POUKAZ500' }),
+            null
+          )
+        )
+      );
+
+      const poukaz = await db.giftCard.findUniqueOrThrow({ where: { kod: 'POUKAZ500' } });
+
+      // Zůstatek nesmí nikdy spadnout pod nulu – to by byly rozdané peníze.
+      expect(Number(poukaz.zustatek)).toBeGreaterThanOrEqual(0);
+
+      // A hlavně musí sedět součet: co z poukazu odešlo, se rovná tomu,
+      // co se z něj u úspěšných objednávek strhlo.
+      const uspesne = pokusy.filter((v) => v.ok);
+      expect(uspesne.length).toBeGreaterThanOrEqual(1);
+
+      const objednavky = await db.order.findMany({ select: { castkaZGiftCard: true } });
+      const strzeno = objednavky.reduce((s, o) => s + Number(o.castkaZGiftCard ?? 0), 0);
+
+      expect(strzeno + Number(poukaz.zustatek)).toBe(500);
+      expect(objednavky).toHaveLength(uspesne.length);
+    });
   });
 
   describe('doprava', () => {
