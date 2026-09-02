@@ -12,6 +12,10 @@ interface Props {
   /** Odkazy na sociální sítě z administrace (sekce 6.8). */
   socialInstagram?: string | null;
   socialFacebook?: string | null;
+  /** Identifikace prodávajícího do patičky (§ 435 o. z.) – viz `Footer`. */
+  nazevFirmy?: string | null;
+  icoFirmy?: string | null;
+  zapisVRejstriku?: string | null;
   /**
    * Přihlášené zákaznici se košík i oblíbené synchronizují s účtem.
    * Klientské kontexty samy o přihlášení nevědí, dostanou to z layoutu.
@@ -33,6 +37,9 @@ export function ShopProviders({
   children,
   socialInstagram,
   socialFacebook,
+  nazevFirmy,
+  icoFirmy,
+  zapisVRejstriku,
   prihlasen = false,
 }: Props) {
   const [nastaveniCookiesOtevreno, setNastaveniCookiesOtevreno] = useState(false);
@@ -46,6 +53,9 @@ export function ShopProviders({
           onOpenCookieSettings={() => setNastaveniCookiesOtevreno(true)}
           socialInstagram={socialInstagram}
           socialFacebook={socialFacebook}
+          nazevFirmy={nazevFirmy}
+          icoFirmy={icoFirmy}
+          zapisVRejstriku={zapisVRejstriku}
         />
 
         <CookieBanner

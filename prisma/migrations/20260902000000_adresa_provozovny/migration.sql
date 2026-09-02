@@ -1,0 +1,14 @@
+-- Adresa kamenné provozovny, oddělená od sídla (`adresaFirmy`).
+--
+-- Sídlo je právní adresa podnikatele (faktura, § 435 o. z.) a u OSVČ to bývá
+-- bydliště; provozovna je místo, kam zákaznice přijde. Jedno sdílené pole
+-- muselo jednu z těch rolí zkreslit – buď doklad uváděl jako sídlo adresu
+-- obchodu, nebo `ClothingStore` ve strukturovaných datech posílal Google Maps
+-- k majitelce domů.
+--
+-- Nullable bez výchozí hodnoty: prázdné znamená „provozovna je samo sídlo“
+-- a čtecí místa v tom případě spadnou zpět na `adresaFirmy`. Existující řádek
+-- se tak nemusí ničím doplňovat a chování zůstane beze změny, dokud majitelka
+-- adresu nevyplní.
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN     "adresaProvozovny" TEXT;

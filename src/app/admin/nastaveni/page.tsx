@@ -44,6 +44,7 @@ interface Nastaveni {
   zapisVRejstriku: string | null;
   sazbaDph: number;
   adresaProVraceni: string | null;
+  adresaProvozovny: string | null;
   dodaciLhutaDnu: number;
   emailProGdpr: string | null;
   verzePodminek: string;
@@ -70,6 +71,7 @@ const PRAZDNE: Nastaveni = {
   zapisVRejstriku: null,
   sazbaDph: 21,
   adresaProVraceni: null,
+  adresaProvozovny: null,
   dodaciLhutaDnu: 3,
   emailProGdpr: null,
   verzePodminek: '1',
@@ -277,7 +279,8 @@ export default function AdminNastaveniPage() {
                 ['dicFirmy', 'DIČ', 'CZ12345678'],
                 ['telefonFirmy', 'Telefon', '+420 777 888 999'],
                 ['emailFirmy', 'E-mail', 'info@lindafashion.cz'],
-                ['adresaFirmy', 'Adresa', 'Pařížská 12, 110 00 Praha 1'],
+                ['adresaFirmy', 'Sídlo podnikání', 'Jednoty 1441, 356 01 Sokolov'],
+                ['adresaProvozovny', 'Adresa provozovny', 'Rokycanova 1929, 356 01 Sokolov'],
               ] as const
             ).map(([klic, popisek, priklad]) => (
               <div key={klic}>

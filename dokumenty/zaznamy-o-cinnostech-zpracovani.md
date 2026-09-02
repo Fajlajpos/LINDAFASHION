@@ -18,9 +18,11 @@
 
 | Údaj | Hodnota |
 |---|---|
-| Název | [DOPLNIT — obchodní firma / jméno podnikatele] |
-| Sídlo | [DOPLNIT] |
-| IČO | [DOPLNIT] |
+| Název | Martina Ludvíková, podnikající fyzická osoba (neplátce DPH) |
+| Sídlo | Jednoty 1441, 356 01 Sokolov |
+| Provozovna | Linda Fashion, Rokycanova 1929, 356 01 Sokolov |
+| IČO | 02688468 |
+| Telefon | +420 607 030 764 |
 | Kontaktní e-mail | [DOPLNIT] |
 | Kontakt pro subjekty údajů | [DOPLNIT — např. gdpr@…, zadává se i v administraci jako `emailProGdpr`] |
 | Pověřenec (DPO) | **Nejmenován.** Nejde o orgán veřejné moci, hlavní činností není rozsáhlé pravidelné monitorování ani zpracování zvláštních kategorií údajů (čl. 37 odst. 1). |

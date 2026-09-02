@@ -109,6 +109,10 @@ export default async function GDPRPage() {
     nastaveni.icoFirmy ? `IČO: ${nastaveni.icoFirmy}` : null,
     nastaveni.dicFirmy ? `DIČ: ${nastaveni.dicFirmy}` : null,
     nastaveni.zapisVRejstriku,
+    /* Čl. 13 odst. 1 písm. a) chce totožnost **a kontaktní údaje** správce.
+       Telefon tu chyběl – e-mail nese až odstavec o právech, takže blok
+       o správci sděloval jen adresu a IČO. */
+    nastaveni.telefonFirmy ? `Telefon: ${nastaveni.telefonFirmy}` : null,
   ].filter((r): r is string => Boolean(r && r.trim()));
 
   return (

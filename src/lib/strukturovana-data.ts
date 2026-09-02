@@ -47,7 +47,14 @@ export function organizaceLd(nastaveni: NastaveniWebu) {
  * než žádný, Google ho označí za chybný.
  */
 export function mistniProvozovnaLd(nastaveni: NastaveniWebu) {
-  if (!nastaveni.adresaFirmy) return null;
+  /*
+   * Adresa provozovny, ne sídla. `ClothingStore` říká Googlu „tady je obchod,
+   * sem pošli zákaznice" – a sídlo je u podnikající fyzické osoby zpravidla
+   * bydliště. Dokud se tu četla `adresaFirmy`, mapa mířila k majitelce domů.
+   * Sídlo zůstává záložní hodnotou pro obchod, který provozovnu nemá zvlášť.
+   */
+  const adresa = nastaveni.adresaProvozovny ?? nastaveni.adresaFirmy;
+  if (!adresa) return null;
 
   return {
     '@context': 'https://schema.org',
@@ -56,7 +63,7 @@ export function mistniProvozovnaLd(nastaveni: NastaveniWebu) {
     url: ZAKLADNI_URL,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: nastaveni.adresaFirmy,
+      streetAddress: adresa,
       addressCountry: 'CZ',
     },
     ...(nastaveni.telefonFirmy ? { telephone: nastaveni.telefonFirmy } : {}),

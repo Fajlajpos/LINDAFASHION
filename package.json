@@ -17,6 +17,7 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node -P tsconfig.node.json prisma/seed.ts",
     "admin:reset-heslo": "ts-node -P tsconfig.node.json src/scripts/reset-admin-password.ts",
+    "nastaveni:firma": "ts-node -P tsconfig.node.json src/scripts/vyplnit-udaje-firmy.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",

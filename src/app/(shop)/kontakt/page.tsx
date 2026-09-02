@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Clock, MessageCircle } from 'lucide-react';
 import { KontaktFormular } from '@/components/shop/KontaktFormular';
 import { siteKey } from '@/lib/captcha';
 import { nacistNastaveni } from '@/lib/nastaveni';
@@ -26,14 +26,38 @@ export default async function KontaktPage() {
 
   const telefonProOdkaz = nastaveni.telefonFirmy?.replace(/[^\d+]/g, '') ?? null;
 
+  /* Obchod bez samostatné provozovny prodává ze sídla – pak se sídlo neopakuje. */
+  const adresaProdejny = nastaveni.adresaProvozovny ?? nastaveni.adresaFirmy;
+  const sidloZvlast =
+    nastaveni.adresaProvozovny && nastaveni.adresaFirmy ? nastaveni.adresaFirmy : null;
+
   const polozky = [
     {
       Ikona: MapPin,
-      nadpis: 'Adresa butiku a sídlo',
-      obsah: nastaveni.adresaFirmy ? (
+      /*
+       * Prodejna, ne sídlo. Zákaznice na téhle stránce hledá, kam přijít –
+       * a sídlo je u podnikající fyzické osoby zpravidla bydliště. Dokud tu byl
+       * jeden řádek „Adresa butiku a sídlo“, musela ta adresa zastat obojí.
+       * Sídlo má vlastní položku níž – je to fakturační údaj, ne pozvánka.
+       */
+      nadpis: 'Adresa prodejny',
+      obsah: adresaProdejny ? (
         <span className="whitespace-pre-line text-linda-espresso/75">
           {nastaveni.nazevFirmy && `${nastaveni.nazevFirmy}\n`}
-          {nastaveni.adresaFirmy}
+          {adresaProdejny}
+        </span>
+      ) : null,
+    },
+    {
+      /* Fakturační sídlo (§ 435 o. z.). Uvádí se jen tehdy, když se liší od
+         prodejny – jinak by na stránce stála tatáž adresa dvakrát. */
+      Ikona: Building2,
+      nadpis: 'Fakturační údaje',
+      obsah: sidloZvlast ? (
+        <span className="whitespace-pre-line text-linda-espresso/75">
+          {sidloZvlast}
+          {nastaveni.icoFirmy && `
+IČO ${nastaveni.icoFirmy}`}
         </span>
       ) : null,
     },

@@ -24,6 +24,9 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
     <ShopProviders
       socialInstagram={nastaveni.socialInstagram}
       socialFacebook={nastaveni.socialFacebook}
+      nazevFirmy={nastaveni.nazevFirmy}
+      icoFirmy={nastaveni.icoFirmy}
+      zapisVRejstriku={nastaveni.zapisVRejstriku}
       prihlasen={session !== null}
     >
       {/* Bez vlastního pozadí – zem stránky (`linda-paper` + zrno) drží `body`

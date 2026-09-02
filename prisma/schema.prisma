@@ -541,6 +541,17 @@ model Settings {
   /// být uvedena v poučení o odstoupení od smlouvy.
   adresaProVraceni String?
 
+  /// Adresa kamenné provozovny.
+  ///
+  /// Oddělená od `adresaFirmy` schválně. Sídlo je právní adresa podnikatele –
+  /// patří na fakturu a do patičky (§ 435 o. z.) a u OSVČ to bývá bydliště.
+  /// Provozovna je místo, kam zákaznice fyzicky přijde. Dokud bylo pole jedno,
+  /// musela jedna z těch dvou rolí lhát: buď doklad uváděl jako sídlo adresu
+  /// obchodu, nebo `ClothingStore` ve strukturovaných datech posílal Google
+  /// Maps k majitelce domů. Prázdné = obchod provozovnu nemá a všude se
+  /// použije sídlo.
+  adresaProvozovny String?
+
   /// Obvyklá doba dodání v pracovních dnech.
   ///
   /// § 1820 odst. 1 písm. h) o. z. ukládá sdělit dobu dodání **před**

@@ -64,6 +64,7 @@ export const nastaveniSchema = z
     sazbaDph: z.coerce.number().int().min(0).max(99).optional().default(21),
 
     adresaProVraceni: volitelnyText(300),
+    adresaProvozovny: volitelnyText(300),
     emailProGdpr: volitelnyText(180),
 
     /*

@@ -10,6 +10,18 @@ interface FooterProps {
   /** Odkazy na sociální sítě spravuje admin (sekce 6.8) – nejsou natvrdo v kódu. */
   socialInstagram?: string | null;
   socialFacebook?: string | null;
+  /**
+   * Identifikace prodávajícího podle § 435 o. z. – jméno (obchodní firma),
+   * IČO a údaj o zápisu v rejstříku patří na obchodní listiny **i na web**.
+   *
+   * Čte se z `Settings`, protože natvrdo tu stálo „LINDA FASHION s.r.o." na
+   * každé stránce obchodu. To není jen neaktualizovatelný text: u podnikající
+   * fyzické osoby je to nepravdivý údaj o právní formě, tedy o tom, kdo za
+   * závazky ručí. IČO a zápis v rejstříku v patičce nebyly vůbec.
+   */
+  nazevFirmy?: string | null;
+  icoFirmy?: string | null;
+  zapisVRejstriku?: string | null;
 }
 
 /* Kategorie přes vlastní cestu, ne přes `?kategorie=` – viz komentář
@@ -90,6 +102,9 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenCookieSettings,
   socialInstagram,
   socialFacebook,
+  nazevFirmy,
+  icoFirmy,
+  zapisVRejstriku,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
 
@@ -260,8 +275,17 @@ export const Footer: React.FC<FooterProps> = ({
                 />
               </a>
             ))}
+            {/* Nevyplněný údaj se neuvede – vymyslet si ho by bylo horší.
+                Dokud majitelka nevyplní název, zůstane jen značka obchodu. */}
             <p className="ml-1 text-left">
-              &copy; {new Date().getFullYear()} LINDA FASHION s.r.o.
+              &copy; {new Date().getFullYear()} {nazevFirmy || 'LINDA FASHION'}
+              {icoFirmy && <>, IČO {icoFirmy}</>}
+              {zapisVRejstriku && (
+                <>
+                  <br />
+                  {zapisVRejstriku}
+                </>
+              )}
             </p>
           </div>
 

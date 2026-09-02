@@ -551,6 +551,22 @@ deleted with her browser history. That is not evidence.
   in at checkout, so it stays out of `PriceHistory` on purpose — but the moment a code is
   advertised on the product page, it becomes part of the offered price and has to be
   recorded as one.
+- **Sídlo and provozovna are two fields, not one.** `adresaFirmy` is the legal seat — it
+  goes on the invoice and in the footer (§ 435 o. z.) and for a sole trader it is usually
+  the home address. `adresaProvozovny` is where the customer actually walks in. While one
+  field served both, one of the two roles had to lie: either the document named the shop
+  as the seat, or `mistniProvozovnaLd`'s `ClothingStore` pointed Google Maps at the
+  owner's flat. Reading sites fall back to `adresaFirmy` when the provozovna is empty,
+  so a shop selling from its seat needs to fill in nothing.
+- **The footer identifies the seller from `Settings`.** It used to print
+  „LINDA FASHION s.r.o.“ hardcoded on every page — for a podnikající fyzická osoba that
+  is a false statement about legal form, i.e. about who is liable — and carried neither
+  IČO nor `zapisVRejstriku`, which § 435 requires there. Same rule as `/kontakt`:
+  `Footer` is a client component, so the values arrive as props through `ShopProviders`.
+- **`/llms.txt` reads `Settings` too.** It shipped with invented contact details
+  („Pařížská 12, Praha 1“, a made-up e-mail and phone) and a hardcoded
+  „doprava zdarma nad 2 500 Kč“ — a public file stating a seat that is not the seller's
+  and a shipping promise the checkout does not keep. Missing values drop their line.
 - **Settings the owner has to fill in, not code.** `adresaProVraceni`, `emailProGdpr`,
   `zapisVRejstriku` and the real company identification are read from `Settings` everywhere
   they appear. Every page degrades honestly while they are empty — the withdrawal
