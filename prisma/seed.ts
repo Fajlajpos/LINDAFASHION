@@ -26,32 +26,47 @@ async function main() {
   await prisma.category.deleteMany();
   await prisma.address.deleteMany();
   await prisma.user.deleteMany();
-  await prisma.settings.deleteMany();
   await prisma.newsletterSubscriber.deleteMany();
 
-  // 2. Vytvoření Nastavení (Settings)
-  await prisma.settings.create({
-    data: {
-      id: 1,
-      rezimDovolene: false,
-      datumNavratu: null,
-      zpravaProZakazniky: 'Momentálně čerpáme dovolenou. Všechny objednávky odešleme ihned po návratu.',
-      zablokovatObjednavky: false,
-      nazevFirmy: 'LINDA FASHION s.r.o.',
-      icoFirmy: '12345678',
-      dicFirmy: 'CZ12345678',
-      adresaFirmy: 'Pařížská 12, 110 00 Praha 1',
-      telefonFirmy: '+420 777 888 999',
-      emailFirmy: 'info@lindafashion.cz',
-      jePlatceDph: true,
-      socialInstagram: 'https://instagram.com/lindafashion_cz',
-      socialFacebook: 'https://facebook.com/lindafashion.cz',
-      cenaDopravyZasilkovna: 79,
-      cenaDopravyPPL: 109,
-      cenaDopravyCeskaPosta: 99,
-      prahDopravaZdarma: 2500,
-    },
-  });
+  /*
+   * 2. Nastavení (Settings)
+   *
+   * Existující řádek se **nepřepisuje**. Seed je demo katalog – smí zahodit
+   * produkty a testovací účty, ale identifikace prodávajícího je údaj ze
+   * živnostenského rejstříku, který sem majitelka zadala rukou.
+   *
+   * Předtím to `settings.deleteMany()` + `create()` dělalo potichu: vrátilo na
+   * web cizí IČO, cizí sídlo a `jePlatceDph: true` u neplátce – tedy doklad
+   * s daní, kterou není oprávněna účtovat. Žádná chyba, jen špatná čísla
+   * na faktuře.
+   *
+   * Firemní údaje tu proto nejsou vůbec. Vymyšlené IČO na čerstvé vývojové
+   * databázi není pohodlí – je to hodnota, která vypadá vyplněně a už ji nikdo
+   * nezkontroluje. Prázdné pole se na webu nevykreslí.
+   * Skutečné údaje zapíše `npm run nastaveni:firma`.
+   */
+  const nastaveniUzJe = await prisma.settings.findUnique({ where: { id: 1 } });
+
+  if (nastaveniUzJe) {
+    console.log('⏭  Nastavení už existuje – nechávám ho beze změny.');
+  } else {
+    await prisma.settings.create({
+      data: {
+        id: 1,
+        rezimDovolene: false,
+        datumNavratu: null,
+        zpravaProZakazniky:
+          'Momentálně čerpáme dovolenou. Všechny objednávky odešleme ihned po návratu.',
+        zablokovatObjednavky: false,
+        // Ceny dopravy jsou provozní čísla, ne identifikace – bez nich
+        // by pokladna neměla co nabídnout a demo katalog by nešel objednat.
+        cenaDopravyZasilkovna: 79,
+        cenaDopravyPPL: 109,
+        cenaDopravyCeskaPosta: 99,
+        prahDopravaZdarma: 2500,
+      },
+    });
+  }
 
   // 3. Vytvoření Uživatelů
   // Admin se bere z .env, ne natvrdo – jinak by seed přepsal heslo, které si
