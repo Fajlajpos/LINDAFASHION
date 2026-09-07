@@ -197,14 +197,20 @@ export default function AdminNastaveniPage() {
               <Palmtree className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
               Režim dovolené („Jsem pryč“)
             </h2>
-            <input
-              type="checkbox"
-              aria-label="Aktivovat režim nepřítomnosti"
-              checked={n.rezimDovolene}
-              disabled={ukladam}
-              onChange={(e) => setN({ ...n, rezimDovolene: e.target.checked })}
-              className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-linda-cognac"
-            />
+            {/* Zaškrtávátko samo měří 20 px, tedy méně než polovinu dotykového
+                minima – a je to hlavní vypínač celého obchodu. Obalení do
+                `<label>` s `min-h-touch`/`min-w-touch` zvětší plochu, na kterou
+                jde ťuknout, aniž by se měnil vzhled ovládacího prvku. */}
+            <label className="-my-2 flex min-h-touch min-w-touch shrink-0 cursor-pointer items-center justify-center">
+              <input
+                type="checkbox"
+                aria-label="Aktivovat režim nepřítomnosti"
+                checked={n.rezimDovolene}
+                disabled={ukladam}
+                onChange={(e) => setN({ ...n, rezimDovolene: e.target.checked })}
+                className="h-5 w-5 shrink-0 cursor-pointer accent-linda-cognac"
+              />
+            </label>
           </div>
 
           {/* Zaškrtnutím vyroste pod nadpisem tři pole najednou. Bez naskočení

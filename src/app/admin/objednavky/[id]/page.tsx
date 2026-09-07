@@ -78,7 +78,7 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
         <div>
           <Link
             href="/admin/objednavky"
-            className="mb-1 flex w-fit items-center gap-1 text-xs font-semibold text-linda-cognac hover:underline"
+            className="-ml-2 mb-1 flex min-h-touch w-fit items-center gap-1 px-2 text-xs font-semibold text-linda-cognac hover:underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             Zpět na objednávky
@@ -119,7 +119,7 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
           {objednavka.user ? (
             <Link
               href={`/admin/zakaznici/${objednavka.user.id}`}
-              className="block text-xs text-linda-cognac underline"
+              className="inline-flex min-h-touch items-center break-all text-xs text-linda-cognac underline"
             >
               {objednavka.user.email}
             </Link>
@@ -128,7 +128,7 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
               {objednavka.email && (
                 <a
                   href={`mailto:${objednavka.email}`}
-                  className="block text-xs text-linda-cognac underline"
+                  className="inline-flex min-h-touch items-center break-all text-xs text-linda-cognac underline"
                 >
                   {objednavka.email}
                 </a>

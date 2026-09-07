@@ -192,7 +192,7 @@ export default function AdminKategoriePage() {
           {serazene.map((kat) => (
             <li
               key={kat.id}
-              className={`flex items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm ${kat.parentId ? 'ml-6' : ''}`}
+              className={`flex items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm ${kat.parentId ? 'ml-3 sm:ml-6' : ''}`}
             >
               <FolderTree
                 className={`h-4 w-4 shrink-0 ${kat.parentId ? 'text-linda-espresso/40' : 'text-linda-cognac'}`}

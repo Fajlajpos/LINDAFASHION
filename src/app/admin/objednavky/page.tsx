@@ -99,7 +99,13 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
 
       {/* Filtr stavů – aktivní je zamáčknutý, ostatní leží v rovině. */}
       <nav aria-label="Filtr objednávek">
-        <ul className="flex flex-wrap gap-2">
+        {/* Vodorovný pruh místo zalamování. Sedm filtrů se na telefonu
+            zalomilo do čtyř řádků, tedy zhruba 190 px chromu, než se objevila
+            první objednávka. Stejný vzor jako rozcestník kategorií na úvodní
+            stránce (`home/CategoryBar`): posuvník schovaný, `snap-x`, aby se
+            čipy zastavovaly na hraně. Od `sm` se vrací zalamování – tam je
+            místa dost a vodorovný posuv by byl zbytečná překážka. */}
+        <ul className="flex snap-x gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
           {(['vse', ...STAVY_FILTRU] as const).map((klic) => {
             /* Porovnáváme s ověřenou hodnotou, ne se surovým parametrem:
                při `?stav=cokoliv` se vypisuje vše, takže se musí zamáčknout „Vše“. */
@@ -107,7 +113,7 @@ export default async function AdminObjednavkyPage({ searchParams }: Props) {
             const pocet = klic === 'vse' ? celkem : (pocetPodleStavu.get(klic) ?? 0);
 
             return (
-              <li key={klic}>
+              <li key={klic} className="shrink-0 snap-start sm:shrink">
                 <Link
                   href={klic === 'vse' ? '/admin/objednavky' : `/admin/objednavky?stav=${klic}`}
                   aria-current={jeAktivni ? 'page' : undefined}

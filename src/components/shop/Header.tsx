@@ -171,7 +171,13 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               ref={menuToggleRef}
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              /* Otevřením menu se zavře hledání a naopak. Oba panely rostou
+                 uvnitř `sticky` hlavičky, takže otevřené najednou daly dohromady
+                 ~470 px – na telefonu na šířku víc, než je celá obrazovka. */
+              onClick={() => {
+                setMobileMenuOpen(!mobileMenuOpen);
+                setSearchOpen(false);
+              }}
               className="min-h-touch min-w-touch flex items-center justify-center cursor-pointer text-linda-espresso hover:text-linda-cognac transition-colors lg:hidden"
               aria-label={mobileMenuOpen ? 'Zavřít menu' : 'Otevřít menu'}
               aria-expanded={mobileMenuOpen}
@@ -201,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Desktop Navigation */}
             <nav
               aria-label="Hlavní navigace"
-              className="hidden lg:flex items-center gap-2 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
+              className="hidden lg:flex items-center gap-1.5 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
             >
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
@@ -261,7 +267,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               ref={searchToggleRef}
               type="button"
-              onClick={() => setSearchOpen(!searchOpen)}
+              onClick={() => {
+                setSearchOpen(!searchOpen);
+                setMobileMenuOpen(false);
+              }}
               className="group min-h-touch min-w-touch flex items-center justify-center cursor-pointer rounded-full hover:text-linda-cognac transition-colors"
               aria-label={searchOpen ? 'Zavřít vyhledávání' : 'Otevřít vyhledávání'}
               aria-expanded={searchOpen}
@@ -381,7 +390,17 @@ export const Header: React.FC<HeaderProps> = ({
         <nav
           id="mobilni-menu"
           aria-label="Mobilní navigace"
-          className="animate-fadeIn bg-linda-cream px-6 pb-6 pt-2 text-center text-xs font-medium uppercase tracking-wider text-linda-espresso shadow-neuBarRaised lg:hidden"
+          /* Zásuvka je uvnitř `sticky top-0` hlavičky, a přilepený prvek vyšší
+             než okno má nedosažitelný spodek. Sedm položek po 44 px dá ~340 px,
+             s odkazem do administrace ~390 – na telefonu na šířku (375 px) se
+             tedy na „Kontakt & Showroom“ nedalo dostat vůbec.
+             `6rem` je výška lišty nad zásuvkou v rozbaleném stavu (změřeno:
+             96 px nahoře na stránce, 64 px po sbalení při skrolu). Bereme tu
+             vyšší z obou – v tom druhém případě zásuvka jen nevyužije 32 px,
+             což je bezpečný směr. `dvh` proto, že se adresní řádek v mobilních
+             prohlížečích sbaluje a `vh` na to nereaguje.
+             `overscroll-contain` drží skrol uvnitř zásuvky. */
+          className="animate-fadeIn max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-linda-cream px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-2 text-center text-xs font-medium uppercase tracking-wider text-linda-espresso shadow-neuBarRaised lg:hidden"
         >
           {/* Administrace nahoře a oddělená – není to část nabídky obchodu,
               ale vstup jinam. V liště se pilulka pod `lg` nevejde. */}

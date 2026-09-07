@@ -3,7 +3,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { CHYBI_FOTKA, lzeZverejnitBezFotek, produktSchema, urcitHlavni } from '@/lib/validations/produkt';
 import { unikatniSlug } from '@/lib/slug';
-import { hledaciTextProduktu } from '@/lib/vyhledavani';
+import { hledaciTextProduktu, podminkaHledani, rozlozitDotaz } from '@/lib/vyhledavani';
 import { jePlatnyToken } from '@/lib/uloziste';
 import { FRONTY, publishJob, type UlohaZpracovatObrazek } from '@/lib/queue';
 import { stavSlevyNovehoProduktu, zapsatCenu } from '@/lib/cenova-historie';
@@ -22,18 +22,28 @@ export async function GET(request: Request) {
     const stranka = Math.max(1, Number(url.searchParams.get('stranka') ?? 1) || 1);
     const naStranku = 30;
 
-    const kde: Prisma.ProductWhereInput = {
-      ...(hledat
-        ? {
-            OR: [
-              { nazev: { contains: hledat, mode: 'insensitive' } },
-              { sku: { contains: hledat, mode: 'insensitive' } },
-              { znacka: { contains: hledat, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-      ...(kategorie ? { categoryId: kategorie } : {}),
-    };
+    /*
+     * Hledá se přes `hledaciText`, ne přes `nazev` – stejně jako v katalogu.
+     *
+     * Do téhle chvíle tu bylo `nazev contains` nad surovým sloupcem, takže
+     * administrace neuměla to, co veřejná část umí: „saty" nenašlo
+     * „Hedvábné šaty Bellissima" a „hedvabne" taky ne, protože porovnání
+     * bylo proti textu s diakritikou. Majitelka tak svůj vlastní katalog
+     * z telefonu neprohledala – a přitom je to jediná cesta, jak se
+     * v osmi stech kusech dostat ke konkrétnímu.
+     *
+     * `podminkaHledani` pokrývá i SKU a značku: obojí je součástí
+     * `hledaciText` (viz `hledaciTextProduktu`), a dotaz i sloupec projdou
+     * toutéž normalizací, takže „LF-SAT-001" sedne na „lf sat 001".
+     *
+     * Spojení přes `AND`, ne rozprostřením klíčů: podmínka hledání má
+     * vlastní `AND`/`OR` a filtr kategorie by ho při sloučení do jednoho
+     * objektu přebil.
+     */
+    const tokeny = hledat ? rozlozitDotaz(hledat) : [];
+    const zaklad: Prisma.ProductWhereInput = kategorie ? { categoryId: kategorie } : {};
+    const podminka = podminkaHledani(tokeny);
+    const kde: Prisma.ProductWhereInput = podminka ? { AND: [zaklad, podminka] } : zaklad;
 
     const [produkty, celkem] = await Promise.all([
       db.product.findMany({

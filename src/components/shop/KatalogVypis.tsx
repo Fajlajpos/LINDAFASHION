@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Filter, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ChevronDown, Filter, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { RazeniKatalogu } from '@/components/shop/RazeniKatalogu';
 import { Strankovani } from '@/components/ui/Strankovani';
@@ -65,49 +65,89 @@ export async function KatalogVypis({
     return dotaz ? `${zakladniCesta}?${dotaz}` : zakladniCesta;
   };
 
+  /* Aktivní filtr je zamáčknutý do panelu (prohlubeň), neaktivní leží
+     v rovině a při hoveru se lehce nadzvedne. Stav tak nese i tvar,
+     ne jen barva. */
+  const seznamKategorii = (
+    <ul className="space-y-2 text-sm">
+      <li>
+        <Link
+          href="/produkty"
+          aria-current={!kategorie ? 'page' : undefined}
+          className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
+            !kategorie
+              ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
+              : 'text-linda-espresso hover:shadow-neuSm'
+          }`}
+        >
+          Všechny produkty ({celkemVsech})
+        </Link>
+      </li>
+
+      {viditelne.map((k) => (
+        <li key={k.slug} className={k.parentSlug ? 'ml-3' : undefined}>
+          <Link
+            href={odkazSFiltrem(k.slug)}
+            aria-current={kategorie === k.slug ? 'page' : undefined}
+            className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
+              kategorie === k.slug
+                ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
+                : 'text-linda-espresso hover:shadow-neuSm'
+            }`}
+          >
+            {k.nazev} ({k.pocetProduktu})
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+
+  /** Co je zrovna vyfiltrované – text do sbaleného pruhu na telefonu. */
+  const nazevFiltru = kategorie
+    ? (viditelne.find((k) => k.slug === kategorie)?.nazev ?? 'Kategorie')
+    : 'Všechny produkty';
+
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+      {/* Filtr má na telefonu a na desktopu jinou stavbu, ne jen jiné rozměry.
+
+          Deset kategorií po 44 px je přes 500 px – celá obrazovka telefonu
+          vyplněná filtrem, než se objeví první produkt. Sbalený `<details>`
+          z toho udělá jeden řádek a v souhrnu rovnou řekne, co je vybrané.
+
+          Vykreslujeme proto dvakrát: `<details>` pod `lg`, obyčejná karta nad
+          ním. Přepínat `open` podle šířky nejde – je to atribut, ne třída,
+          a `KatalogVypis` je serverová komponenta bez stavu. Přebít zavřený
+          `<details>` z CSS taky ne: prohlížeče ho neskrývají shodně (novější
+          Chrome přes `::details-content`), takže by to jinde tiše nefungovalo.
+          Skrytá polovina je `display:none`, tedy i mimo strom pro odečítač –
+          dvakrát vypsané odkazy se tak nikde neozvou dvakrát. */}
       <aside className="space-y-6">
-        <div className="space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <details className="group rounded-2xl bg-linda-cream p-4 shadow-neu lg:hidden">
+          <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <SlidersHorizontal className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+            <span className="flex-1 text-left">
+              <span className="block font-serif text-lg leading-tight text-linda-espresso">
+                Kategorie
+              </span>
+              <span className="block truncate text-xs text-linda-espresso/70">{nazevFiltru}</span>
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-linda-cognac transition-transform duration-200 group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+
+          <div className="mt-4 border-t border-linda-sand/60 pt-4">{seznamKategorii}</div>
+        </details>
+
+        <div className="hidden space-y-6 rounded-2xl bg-linda-cream p-6 shadow-neu lg:block">
           <div className="flex items-center gap-2 border-b border-linda-sand/60 pb-3">
             <SlidersHorizontal className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
             <h2 className="font-serif text-xl text-linda-espresso">Kategorie</h2>
           </div>
 
-          {/* Aktivní filtr je zamáčknutý do panelu (prohlubeň), neaktivní
-              leží v rovině a při hoveru se lehce nadzvedne. Stav tak nese
-              i tvar, ne jen barva. */}
-          <ul className="space-y-2 text-sm">
-            <li>
-              <Link
-                href="/produkty"
-                aria-current={!kategorie ? 'page' : undefined}
-                className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
-                  !kategorie
-                    ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
-                    : 'text-linda-espresso hover:shadow-neuSm'
-                }`}
-              >
-                Všechny produkty ({celkemVsech})
-              </Link>
-            </li>
-
-            {viditelne.map((k) => (
-              <li key={k.slug} className={k.parentSlug ? 'ml-3' : undefined}>
-                <Link
-                  href={odkazSFiltrem(k.slug)}
-                  aria-current={kategorie === k.slug ? 'page' : undefined}
-                  className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
-                    kategorie === k.slug
-                      ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
-                      : 'text-linda-espresso hover:shadow-neuSm'
-                  }`}
-                >
-                  {k.nazev} ({k.pocetProduktu})
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {seznamKategorii}
         </div>
       </aside>
 

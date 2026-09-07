@@ -93,7 +93,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     <>
       {/* Banner na spodním okraji obrazovky při první návštěvě */}
       {showBanner && !showSettingsModal && (
-        <div className="animate-fadeInUp fixed bottom-0 left-0 right-0 z-50 bg-linda-espresso p-4 text-linda-cream shadow-neuBarRaised sm:p-6">
+        <div className="animate-fadeInUp fixed bottom-0 left-0 right-0 z-50 bg-linda-espresso p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-linda-cream shadow-neuBarRaised sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div className="flex max-w-3xl items-start gap-3">
               <ShieldCheck className="mt-1 h-6 w-6 flex-shrink-0 text-linda-sand" aria-hidden="true" />
@@ -140,8 +140,8 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
 
       {/* Modal s detailním nastavením kategorií */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-lg space-y-6 rounded-2xl bg-linda-cream p-6 text-linda-espresso shadow-neuLg sm:p-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative my-auto w-full max-w-lg space-y-6 rounded-2xl bg-linda-cream p-6 text-linda-espresso shadow-neuLg sm:p-8">
             <button
               type="button"
               onClick={() => {
@@ -178,33 +178,34 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
-                <div>
-                  <h4 className="text-sm font-semibold text-linda-espresso">Analytické cookies</h4>
-                  <p className="mt-0.5 text-linda-espresso/70">Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</p>
-                </div>
+              {/* Celý řádek je `<label>`: samotné zaškrtávátko měří 16 px, což
+                  je třetina dotykového minima. Souhlas se má dát potvrdit
+                  napoprvé, ne po třetím pokusu. */}
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+                <span>
+                  <span className="block text-sm font-semibold text-linda-espresso">Analytické cookies</span>
+                  <span className="mt-0.5 block text-linda-espresso/70">Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</span>
+                </span>
                 <input
                   type="checkbox"
                   checked={prefs.analyticke}
                   onChange={(e) => setPrefs({ ...prefs, analyticke: e.target.checked })}
-                  aria-label="Analytické cookies"
                   className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />
-              </div>
+              </label>
 
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
-                <div>
-                  <h4 className="text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</h4>
-                  <p className="mt-0.5 text-linda-espresso/70">Slouží k zobrazování relevantních reklam z italské módy.</p>
-                </div>
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+                <span>
+                  <span className="block text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</span>
+                  <span className="mt-0.5 block text-linda-espresso/70">Slouží k zobrazování relevantních reklam z italské módy.</span>
+                </span>
                 <input
                   type="checkbox"
                   checked={prefs.marketingove}
                   onChange={(e) => setPrefs({ ...prefs, marketingove: e.target.checked })}
-                  aria-label="Marketingové cookies"
                   className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
                 />
-              </div>
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">

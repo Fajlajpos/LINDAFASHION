@@ -253,7 +253,7 @@ export default async function AdminDashboardPage() {
             <h2 className="font-serif text-xl text-linda-espresso">Poslední objednávky</h2>
             <Link
               href="/admin/objednavky"
-              className="flex items-center gap-1 text-xs font-semibold text-linda-cognac hover:underline"
+              className="-my-2 flex min-h-touch items-center gap-1 text-xs font-semibold text-linda-cognac hover:underline"
             >
               Vše
               <ArrowRight className="h-3 w-3" aria-hidden="true" />

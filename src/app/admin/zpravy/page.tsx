@@ -141,7 +141,7 @@ export default async function AdminZpravyPage({ searchParams }: Props) {
                       </p>
                       <a
                         href={`mailto:${z.email}`}
-                        className="text-xs text-linda-cognac underline underline-offset-2"
+                        className="inline-flex min-h-touch items-center break-all text-xs text-linda-cognac underline underline-offset-2"
                       >
                         {z.email}
                       </a>

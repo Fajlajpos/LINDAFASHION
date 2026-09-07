@@ -257,7 +257,7 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
                       type="button"
                       onClick={() => updateQuantity(polozka.variantId, polozka.mnozstvi - 1)}
                       aria-label={`Ubrat kus – ${polozka.nazev}`}
-                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
+                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm"
                     >
                       &minus;
                     </button>
@@ -272,7 +272,7 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
                       onClick={() => updateQuantity(polozka.variantId, polozka.mnozstvi + 1)}
                       disabled={polozka.mnozstvi >= polozka.skladem}
                       aria-label={`Přidat kus – ${polozka.nazev}`}
-                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-lg bg-linda-cream text-sm font-bold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac active:shadow-neuInsetSm disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       +
                     </button>

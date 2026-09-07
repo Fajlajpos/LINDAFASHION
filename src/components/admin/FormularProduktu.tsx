@@ -8,8 +8,10 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
+  Camera,
   ChevronDown,
   Factory,
+  ImagePlus,
   Loader2,
   Plus,
   Star,
@@ -146,6 +148,17 @@ function prvniVarianta(): VariantaFormular {
 const POLE =
   'w-full bg-linda-sandLight shadow-neuInsetSm min-h-touch rounded-xl px-4 py-2.5 text-linda-espresso disabled:opacity-60';
 
+/**
+ * Tlačítko pro výběr fotek.
+ *
+ * Dřív tu byl podtržený textový odkaz uvnitř `<label>`, tedy dotykový cíl
+ * vysoký jako řádek textu. Vyvýšená pilulka je 44 px a hlavně unese dvě
+ * tlačítka vedle sebe – focení a výběr z galerie musí být oddělené vstupy,
+ * protože `capture` na společném vstupu zakáže galerii úplně.
+ */
+const TLACITKO_FOTKY =
+  'flex min-h-touch cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm';
+
 /** Hodnota, kterou `Vyber` používá pro „nevybráno“ – prázdný řetězec by kolidoval s názvem. */
 const RUCNE = '__rucne__';
 
@@ -191,6 +204,41 @@ function Rozbalovaci({ nadpis, popis, vychoziOtevreno = false, trida, children }
       <div className="mt-3 space-y-4">{children}</div>
     </details>
   );
+}
+
+/** Kotva sekce s fotkami – cíl skoku, když server vrátí chybu `fotky`. */
+const ID_SEKCE_FOTEK = 'sekce-fotek';
+
+/**
+ * Ke kterému prvku na stránce patří klíč chyby ze serveru.
+ *
+ * Většina klíčů se jmenuje stejně jako `id` pole, ale tři se liší:
+ *
+ *  · `categoryId` – hodnotu drží `Vyber`, jehož spouštěč má `id="kategorie"`;
+ *  · `varianty.0.velikost` – `zodNaPole` skládá cestu tečkami, kdežto pole
+ *    ve formuláři jsou pojmenovaná `velikost-<klíč varianty>`, protože
+ *    varianty nemají stabilní index (dají se mazat i přidávat);
+ *  · `fotky` – nepatří k žádnému poli. V zakládání míří na sekci s fotkami,
+ *    při editaci na zaškrtávátko „Zveřejnit“, protože právě jeho zaškrtnutí
+ *    tu chybu vyvolá (galerii tam spravuje `SpravaFotek` mimo formulář).
+ */
+function idPrvkuProChybu(
+  klic: string,
+  varianty: VariantaFormular[],
+  skrytNahravaniFotek: boolean
+): string | null {
+  if (klic === 'categoryId') return 'kategorie';
+  if (klic === 'fotky') return skrytNahravaniFotek ? 'aktivni' : ID_SEKCE_FOTEK;
+
+  const shoda = /^varianty\.(\d+)\.(.+)$/.exec(klic);
+  if (shoda) {
+    const varianta = varianty[Number(shoda[1])];
+    if (!varianta) return null;
+    // `miry.obvodPasu` → `obvodPasu-<klíč>`, `velikost` → `velikost-<klíč>`
+    return `${shoda[2].replace(/^miry\./, '')}-${varianta.klic}`;
+  }
+
+  return klic;
 }
 
 export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props) {
@@ -388,6 +436,48 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
         : zbytek.map((f, i) => ({ ...f, jeHlavni: i === 0 }));
     });
 
+  /**
+   * Skok na první chybně vyplněné pole.
+   *
+   * Kontrolu dělá server, ne `required`, takže prohlížeč sám nic nezaostří.
+   * Hláška se přitom vypisuje nahoře nad formulářem, ale odesílá se tlačítkem
+   * úplně dole – na telefonu jsou to čtyři obrazovky od sebe a po neúspěšném
+   * uložení nebylo vidět vůbec nic. Formulář má ~30 polí, takže „najdi si to
+   * sama“ tu není odpověď.
+   *
+   * Pořadí bereme z DOM (`compareDocumentPosition`), ne z pořadí klíčů
+   * v odpovědi: Zod je vrací v pořadí schématu, které se s pořadím polí na
+   * stránce neshoduje (GPSR údaje jsou ve schématu dřív než popis).
+   */
+  const zaostritPrvniChybu = (pole: Record<string, string>) => {
+    const prvky = Object.keys(pole)
+      .map((klic) => idPrvkuProChybu(klic, varianty, skrytNahravaniFotek))
+      .flatMap((id) => (id ? [document.getElementById(id)] : []))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (prvky.length === 0) return;
+
+    const prvni = prvky.reduce((a, b) =>
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_PRECEDING ? b : a
+    );
+
+    /* Zavřený `<details>` se sám neotevře, takže by skrol skončil na prvku
+       nulové výšky a chybu by nikdo neuviděl. Otevíráme celý řetěz nadřazených
+       bloků – míry varianty jsou zanořené o dvě úrovně. */
+    let blok = prvni.closest('details');
+    while (blok) {
+      blok.open = true;
+      blok = blok.parentElement?.closest('details') ?? null;
+    }
+
+    /* `scrollIntoView` s `behavior: 'smooth'` přebíjí i `scroll-behavior`
+       z CSS, takže pravidlo pro `prefers-reduced-motion` v `globals.css` by
+       se tudy obešlo. Ptáme se proto přímo. */
+    const bezPohybu = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    prvni.scrollIntoView({ block: 'center', behavior: bezPohybu ? 'auto' : 'smooth' });
+    prvni.focus({ preventScroll: true });
+  };
+
   const ulozit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (odesilam) return;
@@ -455,9 +545,17 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       : await poslatJson<{ id: string }>('/api/admin/produkty', telo);
 
     if (!vysledek.ok) {
+      const pole = vysledek.pole ?? {};
       setChyba(vysledek.chyba);
-      setChybyPoli(vysledek.pole ?? {});
+      setChybyPoli(pole);
       setOdesilam(false);
+
+      /* Až po překreslení. Dokud React nezpracuje `setOdesilam(false)`, mají
+         všechna pole pořád `disabled` – a zakázaný prvek fokus nepřijme, takže
+         by spadl na `<body>` a skok by sice odskroloval, ale kurzor by nikam
+         nesedl. Automatické dávkování v Reactu 18 se vyplaví v mikroúloze,
+         `requestAnimationFrame` běží až po ní. */
+      requestAnimationFrame(() => zaostritPrvniChybu(pole));
       return;
     }
 
@@ -952,6 +1050,10 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               <input
                 id="ean"
                 type="text"
+                /* Čárový kód je čistě číselný, ale `type="number"` by ho
+                   zkazil: usekl by vodicí nulu a přidal šipky nahoru/dolů.
+                   `inputMode` mění jen klávesnici na telefonu. */
+                inputMode="numeric"
                 disabled={odesilam}
                 value={form.ean}
                 onChange={(e) => setForm({ ...form, ean: e.target.value })}
@@ -1012,7 +1114,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       )}
 
       {!skrytNahravaniFotek && (
-        <div className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
+        <div id={ID_SEKCE_FOTEK} className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">
           <div>
             <h2 className="font-serif text-xl text-linda-espresso">
               Fotografie{!form.jeDarkovyPoukaz && <span className="text-linda-cognac"> *</span>}
@@ -1034,9 +1136,23 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
               <Upload className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
             )}
 
-            <div className="text-xs">
-              <label className="cursor-pointer font-semibold text-linda-cognac hover:underline">
-                {nahravam ? 'Nahrávám…' : 'Vyberte fotky k nahrání'}
+            <div className={`flex flex-col gap-2 sm:flex-row sm:justify-center ${nahravam || odesilam ? 'pointer-events-none opacity-60' : ''}`}>
+              <label className={TLACITKO_FOTKY}>
+                <Camera className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+                {nahravam ? 'Nahrávám…' : 'Vyfotit'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  capture="environment"
+                  disabled={nahravam || odesilam}
+                  onChange={nahratFotky}
+                  className="hidden"
+                />
+              </label>
+
+              <label className={TLACITKO_FOTKY}>
+                <ImagePlus className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+                Vybrat z galerie
                 <input
                   type="file"
                   multiple
@@ -1201,6 +1317,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                       }
                       className="min-h-touch w-full rounded-lg bg-linda-sandLight px-3 py-2 text-linda-espresso shadow-neuInsetSm"
                     />
+                    {chybaPole(`varianty.${index}.velikost`)}
                   </div>
 
                   <div>
@@ -1222,6 +1339,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                       }
                       className="min-h-touch w-full rounded-lg bg-linda-sandLight px-3 py-2 text-linda-espresso shadow-neuInsetSm"
                     />
+                    {chybaPole(`varianty.${index}.skladem`)}
                   </div>
                 </div>
 
@@ -1278,6 +1396,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                         placeholder={priklad}
                         className="min-h-touch w-full rounded-lg bg-linda-sandLight px-2.5 py-1.5 text-xs shadow-neuInsetSm"
                       />
+                      {chybaPole(`varianty.${index}.miry.${klic}`)}
                     </div>
                   ))}
                 </div>
@@ -1291,8 +1410,9 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       <div className="space-y-3 rounded-2xl bg-linda-cream p-6 text-xs shadow-neu">
         <h2 className="font-serif text-xl text-linda-espresso">Zveřejnění</h2>
 
-        <label className="flex cursor-pointer items-center gap-2.5">
+        <label className="flex min-h-touch cursor-pointer items-center gap-2.5">
           <input
+            id="aktivni"
             type="checkbox"
             checked={form.aktivni}
             disabled={odesilam}
@@ -1303,6 +1423,14 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             Zveřejnit v e-shopu (odškrtnuté = koncept, zákaznice ho neuvidí)
           </span>
         </label>
+
+        {/* Při editaci se galerie spravuje mimo formulář (`SpravaFotek`), takže
+            sekce s fotkami tu není a s ní chyběl i výpis chyby `fotky`. Server
+            ji přitom vrací právě sem: „koncept bez fotky nelze zveřejnit“
+            (čl. 19 GPSR) vyskočí ve chvíli, kdy se zaškrtne políčko nad tímhle
+            řádkem. Majitelka do té doby viděla jen obecné „Zkontrolujte prosím
+            vyplněné údaje.“ a neměla jak zjistit, co se serveru nelíbí. */}
+        {skrytNahravaniFotek && chybaPole('fotky')}
 
         <label className="flex cursor-pointer items-center gap-2.5">
           <input
@@ -1316,7 +1444,22 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
         </label>
       </div>
 
-      <div className="flex justify-end gap-4">
+      {/* Lepivá lišta s uložením.
+
+          Formulář má 29–57 ovládacích prvků, tedy zhruba pět obrazovek na
+          telefonu. Tlačítko na konci znamenalo, že se k němu majitelka musela
+          po každé úpravě proskrolovat – a po chybě zase zpátky nahoru.
+
+          Lepí se jen pod `sm`; na desktopu je celý formulář v dohledu a lišta
+          přes spodek obrazovky by tam jen ubírala místo. Podklad je krémový
+          a neprůhledný, aby pod ním obsah nebyl vidět, a `shadow-neuBar` je
+          týž token jako u hlavičky – lišta přes celou šířku, ze které zbyde
+          měkký okraj (boční složky stínu jsou mimo obrazovku).
+
+          `-mx-5` ruší `p-5` na `<main>`, aby lišta sahala od kraje ke kraji;
+          `pb-[env(safe-area-inset-bottom)]` drží tlačítka nad domácím
+          indikátorem iPhonu. */}
+      <div className="sticky bottom-0 -mx-5 flex justify-end gap-4 bg-linda-cream px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-neuBar sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <Link
           href="/admin/produkty"
           className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
@@ -1327,7 +1470,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
           type="submit"
           disabled={odesilam || nahravam}
           aria-busy={odesilam}
-          className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac px-8 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70 sm:flex-none"
         >
           {odesilam ? (
             <>

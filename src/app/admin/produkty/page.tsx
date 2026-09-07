@@ -104,7 +104,7 @@ export default async function AdminProduktyPage({ searchParams }: Props) {
               <li key={produkt.id}>
                 <Link
                   href={`/admin/produkty/${produkt.id}`}
-                  className="flex cursor-pointer items-center gap-4 rounded-2xl bg-linda-cream p-4 shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+                  className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-linda-cream p-4 shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
                 >
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-linda-sandLight shadow-neuInsetSm">
                     {hlavni?.urlThumb ? (
@@ -126,7 +126,7 @@ export default async function AdminProduktyPage({ searchParams }: Props) {
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[10rem] flex-1">
                     <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-linda-espresso">
                       {produkt.jeDarkovyPoukaz && (
                         <Gift className="h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />

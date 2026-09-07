@@ -32,7 +32,7 @@ export default async function DetailZakaznicePage({ params }: { params: { id: st
       <div className="border-b border-linda-sand pb-6">
         <Link
           href="/admin/zakaznici"
-          className="mb-1 flex w-fit items-center gap-1 text-xs font-semibold text-linda-cognac hover:underline"
+          className="-ml-2 mb-1 flex min-h-touch w-fit items-center gap-1 px-2 text-xs font-semibold text-linda-cognac hover:underline"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Zpět na zákaznice
@@ -58,7 +58,10 @@ export default async function DetailZakaznicePage({ params }: { params: { id: st
           <h2 className="font-serif text-xl text-linda-espresso">Kontakt</h2>
           <p className="flex items-center gap-2 text-linda-espresso">
             <Mail className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
-            <a href={`mailto:${zakaznice.email}`} className="text-linda-cognac underline">
+            <a
+              href={`mailto:${zakaznice.email}`}
+              className="inline-flex min-h-touch items-center break-all text-linda-cognac underline"
+            >
               {zakaznice.email}
             </a>
           </p>

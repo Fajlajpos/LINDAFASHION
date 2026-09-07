@@ -37,7 +37,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <JsonLd data={organizaceLd(nastaveni)} />
       <JsonLd data={mistniProvozovnaLd(nastaveni)} />
 
-      <div className="flex min-h-screen flex-col text-linda-espresso selection:bg-linda-cognac selection:text-white">
+      <div className="flex flex-1 flex-col text-linda-espresso selection:bg-linda-cognac selection:text-white">
         {/* `role` slouží jen k tomu, jestli hlavička ukáže zkratku do
             administrace. Oprávnění to není: `/admin` hlídá middleware a každý
             admin endpoint si roli ověřuje proti databázi. U odebraných práv se

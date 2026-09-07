@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   AlertCircle,
@@ -66,6 +66,27 @@ export function DetailProduktu({
 
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  /* Průvodce velikostmi se choval jinak než ostatní překryvy na webu: nešel
+     zavřít Escapem a stránka pod ním skrolovala dál, takže se okno na telefonu
+     odsunulo mimo obrazovku. Zámek posunu i posluchač se ruší při zavření,
+     takže po sobě nic nezůstane. */
+  useEffect(() => {
+    if (!prubvodceOtevren) return;
+
+    const naKlavesu = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPrubvodceOtevren(false);
+    };
+    document.addEventListener('keydown', naKlavesu);
+
+    const puvodniPresah = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', naKlavesu);
+      document.body.style.overflow = puvodniPresah;
+    };
+  }, [prubvodceOtevren]);
 
   const varianta = produkt.varianty.find((v) => v.id === vybranaId) ?? vychoziVarianta;
   const jeOblibeny = isFavorite(produkt.slug);
@@ -503,12 +524,21 @@ export function DetailProduktu({
 
       {/* Průvodce velikostmi */}
       {prubvodceOtevren && (
-        <div className="animate-fadeIn fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        /* Zástěna skroluje, ne obsah okna: `items-center` přes `overflow-y-auto`
+           drží okno na středu, dokud se vejde, a jakmile přeroste (telefon na
+           šířku, zvětšené systémové písmo), začne se dát doskrolovat. Bez toho
+           se ořízlo a tlačítko „Rozumím“ nešlo trefit vůbec. */
+        <div
+          onClick={() => setPrubvodceOtevren(false)}
+          className="animate-fadeIn fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/60 p-4 backdrop-blur-sm"
+        >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="pruvodce-nadpis"
-            className="relative w-full max-w-md space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neuLg"
+            /* Klik uvnitř okna nesmí propadnout na zástěnu a zavřít ho. */
+            onClick={(e) => e.stopPropagation()}
+            className="relative my-auto w-full max-w-md space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neuLg"
           >
             <h2 id="pruvodce-nadpis" className="font-serif text-2xl text-linda-espresso">
               Průvodce velikostmi a jak se měřit

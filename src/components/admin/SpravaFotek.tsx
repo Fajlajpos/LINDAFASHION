@@ -2,7 +2,18 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { AlertCircle, ArrowDown, ArrowUp, Clock, Loader2, Star, Trash2, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  Camera,
+  Clock,
+  ImagePlus,
+  Loader2,
+  Star,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
 
 export interface AdminFotka {
@@ -41,6 +52,16 @@ const INTERVAL_MS = 2500;
  * ke kterému mohla dojít, byl že se fotka nenahrála.
  */
 const ZASEKNUTO_PO_MS = 60 * 1000;
+
+/**
+ * Tlačítko pro výběr fotek – stejné jako v `FormularProduktu`.
+ *
+ * Vyvýšená pilulka místo podtrženého textového odkazu: dotykový cíl musí mít
+ * 44 px a musí unést dvě tlačítka vedle sebe, protože focení a výběr
+ * z galerie potřebují každé svůj `<input>`.
+ */
+const TLACITKO_FOTKY =
+  'flex min-h-touch cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm';
 
 /** Jak dlouho fotka čeká na svůj krok – od zařazení, případně od převzetí. */
 function cekaMs(fotka: AdminFotka, ted: number): number {
@@ -243,9 +264,26 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
         ) : (
           <Upload className="mx-auto h-8 w-8 text-linda-cognac opacity-60" aria-hidden="true" />
         )}
-        <div className="text-xs">
-          <label className="cursor-pointer font-semibold text-linda-cognac hover:underline">
-            {nahravam ? 'Nahrávám…' : 'Přidat další fotky'}
+        <div className={`flex flex-col gap-2 sm:flex-row sm:justify-center ${nahravam ? 'pointer-events-none opacity-60' : ''}`}>
+          <label className={TLACITKO_FOTKY}>
+            <Camera className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+            {nahravam ? 'Nahrávám…' : 'Vyfotit'}
+            {/* Vlastní vstup, ne `capture` na tom společném: `capture` výběr
+                z galerie zakáže, takže by se druhá cesta ztratila. Bez
+                `multiple` – fotoaparát stejně vrací jednu fotku. */}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              capture="environment"
+              disabled={nahravam}
+              onChange={nahratFotky}
+              className="hidden"
+            />
+          </label>
+
+          <label className={TLACITKO_FOTKY}>
+            <ImagePlus className="h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+            Vybrat z galerie
             <input
               type="file"
               multiple

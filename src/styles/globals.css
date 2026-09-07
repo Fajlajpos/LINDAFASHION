@@ -141,6 +141,45 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
     0 0 0 4px var(--color-cognac);
 }
 
+/* ---------------------------------------------------------------------------
+   Zvětšení písma ve formulářových polích na mobilu.
+
+   Safari na iOS přiblíží celou stránku vždy, když dostane fokus prvek s písmem
+   menším než 16 px – a po opuštění pole ji **nezmenší zpět**. Zoom přitom
+   nesmíme zakázat (`maximumScale` v `layout.tsx` je záměrně nevyplněné, WCAG
+   1.4.4), takže jediná obrana je písmo samotné.
+
+   Celý web přitom jede na `text-xs`, tedy 12 px: sdílená `TRIDY_VSTUPU`
+   v `PoleFormulare`, `AuthField`, pole v pokladně i osm konstant `POLE`
+   v administraci. Bez tohohle pravidla znamená vyplnění pokladny z iPhonu
+   sedm přiblížení po sobě a založení produktu v administraci třicet.
+
+   Řeší se to tady jedním pravidlem, ne úpravou těch deseti konstant: nové
+   formuláře ho pak dostanou samy od sebe a nedá se na něj zapomenout.
+
+   **Selektor musí být `input[class]`, ne `input`.** Specifičnost holého prvku
+   je (0,1,1) proti (0,1,0) Tailwindí třídy `.text-xs` – atribut `[class]`
+   přidá právě tu jednu chybějící úroveň, takže pravidlo vyhraje i bez
+   `!important`. Se samotným `input` by se tiše nedělo nic.
+
+   Zaškrtávátka a přepínače vynecháváme – nemají text, který by šlo zvětšit,
+   ale `font-size` jim v některých prohlížečích mění velikost samotného
+   ovládacího prvku a rozhodilo by to zarovnání vedle popisku.
+
+   Jen pod `sm` (640 px). Na desktopu má hustý administrátorský formulář
+   zůstat hustý – tam žádné přibližování nehrozí.
+
+   Výška sedí: 16 px × 1.5 + `py-2.5` (2× 10 px) = 44 px, tedy přesně
+   `min-h-touch`.
+--------------------------------------------------------------------------- */
+@media (max-width: 639px) {
+  input[class]:not([type='checkbox']):not([type='radio']),
+  textarea[class],
+  select[class] {
+    font-size: 16px;
+  }
+}
+
 /* Odkaz pro přeskočení navigace – viditelný až při fokusu klávesnicí */
 .skip-link {
   position: absolute;

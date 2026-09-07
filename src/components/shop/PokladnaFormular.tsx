@@ -42,10 +42,24 @@ const Pole: React.FC<{
   type?: string;
   placeholder?: string;
   autoComplete?: string;
+  /** Klávesnice na telefonu. `type` necháváme `text`, ať se nepřidají šipky. */
+  inputMode?: 'text' | 'tel' | 'email' | 'numeric';
   required?: boolean;
   disabled?: boolean;
   chyba?: string;
-}> = ({ id, label, value, onChange, type = 'text', placeholder, autoComplete, required, disabled, chyba }) => (
+}> = ({
+  id,
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  autoComplete,
+  inputMode,
+  required,
+  disabled,
+  chyba,
+}) => (
   <div>
     <label htmlFor={id} className="mb-1 block text-xs font-semibold text-linda-espresso">
       {label}
@@ -60,6 +74,7 @@ const Pole: React.FC<{
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       autoComplete={autoComplete}
+      inputMode={inputMode}
       aria-invalid={chyba ? true : undefined}
       aria-describedby={chyba ? `${id}-chyba` : undefined}
       /* Prohlubeň místo rámečku – tvar sám říká „sem se píše“. */
@@ -473,6 +488,7 @@ export function PokladnaFormular({
                 label="PSČ"
                 required
                 autoComplete="postal-code"
+                inputMode="numeric"
                 placeholder="110 00"
                 value={form.dodaciPsc}
                 onChange={(v) => setForm({ ...form, dodaciPsc: v })}

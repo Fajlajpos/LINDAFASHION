@@ -265,8 +265,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Pricing & CTA */}
         <div className="mt-4 pt-3 border-t border-linda-sand/40 flex items-center justify-between gap-3">
-          <div>
-            <div className="flex items-baseline gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
               <span className="text-lg font-semibold text-linda-espresso">
                 {displayPrice?.toLocaleString('cs-CZ')} Kč
               </span>

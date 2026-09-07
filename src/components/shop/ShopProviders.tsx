@@ -47,16 +47,28 @@ export function ShopProviders({
   return (
     <CartProvider prihlasen={prihlasen}>
       <FavoritesProvider prihlasen={prihlasen}>
-        {children}
+        {/* Sloupec přes celou výšku okna musí obepínat i patičku.
 
-        <Footer
-          onOpenCookieSettings={() => setNastaveniCookiesOtevreno(true)}
-          socialInstagram={socialInstagram}
-          socialFacebook={socialFacebook}
-          nazevFirmy={nazevFirmy}
-          icoFirmy={icoFirmy}
-          zapisVRejstriku={zapisVRejstriku}
-        />
+            Dřív měl `min-h-screen` až vnitřek `(shop)/layout.tsx`, tedy jen
+            hlavička s obsahem – patička je jeho sourozenec a začínala proto
+            vždycky až za celou výškou obrazovky. Na krátkých stránkách
+            (prázdný košík, prázdné oblíbené) z toho byla obrazovka prázdna,
+            kterou musela zákaznice přeskrolovat, než na patičku narazila.
+
+            Layout uvnitř je `flex-1`, takže se pořadí ani ničemu jinému
+            nemění – jen se výška počítá o úroveň výš. */}
+        <div className="flex min-h-screen flex-col">
+          {children}
+
+          <Footer
+            onOpenCookieSettings={() => setNastaveniCookiesOtevreno(true)}
+            socialInstagram={socialInstagram}
+            socialFacebook={socialFacebook}
+            nazevFirmy={nazevFirmy}
+            icoFirmy={icoFirmy}
+            zapisVRejstriku={zapisVRejstriku}
+          />
+        </div>
 
         <CookieBanner
           isOpenExternal={nastaveniCookiesOtevreno}

@@ -319,14 +319,14 @@ function CenovaEvidence() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[34rem] text-left text-xs">
                   <thead>
                     <tr className="border-b border-linda-sand text-[10px] uppercase tracking-wider text-linda-espresso/60">
-                      <th className="py-2 pr-3 font-semibold">Platná od</th>
-                      <th className="py-2 pr-3 font-semibold">Prodejní cena</th>
-                      <th className="py-2 pr-3 font-semibold">Základní cena</th>
-                      <th className="py-2 pr-3 font-semibold">Sleva</th>
-                      <th className="py-2 font-semibold">Zdroj</th>
+                      <th scope="col" className="py-2 pr-3 font-semibold">Platná od</th>
+                      <th scope="col" className="py-2 pr-3 font-semibold">Prodejní cena</th>
+                      <th scope="col" className="py-2 pr-3 font-semibold">Základní cena</th>
+                      <th scope="col" className="py-2 pr-3 font-semibold">Sleva</th>
+                      <th scope="col" className="py-2 font-semibold">Zdroj</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -476,14 +476,14 @@ function SouhlasyOsoby() {
                     Záznamy o souhlasu
                   </h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full min-w-[34rem] text-left text-xs">
                       <thead>
                         <tr className="border-b border-linda-sand text-[10px] uppercase tracking-wider text-linda-espresso/60">
-                          <th className="py-2 pr-3 font-semibold">Kdy</th>
-                          <th className="py-2 pr-3 font-semibold">Čeho se týká</th>
-                          <th className="py-2 pr-3 font-semibold">Stav</th>
-                          <th className="py-2 pr-3 font-semibold">Verze</th>
-                          <th className="py-2 font-semibold">IP</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Kdy</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Čeho se týká</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Stav</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Verze</th>
+                          <th scope="col" className="py-2 font-semibold">IP</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -513,13 +513,13 @@ function SouhlasyOsoby() {
                     Souhlas s obchodními podmínkami u objednávek
                   </h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full min-w-[34rem] text-left text-xs">
                       <thead>
                         <tr className="border-b border-linda-sand text-[10px] uppercase tracking-wider text-linda-espresso/60">
-                          <th className="py-2 pr-3 font-semibold">Objednávka</th>
-                          <th className="py-2 pr-3 font-semibold">Souhlas udělen</th>
-                          <th className="py-2 pr-3 font-semibold">Verze podmínek</th>
-                          <th className="py-2 font-semibold">IP</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Objednávka</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Souhlas udělen</th>
+                          <th scope="col" className="py-2 pr-3 font-semibold">Verze podmínek</th>
+                          <th scope="col" className="py-2 font-semibold">IP</th>
                         </tr>
                       </thead>
                       <tbody>

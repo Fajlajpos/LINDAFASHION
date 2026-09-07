@@ -64,13 +64,20 @@ function StitekLhuty({ lhutaDo, stav }: { lhutaDo: string | null; stav: string }
     },
   }[nalehavost];
 
+  /* Datum konce lhůty bylo jen v `title`, tedy dostupné pouze najetím myší.
+     Na telefonu se `title` nezobrazí vůbec – a tohle je zákonná lhůta podle
+     § 19 odst. 3 zák. č. 634/1992 Sb., ne doplňková informace. Píšeme ho
+     proto natvrdo vedle počtu dnů; `title` zůstává jako celá věta. */
+  const datumKonce = konec.toLocaleDateString('cs-CZ');
+
   return (
     <span
-      title={`Zákonná lhůta ${DNU_NA_REKLAMACI} dnů končí ${konec.toLocaleDateString('cs-CZ')}`}
+      title={`Zákonná lhůta ${DNU_NA_REKLAMACI} dnů končí ${datumKonce}`}
       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${podle.tridy}`}
     >
       <CalendarClock className="h-3 w-3" aria-hidden="true" />
       {podle.text}
+      <span className="font-normal opacity-80">({datumKonce})</span>
     </span>
   );
 }
@@ -241,7 +248,7 @@ export default function AdminReklamacePage() {
                       {r.typ === 'VRACENI' ? 'Vrácení' : 'Reklamace'} ·{' '}
                       <Link
                         href={`/admin/objednavky/${r.orderId}`}
-                        className="text-linda-cognac underline"
+                        className="inline-block py-2 text-linda-cognac underline"
                       >
                         {r.cisloObjednavky}
                       </Link>
@@ -262,7 +269,7 @@ export default function AdminReklamacePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
                   <label htmlFor={`stav-${r.id}`} className="text-[11px] font-semibold text-linda-espresso">
                     Změnit stav:
                   </label>

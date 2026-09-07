@@ -70,12 +70,12 @@ const SkupinaOdkazu: React.FC<{
     <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-sand">
       {nadpis}
     </h2>
-    <ul className="mt-1 flex flex-wrap items-center gap-x-4 text-xs text-linda-cream/75">
+    <ul className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-linda-cream/75">
       {odkazy.map(({ href, label }) => (
         <li key={href}>
           <Link
             href={href}
-            className="inline-flex items-center py-1 transition-colors hover:text-linda-sand"
+            className="inline-flex min-h-touch items-center py-2 transition-colors hover:text-linda-sand"
           >
             {label}
           </Link>
@@ -167,7 +167,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <button
                   type="button"
                   onClick={onOpenCookieSettings}
-                  className="inline-flex cursor-pointer items-center py-1 text-linda-sand underline underline-offset-2 transition-colors hover:text-white"
+                  className="inline-flex min-h-touch cursor-pointer items-center py-2 text-linda-sand underline underline-offset-2 transition-colors hover:text-white"
                 >
                   Nastavení cookies
                 </button>
