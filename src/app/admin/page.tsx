@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { STAV_OBJEDNAVKY, formatDatum } from '@/lib/objednavka-popisky';
+import { nacistNastaveni } from '@/lib/nastaveni';
+import { provozniVarovani } from '@/lib/provozni-kontrola';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +52,89 @@ const Dlazdice: React.FC<{
     </span>
   </Link>
 );
+
+/**
+ * Provozní varování.
+ *
+ * Reliéf jde po pravidlech: zem → vyvýšená `cream` karta → pro každý bod
+ * prohlubeň v `sandLight`. Žádná další prohlubeň uvnitř – sedmistupňový
+ * rozpočet na to nemá místo.
+ *
+ * Kritické body nesou plnou kognakovou značku, doporučené jen obrys. Závažnost
+ * se tedy nepozná pouze barvou, ale i tvarem a slovem – barva sama by na to
+ * nestačila.
+ */
+const ProvozniVarovani: React.FC<{ varovani: ReturnType<typeof provozniVarovani> }> = ({
+  varovani,
+}) => {
+  if (varovani.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="provozni-varovani-nadpis"
+      className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu"
+    >
+      <h2
+        id="provozni-varovani-nadpis"
+        className="flex items-center gap-2 font-serif text-xl text-linda-espresso"
+      >
+        <TriangleAlert className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+        Vyžaduje pozornost
+      </h2>
+
+      <ul className="space-y-2">
+        {varovani.map((v) => {
+          const kriticke = v.zavaznost === 'kriticke';
+
+          const obsah = (
+            <>
+              <span
+                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                  kriticke ? 'bg-linda-cognac text-white shadow-neuDark' : 'bg-linda-cream shadow-neuSm'
+                }`}
+              >
+                <TriangleAlert
+                  className={`h-3.5 w-3.5 ${kriticke ? '' : 'text-linda-cognac'}`}
+                  aria-hidden="true"
+                />
+              </span>
+
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-linda-espresso">
+                  {v.nadpis}
+                  <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-linda-espresso/60">
+                    {kriticke ? 'Kritické' : 'Doporučené'}
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-linda-espresso/75">
+                  {v.dopad}
+                </span>
+              </span>
+            </>
+          );
+
+          const trida =
+            'flex items-start gap-3 rounded-xl bg-linda-sandLight p-3 shadow-neuInsetSm';
+
+          return (
+            <li key={v.klic}>
+              {v.odkaz ? (
+                <Link
+                  href={v.odkaz}
+                  className={`${trida} cursor-pointer transition-all duration-200 hover:shadow-neuInset`}
+                >
+                  {obsah}
+                </Link>
+              ) : (
+                <div className={trida}>{obsah}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+};
 
 export default async function AdminDashboardPage() {
   const zacatekMesice = new Date();
@@ -104,6 +189,11 @@ export default async function AdminDashboardPage() {
 
   const trzby = Number(trzbyMesic._sum.celkovaCena ?? 0);
 
+  /* Nastavení až tady: `provozniVarovani` čte i `process.env`, takže to není
+     čistě databázový dotaz a nepatří do `Promise.all` výše. */
+  const nastaveni = await nacistNastaveni();
+  const varovani = provozniVarovani(nastaveni);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-4 border-b border-linda-sand pb-6 sm:flex-row sm:items-center">
@@ -120,6 +210,8 @@ export default async function AdminDashboardPage() {
           Přidat produkt
         </Link>
       </div>
+
+      <ProvozniVarovani varovani={varovani} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Dlazdice

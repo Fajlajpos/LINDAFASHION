@@ -2,6 +2,14 @@ import { db } from '@/lib/db';
 import { odpovedOk, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano } from '@/lib/admin';
 
+/*
+ * Jako každá admin route: ověřuje přihlášení přes `cookies()`, takže ji Next
+ * nemůže předgenerovat. Bez téhle řádky se o to při buildu stejně pokusí
+ * a vyplívne `Dynamic server usage` – chyba, která nic neznamená, ale výpis
+ * buildu zaplevělí natolik, že se v něm skutečná chyba přehlédne.
+ */
+export const dynamic = 'force-dynamic';
+
 /**
  * Výrobci, kteří už v katalogu jsou.
  *
