@@ -57,6 +57,9 @@ services:
     volumes:
       - uploads_data:/app/public/uploads
       - storage_data:/app/storage
+      # Jen kvůli `stav.json`, ze kterého administrace pozná, že zálohy běží.
+      # Ke čtení – web do záloh nikdy nezapisuje.
+      - ./zalohy:/app/zalohy:ro
     # Zdravý `web` znamená "migrace doběhly a server odpovídá" – worker se na to
     # níž váže, aby nestartoval do databáze bez tabulek.
     healthcheck:
@@ -100,6 +103,43 @@ services:
     volumes:
       - uploads_data:/app/public/uploads
       - storage_data:/app/storage
+
+  # Noční záloha databáze a souborů.
+  #
+  # Vlastní kontejner, ne úloha ve workeru: `pg_dump` musí být ve stejné verzi
+  # jako server, a aplikační image (`node:20-alpine`) klienta Postgresu nemá.
+  # Doinstalovat ho tam by nafouklo `web` i `worker`, protože sdílí jeden tag –
+  # a ani jeden z nich `pg_dump` k ničemu nepotřebuje.
+  #
+  # Databáze schválně nepublikuje port, takže záloha musí běžet uvnitř téhle
+  # sítě. Odtud `--network` a jméno hostitele `postgres`.
+  zalohy:
+    # Verze MUSÍ sedět se službou `postgres` výš. `pg_dump` starší než server
+    # odmítne dumpovat; `postgres:alpine` bez čísla by se jednou tiše posunul.
+    image: postgres:16-alpine
+    container_name: linda_zalohy
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-linda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lindapassword}
+      POSTGRES_DB: ${POSTGRES_DB:-linda_fashion}
+      ZALOHY_DNU: ${ZALOHY_DNU:-30}
+      ZALOHY_CAS: ${ZALOHY_CAS:-04:10}
+    volumes:
+      # Zdroje jen ke čtení – záloha nesmí mít jak poškodit to, co zálohuje.
+      # Přípojné body kopírují rozložení aplikace v `/app`, aby v archivu byly
+      # cesty `public/uploads/…` a `storage/faktury/…` a obnova se rozbalovala
+      # rovnou na místo.
+      - uploads_data:/zdroj/public/uploads:ro
+      - storage_data:/zdroj/storage:ro
+      # Výstup je bind mount, ne pojmenovaný volume: zálohy se musí dát ze
+      # serveru odvézt jinam, a to je z volume zbytečná práce navíc.
+      - ./zalohy:/zalohy
+      - ./deploy/zaloha.sh:/zaloha.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ['sh', '/zaloha.sh', '--smycka']
 
   caddy:
     image: caddy:2-alpine

@@ -34,6 +34,9 @@ yarn-error.log*
 # dočasné originály čekající na zpracování workerem
 /storage
 
+# zálohy databáze a souborů (deploy/zaloha.sh je tam ukládá)
+/zalohy
+
 # vercel
 .vercel
 

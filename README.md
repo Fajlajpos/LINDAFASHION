@@ -82,6 +82,22 @@ z `.env`, pokud v databázi ještě žádný admin není.
 `web` a `worker` sdílí jeden image i jednu kódovou základnu, liší se jen
 spouštěcím příkazem.
 
+### Zálohy
+
+Se stackem se rozjede i kontejner `zalohy`: každou noc ve **04:10 UTC** udělá
+`pg_dump` celé databáze a archiv fotek a faktur do složky `./zalohy`, ověří, že
+jdou přečíst, a smaže zálohy starší než 30 dní. Nic se nenastavuje.
+
+Je to samostatný kontejner na `postgres:16-alpine`, protože `pg_dump` musí být
+ve stejné verzi jako server — aplikační image klienta Postgresu nemá a přidat ho
+tam by nafouklo `web` i `worker`.
+
+Když zálohy přestanou běžet, řekne to `/admin` v sekci „Vyžaduje pozornost".
+
+> **Zálohy leží na tomtéž serveru**, takže chrání před smazáním a poškozením dat,
+> ale ne před ztrátou serveru. Postup, jak je odvážet jinam, a hlavně **ověřený
+> postup obnovy** jsou v [`dokumenty/zalohy-a-obnova.md`](dokumenty/zalohy-a-obnova.md).
+
 ---
 
 ## Příkazy
@@ -100,6 +116,7 @@ spouštěcím příkazem.
 | `npm run db:studio` | Prisma Studio – prohlížeč databáze |
 | `npm run admin:reset-heslo -- <email> <heslo>` | reset hesla administrátorky |
 | `npm test` | testy (peníze, slugy, validace uploadu, limity požadavků) |
+| `docker compose run --rm zalohy sh /zaloha.sh --jednou` | záloha databáze a souborů hned teď |
 
 ---
 

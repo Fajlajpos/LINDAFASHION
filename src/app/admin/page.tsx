@@ -14,6 +14,7 @@ import { db } from '@/lib/db';
 import { STAV_OBJEDNAVKY, formatDatum } from '@/lib/objednavka-popisky';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { provozniVarovani } from '@/lib/provozni-kontrola';
+import { nacistStavZaloh } from '@/lib/zalohy';
 
 export const dynamic = 'force-dynamic';
 
@@ -189,10 +190,11 @@ export default async function AdminDashboardPage() {
 
   const trzby = Number(trzbyMesic._sum.celkovaCena ?? 0);
 
-  /* Nastavení až tady: `provozniVarovani` čte i `process.env`, takže to není
-     čistě databázový dotaz a nepatří do `Promise.all` výše. */
-  const nastaveni = await nacistNastaveni();
-  const varovani = provozniVarovani(nastaveni);
+  /* Nastavení a stav záloh až tady: `provozniVarovani` čte i `process.env`
+     a stav záloh je soubor na disku, takže ani jedno není databázový dotaz
+     a nepatří do `Promise.all` výše. */
+  const [nastaveni, stavZaloh] = await Promise.all([nacistNastaveni(), nacistStavZaloh()]);
+  const varovani = provozniVarovani(nastaveni, stavZaloh);
 
   return (
     <div className="space-y-8">

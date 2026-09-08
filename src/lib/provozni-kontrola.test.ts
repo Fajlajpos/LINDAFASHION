@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { NastaveniWebu } from './nastaveni';
 import { jeEmailNastaveny, provozniVarovani } from './provozni-kontrola';
+import type { StavZaloh } from './zalohy';
 
 /**
  * Kontrola hlídá věci, jejichž selhání není vidět: e-mail, který se neodešle,
@@ -128,5 +129,79 @@ describe('provozniVarovani', () => {
     for (const v of provozniVarovani(VYPLNENO)) {
       expect(v.odkaz === null, v.klic).toBe(v.klic === 'smtp');
     }
+  });
+});
+
+/*
+ * Zálohy se předávají jako druhý parametr, ne čtou uvnitř: funkce tím zůstává
+ * čistá a testy si stav podstrčí bez sahání na disk.
+ *
+ * Klíčové je rozlišení `undefined` (volající zálohy neřeší) od `null` (řeší je,
+ * ale žádná neproběhla). Bez něj by varování dostal každý, kdo funkci zavolá
+ * postaru – a všech pět testů nad tímhle blokem by spadlo.
+ */
+const ZALOHA_OK: StavZaloh = {
+  dokonceno: new Date().toISOString(),
+  uspech: true,
+  chyba: null,
+  dbBajtu: 105821,
+  souboryBajtu: 468173,
+  drzetDnu: 30,
+};
+
+describe('provozniVarovani – zálohy', () => {
+  const klice = (z?: StavZaloh | null) => provozniVarovani(VYPLNENO, z).map((v) => v.klic);
+
+  it('bez druhého parametru o zálohách nemluví', () => {
+    expect(klice()).toEqual([]);
+  });
+
+  it('čerstvá úspěšná záloha nehlásí nic', () => {
+    expect(klice(ZALOHA_OK)).toEqual([]);
+  });
+
+  it('chybějící stav hlásí jen doporučení – ve vývoji zálohy neběží', () => {
+    const varovani = provozniVarovani(VYPLNENO, null);
+    expect(varovani.map((v) => v.klic)).toEqual(['zalohy-chybi']);
+    expect(varovani[0].zavaznost).toBe('doporucene');
+  });
+
+  it('selhaná záloha je kritická a nese důvod', () => {
+    const varovani = provozniVarovani(VYPLNENO, {
+      ...ZALOHA_OK,
+      uspech: false,
+      chyba: 'pg_dump selhal',
+    });
+
+    expect(varovani.map((v) => v.klic)).toEqual(['zalohy-selhaly']);
+    expect(varovani[0].zavaznost).toBe('kriticke');
+    expect(varovani[0].dopad).toContain('pg_dump selhal');
+  });
+
+  it('vynechaná noc je kritická', () => {
+    const pred = new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString();
+    const varovani = provozniVarovani(VYPLNENO, { ...ZALOHA_OK, dokonceno: pred });
+
+    expect(varovani.map((v) => v.klic)).toEqual(['zalohy-zastaraly']);
+    expect(varovani[0].zavaznost).toBe('kriticke');
+  });
+
+  /* Selhání má přednost před stářím – hlásit u staré selhané zálohy „přestaly
+     přibývat“ místo konkrétního důvodu by zakrylo to podstatné. */
+  it('u staré a zároveň selhané zálohy hlásí selhání, ne stáří', () => {
+    const pred = new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString();
+    expect(klice({ ...ZALOHA_OK, uspech: false, chyba: 'disk plný', dokonceno: pred })).toEqual([
+      'zalohy-selhaly',
+    ]);
+  });
+
+  it('kritické zálohy jdou před doporučeními z nastavení', () => {
+    const varovani = provozniVarovani(
+      { ...VYPLNENO, zapisVRejstriku: null },
+      { ...ZALOHA_OK, uspech: false, chyba: 'disk plný' }
+    );
+
+    expect(varovani[0].klic).toBe('zalohy-selhaly');
+    expect(varovani.map((v) => v.klic)).toContain('zapis-rejstrik');
   });
 });

@@ -17,6 +17,9 @@ npm-debug.log*
 public/uploads
 storage
 
+# Zálohy nemají v image co dělat a build kontext by nafoukly o desítky MB.
+zalohy
+
 # Vývojové a dokumentační soubory
 README.md
 CLAUDE.md

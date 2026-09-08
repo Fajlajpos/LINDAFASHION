@@ -145,7 +145,14 @@
 - Omezení počtu pokusů (rate limiting) u přihlášení, kontaktního formuláře a veřejných formulářů.
 - Přístup k databázi jen z aplikačního serveru, databáze není vystavena do internetu.
 - Automatická retenční úloha maže osobní údaje po uplynutí lhůt (viz `src/lib/retence.ts`).
-- Zálohy: **[DOPLNIT — kdo je dělá, jak často, kde leží a jak dlouho se drží]**.
+- Zálohy: dělá je automaticky kontejner `zalohy` (skript `deploy/zaloha.sh`), každou noc
+  ve 04:10 UTC. Zálohuje se celá databáze a k tomu fotky produktů a PDF faktury. Leží na
+  témže serveru jako aplikace, ve složce `zalohy/` mimo veřejně dostupné cesty, a drží se
+  **30 dní**; starší se automaticky mažou. Přístup k nim má jen správce přes SSH.
+  Podrobnosti a postup obnovy: [`dokumenty/zalohy-a-obnova.md`](zalohy-a-obnova.md).
+- **Osobní údaje smazané retenční úlohou přežívají v zálohách nejdéle 30 dní.** Výmaz
+  v živé databázi je okamžitý, ze záloh údaje zmizí postupně, jak se zálohy obměňují.
+  Ze zálohy se obnovuje jen při havárii, ne pro běžný provoz.
 
 ---
 

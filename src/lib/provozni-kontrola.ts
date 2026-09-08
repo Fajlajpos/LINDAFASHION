@@ -16,6 +16,7 @@
  * dál; jen je na přehledu vidět, co zrovna nefunguje.
  */
 import type { NastaveniWebu } from './nastaveni';
+import { ZASTARALA_PO_HODINACH, stariHodin, type StavZaloh } from './zalohy';
 
 export type ZavaznostVarovani = 'kriticke' | 'doporucene';
 
@@ -40,7 +41,19 @@ export function jeEmailNastaveny(): boolean {
  * Pořadí je podle závažnosti, ne podle toho, jak se to sem psalo – kritické
  * věci musí být první i kdyby jich přibylo víc.
  */
-export function provozniVarovani(nastaveni: NastaveniWebu): ProvozniVarovani[] {
+export function provozniVarovani(
+  nastaveni: NastaveniWebu,
+  /**
+   * Stav noční zálohy z `nacistStavZaloh()`. Je to jediný vstup, který se čte
+   * z disku, takže se sem předává hotový — funkce zůstává čistá a synchronní
+   * a testy si stav podstrčí bez sahání na souborový systém.
+   *
+   * `undefined` (parametr se nepředal) se schválně liší od `null` (předal se,
+   * ale soubor neexistuje): volající, který zálohy neřeší, o nich nesmí dostat
+   * varování.
+   */
+  zalohy?: StavZaloh | null
+): ProvozniVarovani[] {
   const varovani: ProvozniVarovani[] = [];
 
   if (!jeEmailNastaveny()) {
@@ -121,6 +134,57 @@ export function provozniVarovani(nastaveni: NastaveniWebu): ProvozniVarovani[] {
       zavaznost: 'doporucene',
       odkaz: '/admin/nastaveni',
     });
+  }
+
+  /*
+   * Zálohy. Řeší se odděleně od nastavení, protože to není nevyplněné políčko,
+   * ale běžící (nebo neběžící) služba.
+   *
+   * Záloha, která tiše přestane běžet, vypadá zvenčí úplně stejně jako záloha,
+   * která běží. Přijde se na to až ve chvíli, kdy je potřeba obnovit – tedy
+   * v tu nejhorší možnou chvíli. Proto je selhání i zastarání kritické.
+   *
+   * Odkaz je `null` u všech tří: zálohy se nespravují v administraci, ale na
+   * serveru (`docker compose logs zalohy`). Ukázat sem odkaz do nastavení by
+   * poslal majitelku někam, kde s tím nic nesvede.
+   */
+  if (zalohy !== undefined) {
+    if (zalohy === null) {
+      varovani.push({
+        klic: 'zalohy-chybi',
+        nadpis: 'Neběží zálohování',
+        dopad:
+          'Nenašel se žádný záznam o proběhlé záloze. Při ztrátě databáze by nebylo z čeho ' +
+          'obnovit objednávky, faktury ani fotky produktů – originály fotek se po zpracování ' +
+          'mažou, takže je nejde vyrobit znovu. Zkontrolujte službu `zalohy` ' +
+          '(`docker compose logs zalohy`). Ve vývoji je tahle hláška v pořádku.',
+        zavaznost: 'doporucene',
+        odkaz: null,
+      });
+    } else if (!zalohy.uspech) {
+      varovani.push({
+        klic: 'zalohy-selhaly',
+        nadpis: 'Poslední záloha selhala',
+        dopad:
+          `Zálohování skončilo chybou: ${zalohy.chyba ?? 'důvod není zaznamenaný'}. ` +
+          'Starší zálohy zůstávají na místě, ale nových nepřibývá. ' +
+          'Podrobnosti jsou v `docker compose logs zalohy`.',
+        zavaznost: 'kriticke',
+        odkaz: null,
+      });
+    } else if (stariHodin(zalohy) > ZASTARALA_PO_HODINACH) {
+      const dnu = Math.floor(stariHodin(zalohy) / 24);
+      varovani.push({
+        klic: 'zalohy-zastaraly',
+        nadpis: 'Zálohy přestaly přibývat',
+        dopad:
+          `Poslední záloha proběhla před ${dnu === 0 ? 'více než dnem' : `${dnu} dny`}, ` +
+          'ačkoliv má běžet každou noc. Zálohovací služba nejspíš neběží – ' +
+          'zkontrolujte `docker compose ps zalohy`.',
+        zavaznost: 'kriticke',
+        odkaz: null,
+      });
+    }
   }
 
   const poradi: Record<ZavaznostVarovani, number> = { kriticke: 0, doporucene: 1 };
