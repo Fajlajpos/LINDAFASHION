@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 // které cesty nepřepisuje (stejný důvod jako u kódu workeru).
 import { hledaciNazevKategorie, hledaciTextProduktu } from '../src/lib/vyhledavani';
 import { VYCHOZI_ZNENI } from '../src/lib/pravni-dokumenty';
+import { stavSlevyNovehoProduktu, zapsatCenu } from '../src/lib/cenova-historie';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,16 @@ async function main() {
   await prisma.discountCode.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.productVariant.deleteMany();
+
+  /*
+   * Cenová evidence musí padnout **před** produkty, ne s nimi.
+   *
+   * `PriceHistory` visí na produktu přes `onDelete: Restrict` – schválně, aby
+   * `product.delete()` nemohlo tiše zničit důkazy o cenách. Tady je to ale
+   * úplný úklid vývojové databáze, takže se maže výslovně a nahlas; kdyby se
+   * na to zapomnělo, druhé spuštění seedu by spadlo na cizím klíči.
+   */
+  await prisma.priceHistory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
   await prisma.address.deleteMany();
@@ -202,6 +213,26 @@ async function main() {
       material: '100% Přírodní italské hedvábí',
       udrzba: 'Šetrné ruční praní na 30°C nebo chemické čištění. Žehlit na nízkou teplotu z rubu.',
       sku: 'LF-SAT-001',
+
+      // --- Povinné údaje o výrobku ------------------------------------
+      // Bez nich by produkt neprošel `produktSchema` v administraci.
+      // Seed píše rovnou přes Prismu, takže si je musí doplnit sám –
+      // jinak naseedovaný e-shop nabízí zboží, které nabízet nesmí.
+      //
+      // Nařízení (EU) 1007/2011: složení vláken v procentech. `material`
+      // výš je marketingový text a povinnost nevyčerpává.
+      slozeniMaterialu: '100 % hedvábí',
+      // Hedvábí je sice živočišné vlákno, ale čl. 12 míří na *netextilní*
+      // části – kůži, rohovinu, perleť. Ty tenhle model nemá, takže false.
+      obsahujeZivocisneCasti: false,
+
+      // GPSR, nařízení (EU) 2023/988. Výrobce sídlí v Unii, takže
+      // `vyrobceMimoEu` zůstává false a odpovědná osoba podle čl. 16
+      // se nevyplňuje – buď celá, nebo vůbec.
+      vyrobceNazev: 'Milano Elegance S.r.l.',
+      vyrobceAdresa: 'Via della Spiga 21, 20121 Milano, Itálie',
+      vyrobceEmail: 'vyrobce@milanoelegance.example',
+      zemePuvodu: 'Itálie',
       aktivni: true,
       doporuceny: true,
       metaTitle: 'Hedvábné šaty Bellissima | LINDA FASHION',
@@ -233,6 +264,12 @@ async function main() {
       // fotek se v e-shopu i v administraci zobrazí s grafickým zástupným
       // symbolem – dřív tu vznikal řádek se stavem HOTOVO a `url: null`,
       // tedy "hotová" fotka, kterou není kde vzít.
+      //
+      // Je to jediné pravidlo z GPSR, které naseedovaná data nesplňují:
+      // `lzeZverejnitBezFotek` u aktivního produktu fotku vyžaduje (čl. 19
+      // písm. c – identifikace „včetně vyobrazení"), takže administrace by
+      // tenhle produkt uložit nenechala. Vyřeší se to nahráním skutečných
+      // fotek, ne změnou pravidla.
     },
   });
 
@@ -248,6 +285,26 @@ async function main() {
       material: '100% Premium toskánský len',
       udrzba: 'Praní v pračce na 30°C. Sušit volně vyvěšené.',
       sku: 'LF-HAL-002',
+
+      // --- Povinné údaje o výrobku ------------------------------------
+      // Bez nich by produkt neprošel `produktSchema` v administraci.
+      // Seed píše rovnou přes Prismu, takže si je musí doplnit sám –
+      // jinak naseedovaný e-shop nabízí zboží, které nabízet nesmí.
+      //
+      // Nařízení (EU) 1007/2011: složení vláken v procentech. `material`
+      // výš je marketingový text a povinnost nevyčerpává.
+      slozeniMaterialu: '100 % len',
+      // „Matné perleťové knoflíčky“ z popisu – přesně ta netextilní část
+      // živočišného původu, kterou složení vláken nezachytí.
+      obsahujeZivocisneCasti: true,
+
+      // GPSR, nařízení (EU) 2023/988. Výrobce sídlí v Unii, takže
+      // `vyrobceMimoEu` zůstává false a odpovědná osoba podle čl. 16
+      // se nevyplňuje – buď celá, nebo vůbec.
+      vyrobceNazev: 'Toscana Style S.r.l.',
+      vyrobceAdresa: "Via de' Tornabuoni 4, 50123 Firenze, Itálie",
+      vyrobceEmail: 'vyrobce@toscanastyle.example',
+      zemePuvodu: 'Itálie',
       aktivni: true,
       doporuceny: false,
       variants: {
@@ -282,6 +339,24 @@ async function main() {
       material: '70% Kašmír, 30% Merino vlna',
       udrzba: 'Ruční praní ve studené vodě s přípravkem na kašmír.',
       sku: 'LF-SVE-003',
+
+      // --- Povinné údaje o výrobku ------------------------------------
+      // Bez nich by produkt neprošel `produktSchema` v administraci.
+      // Seed píše rovnou přes Prismu, takže si je musí doplnit sám –
+      // jinak naseedovaný e-shop nabízí zboží, které nabízet nesmí.
+      //
+      // Nařízení (EU) 1007/2011: složení vláken v procentech. `material`
+      // výš je marketingový text a povinnost nevyčerpává.
+      slozeniMaterialu: '70 % kašmír, 30 % vlna',
+      obsahujeZivocisneCasti: false,
+
+      // GPSR, nařízení (EU) 2023/988. Výrobce sídlí v Unii, takže
+      // `vyrobceMimoEu` zůstává false a odpovědná osoba podle čl. 16
+      // se nevyplňuje – buď celá, nebo vůbec.
+      vyrobceNazev: 'Roma Knitwear S.r.l.',
+      vyrobceAdresa: 'Via del Corso 12, 00186 Roma, Itálie',
+      vyrobceEmail: 'vyrobce@romaknitwear.example',
+      zemePuvodu: 'Itálie',
       aktivni: true,
       doporuceny: true,
       variants: {
@@ -309,6 +384,24 @@ async function main() {
       material: '80% Vlna, 20% Kašmír',
       udrzba: 'Pouze chemické čištění.',
       sku: 'LF-KAB-004',
+
+      // --- Povinné údaje o výrobku ------------------------------------
+      // Bez nich by produkt neprošel `produktSchema` v administraci.
+      // Seed píše rovnou přes Prismu, takže si je musí doplnit sám –
+      // jinak naseedovaný e-shop nabízí zboží, které nabízet nesmí.
+      //
+      // Nařízení (EU) 1007/2011: složení vláken v procentech. `material`
+      // výš je marketingový text a povinnost nevyčerpává.
+      slozeniMaterialu: '80 % vlna, 20 % kašmír',
+      obsahujeZivocisneCasti: false,
+
+      // GPSR, nařízení (EU) 2023/988. Výrobce sídlí v Unii, takže
+      // `vyrobceMimoEu` zůstává false a odpovědná osoba podle čl. 16
+      // se nevyplňuje – buď celá, nebo vůbec.
+      vyrobceNazev: 'Venezia Tailoring S.r.l.',
+      vyrobceAdresa: 'Calle Larga XXII Marzo 2093, 30124 Venezia, Itálie',
+      vyrobceEmail: 'vyrobce@veneziatailoring.example',
+      zemePuvodu: 'Itálie',
       aktivni: true,
       doporuceny: true,
       variants: {
@@ -391,6 +484,7 @@ async function main() {
   // zapomenout u produktu, který sem někdo přidá později. Stejná funkce běží
   // v administraci při každém uložení, takže se seed a provoz nerozejdou.
   await preindexovatVyhledavani();
+  await zalozitCenovouEvidenci();
   await zalozitPravniDokumenty();
 
   console.log('✅ Seedování databáze LINDA FASHION bylo úspěšně dokončeno!');
@@ -427,6 +521,43 @@ async function zalozitPravniDokumenty() {
 
     console.log(`📜 Vloženo výchozí znění „${vychozi.nadpis}" jako verze ${dnes}.`);
   }
+}
+
+/**
+ * Cenová evidence k naseedovaným produktům (§ 12a zák. č. 634/1992 Sb.).
+ *
+ * Bez ní by seed vyrobil produkt, který **oznamuje slevu, ale nemá ji čím
+ * doložit**: „Kašmírový svetr Roma" má `cenaPoSleve`, takže karta ukáže
+ * přeškrtnutou cenu – a `popisNejnizsiCeny(null)` k ní nevrátí povinnou
+ * referenční větu. Zároveň by `/admin/doklady` neměly u toho produktu co
+ * vytisknout, kdyby se na evidenci někdo zeptal.
+ *
+ * Jede to přes `zapsatCenu` a `stavSlevyNovehoProduktu`, ne přes ruční
+ * `priceHistory.create`: administrace zapisuje ceny toutéž cestou a dvě
+ * implementace téhož pravidla se časem rozejdou.
+ *
+ * Referenční cena se u čerstvě založeného produktu bere z jeho základní ceny
+ * (§ 12a odst. 2 – u zboží v prodeji kratším než 30 dnů je to nejnižší cena
+ * od začátku prodeje). Proto stačí čistá funkce a není se čeho doptávat.
+ */
+async function zalozitCenovouEvidenci() {
+  const produkty = await prisma.product.findMany({
+    select: { id: true, cena: true, cenaPoSleve: true },
+  });
+
+  for (const p of produkty) {
+    // Stav slevy nejdřív, zápis evidence až po něm – stejné pořadí jako
+    // v administraci, ať se okno nikdy nepočítá z řádku, který sami píšeme.
+    const stav = stavSlevyNovehoProduktu(p.cena, p.cenaPoSleve);
+
+    await zapsatCenu(prisma, p.id, p.cena, p.cenaPoSleve, 'seed');
+
+    if (stav.nejnizsiCena30DniHaleru !== null) {
+      await prisma.product.update({ where: { id: p.id }, data: stav });
+    }
+  }
+
+  console.log(`💰 Cenová evidence založena pro ${produkty.length} produktů.`);
 }
 
 async function preindexovatVyhledavani() {

@@ -511,19 +511,36 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       };
     }
 
+    /*
+     * Docházející sklad. Táž událost přichází ze dvou míst a `slug` je rozlišuje:
+     *
+     *   • bez `slug` – kousek leží zákaznici v košíku, odkaz vede do košíku;
+     *   • se `slug` – má ho mezi oblíbenými, odkaz vede na produkt.
+     *
+     * Dokud šablona znala jen košík, věta „ve vašem košíku" by u oblíbených
+     * lhala a tlačítko „Dokončit nákup" by ji poslalo do prázdného košíku.
+     * Nový `TypEmailu` to nedostalo schválně: je to jedna zpráva o jedné
+     * události, jen jinak nalezená.
+     */
     case 'dochazejici-sklad': {
-      const nazev = String(data.nazev ?? 'Zboží z vašeho košíku');
-      const odkaz = `${web}/kosik`;
+      const slug = data.slug ? String(data.slug) : null;
+      const nazev = String(
+        data.nazev ?? (slug ? 'Zboží z vašich oblíbených' : 'Zboží z vašeho košíku')
+      );
+
+      const odkaz = slug ? `${web}/produkt/${slug}` : `${web}/kosik`;
+      const kde = slug ? 'z vašich oblíbených' : 've vašem košíku';
+      const popisek = slug ? 'Zobrazit kousek' : 'Dokončit nákup';
 
       return {
         predmet: `${nazev} dochází – LINDA FASHION`,
         html: obalka(
           'Posledních pár kousků',
           odstavec('Dobrý den,') +
-          odstavec(`z <strong>${e(nazev)}</strong> ve vašem košíku zbývá jen pár kusů.`) +
-          tlacitko('Dokončit nákup', odkaz)
+          odstavec(`z <strong>${e(nazev)}</strong> ${e(kde)} zbývá jen pár kusů.`) +
+          tlacitko(popisek, odkaz)
         ),
-        text: ['Dobrý den,', '', `z ${nazev} ve vašem košíku zbývá jen pár kusů.`, odkaz].join('\n'),
+        text: ['Dobrý den,', '', `z ${nazev} ${kde} zbývá jen pár kusů.`, odkaz].join('\n'),
       };
     }
 

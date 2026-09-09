@@ -130,6 +130,58 @@ describe('PATCH /api/admin/reklamace/[id]', () => {
     expect(Number(poukaz.zustatek)).toBe(300);
   });
 
+  /*
+   * Regrese: kusy vrácené dřívější **uznanou** žádostí se při vrácení celé
+   * objednávky přičetly znovu. Jeden fyzický kus se tak započítal dvakrát
+   * a e-shop nabízel zboží, které nemá.
+   *
+   * Do tohohle stavu se dá dojít bez jediného kliknutí zákaznice:
+   * `/api/admin/reklamace` umí založit vrácení celé objednávky i po uznaném
+   * částečném. Podmínka proto patří k zápisu, ne jen do formuláře.
+   */
+  it('vrácení celé objednávky nepřičte kus vrácený už dřív', async () => {
+    const { prvni, druhy, orderId } = await pripravitObjednavku();
+
+    // Sklad po objednávce: z obou kousků ubyl jeden.
+    expect(await skladem(prvni.variantId)).toBe(4);
+    expect(await skladem(druhy.variantId)).toBe(4);
+
+    const polozky = await db.orderItem.findMany({ where: { orderId }, orderBy: { id: 'asc' } });
+    const polozkaPrvni = polozky.find((p) => p.variantId === prvni.variantId);
+    if (!polozkaPrvni) throw new Error('položku objednávky se nepodařilo najít');
+
+    // 1. Zákaznice vrátí jeden kus samostatně a majitelka ho uzná.
+    const castecne = await db.reklamace.create({
+      data: { orderId, orderItemId: polozkaPrvni.id, typ: 'VRACENI', duvod: 'Malá velikost.' },
+    });
+
+    const prvniOdpoved = await PATCH(pozadavek({ stav: 'VYRIZENA_UZNANA' }), {
+      params: { id: castecne.id },
+    });
+
+    expect(prvniOdpoved.status).toBe(200);
+    expect(await skladem(prvni.variantId)).toBe(5);
+    expect(await skladem(druhy.variantId)).toBe(4);
+
+    // 2. Pak se uzná odstoupení od celé objednávky.
+    const cela = await db.reklamace.create({
+      data: { orderId, orderItemId: null, typ: 'VRACENI', duvod: 'Vracím zbytek.' },
+    });
+
+    const druhaOdpoved = await PATCH(pozadavek({ stav: 'VYRIZENA_UZNANA' }), {
+      params: { id: cela.id },
+    });
+
+    expect(druhaOdpoved.status).toBe(200);
+
+    // Druhý kus se vrátí. První ne – ten už na skladě je.
+    expect(await skladem(prvni.variantId)).toBe(5);
+    expect(await skladem(druhy.variantId)).toBe(5);
+
+    const objednavka = await db.order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(objednavka.stav).toBe('VRACENA');
+  });
+
   it('uznaná reklamace sklad nezvyšuje – vadný kus se do prodeje nevrací', async () => {
     const { prvni, orderId } = await pripravitObjednavku();
 

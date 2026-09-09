@@ -148,6 +148,57 @@ describe('najitProOdstoupeni – částečné odstoupení', () => {
     expect(duvod).toBe('jiz_podano');
   });
 
+  it('uznaná žádost blokuje druhé odstoupení téhož kusu', async () => {
+    /*
+     * Uznané odstoupení je právo **vyčerpané**, ne rozpracované. Dokud se
+     * počítaly jen stavy PRIJATA a RESI_SE, přestal se kus po uznání počítat
+     * úplně: formulář ho nabídl podruhé a druhé uznání navýšilo sklad znovu
+     * za jeden fyzický kus. Objednávka u částečného vrácení zůstává
+     * v původním stavu, takže ji nezachytí ani kontrola uzavřených stavů.
+     */
+    const objednavka = await zalozitObjednavku(1);
+
+    await db.reklamace.create({
+      data: {
+        orderId: objednavka.id,
+        orderItemId: objednavka.items[0].id,
+        typ: 'VRACENI',
+        stav: 'VYRIZENA_UZNANA',
+      },
+    });
+
+    const { duvod, jizPodanePolozky } = await najitProOdstoupeni({
+      token: objednavka.verejnyToken,
+    });
+
+    expect(duvod).toBe('jiz_podano');
+    expect(jizPodanePolozky).toEqual([objednavka.items[0].id]);
+  });
+
+  it('uznané vrácení jednoho kusu nechá druhý vrátit dál', async () => {
+    // Protipól předchozího případu: blokovat se má ten vrácený kus, ne celá
+    // objednávka. Lhůta na zbytek zákaznici pořád běží.
+    const objednavka = await zalozitObjednavku(2);
+    const [prvni, druhy] = objednavka.items;
+
+    await db.reklamace.create({
+      data: {
+        orderId: objednavka.id,
+        orderItemId: prvni.id,
+        typ: 'VRACENI',
+        stav: 'VYRIZENA_UZNANA',
+      },
+    });
+
+    const { duvod, jizPodanePolozky } = await najitProOdstoupeni({
+      token: objednavka.verejnyToken,
+    });
+
+    expect(duvod).toBeNull();
+    expect(jizPodanePolozky).toEqual([prvni.id]);
+    expect(jizPodanePolozky).not.toContain(druhy.id);
+  });
+
   it('vyřízená žádost už další odstoupení neblokuje', async () => {
     const objednavka = await zalozitObjednavku(1);
 

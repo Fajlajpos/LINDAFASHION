@@ -102,7 +102,37 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
       if (!chceVratitNaSklad) return 'ok' as const;
 
-      const polozky = reklamace.orderItem ? [reklamace.orderItem] : reklamace.order.items;
+      /*
+       * Kusy, které už vrátila jiná **uznaná** žádost, se nepřičítají znovu.
+       *
+       * U vrácení celé objednávky se jinak projedou všechny `order.items` —
+       * včetně toho, který zákaznice vrátila minulý týden samostatně a který
+       * se tehdy na sklad vrátil. Jeden fyzický kus by se tak započítal
+       * dvakrát a e-shop by nabízel zboží, které nemá.
+       *
+       * Nestačí to hlídat ve formuláři (`najitProOdstoupeni`): `/api/admin/reklamace`
+       * umí založit vrácení celé objednávky i po uznaném částečném, takže se
+       * sem dá dojít bez jediného kliknutí zákaznice. Podmínka patří k zápisu,
+       * ne k tomu, kdo ho vyvolal.
+       */
+      const jizVracene = celaObjednavka
+        ? await tx.reklamace.findMany({
+            where: {
+              orderId: reklamace.orderId,
+              typ: 'VRACENI',
+              stav: 'VYRIZENA_UZNANA',
+              orderItemId: { not: null },
+              NOT: { id: params.id },
+            },
+            select: { orderItemId: true },
+          })
+        : [];
+
+      const jizVraceneId = new Set(jizVracene.map((r) => r.orderItemId));
+
+      const polozky = (
+        reklamace.orderItem ? [reklamace.orderItem] : reklamace.order.items
+      ).filter((p) => !jizVraceneId.has(p.id));
 
       if (celaObjednavka) {
         /*

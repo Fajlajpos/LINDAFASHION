@@ -37,6 +37,21 @@ export async function vygenerovatPoukazyUloha(data: UlohaPoukazy): Promise<void>
     return;
   }
 
+  /*
+   * A jen k objednávce, která pořád platí.
+   *
+   * Zaplaceno samo o sobě nestačí: kód na doručitele se dá utratit i po tom,
+   * co se nákup zrušil, a zpátky ho nikdo nevezme. `platba.ts` už zrušenou
+   * objednávku za zaplacenou označit nenechá, tohle je druhá vrstva – u
+   * platidla se vyplatí, protože chyba tímhle směrem se nedá vzít zpět.
+   */
+  if (objednavka.stav === 'ZRUSENA' || objednavka.stav === 'VRACENA') {
+    console.warn(
+      `[poukazy] Objednávka ${objednavka.cisloObjednavky} je ve stavu ${objednavka.stav} – poukazy se nevydávají.`
+    );
+    return;
+  }
+
   /** Kódy vydané v tomhle běhu – posílají se zákaznici jedním e-mailem. */
   const noveKody: string[] = [];
 

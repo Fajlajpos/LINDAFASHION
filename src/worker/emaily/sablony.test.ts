@@ -19,6 +19,35 @@ describe('sestavitEmail', () => {
     process.env = { ...puvodni };
   });
 
+  describe('dochazejici-sklad', () => {
+    /*
+     * Tatáž šablona slouží dvěma zdrojům a `slug` je rozlišuje. Dokud znala
+     * jen košík, upozornění na kousek z oblíbených by tvrdilo, že leží
+     * v košíku, a tlačítko by ji poslalo do prázdného košíku.
+     */
+    it('bez slug mluví o košíku a vede do košíku', () => {
+      const email = sestavitEmail('dochazejici-sklad', { nazev: 'Lněná halenka Firenze (M)' });
+
+      expect(email).not.toBeNull();
+      expect(email!.html).toContain('https://lindafashion.cz/kosik');
+      expect(email!.text).toContain('ve vašem košíku');
+      expect(email!.text).not.toContain('oblíbených');
+    });
+
+    it('se slug mluví o oblíbených a vede na produkt', () => {
+      const email = sestavitEmail('dochazejici-sklad', {
+        nazev: 'Vlněný kabát Venezia',
+        slug: 'vlneny-kabat-venezia',
+      });
+
+      expect(email).not.toBeNull();
+      expect(email!.html).toContain('https://lindafashion.cz/produkt/vlneny-kabat-venezia');
+      expect(email!.text).toContain('z vašich oblíbených');
+      // Odkaz do košíku by u oblíbeného kousku vedl do prázdna.
+      expect(email!.html).not.toContain('/kosik');
+    });
+  });
+
   it('neznámý typ nevrací prázdnou zprávu, ale null', () => {
     // Kdyby vracel prázdný řetězec, odešel by prázdný e-mail a nikdo by se
     // to nedozvěděl. `null` doručovací úloha pozná a jen ho zaloguje.

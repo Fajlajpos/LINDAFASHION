@@ -47,7 +47,7 @@ export interface VysledekHledani {
   objednavka: NalezenaObjednavka | null;
   duvod: DuvodOdmitnuti | null;
   /**
-   * Položky, které už rozpracované odstoupení pokrývá.
+   * Položky, které už pokrývá jiné odstoupení – rozpracované i uznané.
    *
    * Odstoupit lze i **částečně** – vrátit jedny šaty ze tří a zbytek si nechat
    * (§ 1829 nikde neříká, že se odstupuje od celé objednávky). Formulář proto
@@ -179,12 +179,22 @@ export async function najitProOdstoupeni(
    * jediná otevřená žádost a další odstoupení se odmítlo — což zákaznici,
    * která minulý týden vrátila jedny šaty a teď chce vrátit i druhé, upíralo
    * právo, na které jí lhůta pořád běží.
+   *
+   * `VYRIZENA_UZNANA` se počítá stejně jako nevyřízená žádost: uznané
+   * odstoupení je právo **vyčerpané**, ne rozpracované. Dokud tu ten stav
+   * chyběl, přestal se kus po uznání počítat úplně — formulář ho nabídl
+   * znovu a druhé uznání navýšilo sklad podruhé za jeden fyzický kus.
+   * Objednávka přitom u částečného vrácení zůstává v původním stavu, takže
+   * ji nezachytí ani kontrola `UZAVRENE` výš.
+   *
+   * `VYRIZENA_ZAMITNUTA` naopak blokovat nesmí. Zamítnutím se právo
+   * nevyčerpalo a lhůta zákaznici běží dál.
    */
   const otevrene = await db.reklamace.findMany({
     where: {
       orderId: objednavka.id,
       typ: 'VRACENI',
-      stav: { in: ['PRIJATA', 'RESI_SE'] },
+      stav: { in: ['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA'] },
     },
     select: { orderItemId: true },
   });
@@ -218,7 +228,9 @@ export function zpravaKDuvodu(duvod: DuvodOdmitnuti): string {
     case 'lhuta_vyprsela':
       return `Zákonná lhůta ${DNU_NA_ODSTOUPENI} dnů od převzetí zboží už uplynula. Reklamovat vadu ale můžete i dál – po celou dobu záruky.`;
     case 'jiz_podano':
-      return 'Vaše odstoupení už evidujeme a pracujeme na něm. Potvrzení jsme vám poslali e-mailem.';
+      // Pokrývá obojí: rozpracovanou žádost i tu už uznanou. Rozdíl mezi nimi
+      // zákaznici nic neřekne — obojí znamená „tohle už u nás vracíte".
+      return 'Vaše odstoupení u téhle objednávky už evidujeme. Potvrzení jsme vám poslali e-mailem.';
   }
 }
 

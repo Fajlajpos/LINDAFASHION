@@ -72,18 +72,42 @@ export interface PlatnaZmena {
   novyEmail: string;
 }
 
-/** Vrátí žádost, pokud je token platný, nepoužitý a nevypršel. */
+/**
+ * Vrátí žádost, pokud je token platný, nepoužitý, nevypršel — a účet pořád
+ * existuje jako účet živé zákaznice.
+ *
+ * Kontrola `anonymizovanoAt` tu je ze stejného důvodu jako
+ * v `/api/auth/zapomenute-heslo`: po žádosti o výmaz se účet nemaže fyzicky,
+ * jen se přepíše na zástupnou adresu. Token vydaný **před** výmazem by jinak
+ * ještě 24 hodin platil a přepsal by ji zpátky na skutečnou — tedy vrátil na
+ * anonymizovaný účet živý osobní údaj, a to bez jakéhokoli přihlášení.
+ *
+ * Anonymizace sama žádosti maže, takže tohle je druhá vrstva. Stojí za to:
+ * je to jediné místo, kde se e-mail účtu dá změnit bez hesla, a rozhoduje
+ * o něm odkaz ležící v cizí schránce.
+ *
+ * Patří to sem, ne do route handleru — funkci sdílí potvrzovací stránka
+ * i endpoint a dvě kopie autorizační kontroly se časem rozejdou.
+ */
 export async function overitTokenZmeny(token: string): Promise<PlatnaZmena | null> {
   if (!token || token.length < 20) return null;
 
   const zaznam = await db.zmenaEmailu.findUnique({
     where: { tokenHash: otisk(token) },
-    select: { id: true, userId: true, novyEmail: true, platnyDo: true, pouzitoAt: true },
+    select: {
+      id: true,
+      userId: true,
+      novyEmail: true,
+      platnyDo: true,
+      pouzitoAt: true,
+      user: { select: { anonymizovanoAt: true } },
+    },
   });
 
   if (!zaznam) return null;
   if (zaznam.pouzitoAt !== null) return null;
   if (zaznam.platnyDo.getTime() < Date.now()) return null;
+  if (zaznam.user.anonymizovanoAt !== null) return null;
 
   return { id: zaznam.id, userId: zaznam.userId, novyEmail: zaznam.novyEmail };
 }

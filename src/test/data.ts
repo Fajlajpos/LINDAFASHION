@@ -27,6 +27,7 @@ const TABULKY = [
   'Favorite',
   'Address',
   'PasswordReset',
+  'ZmenaEmailu',
   'StockNotification',
   'NewsletterSubscriber',
   'ContactMessage',

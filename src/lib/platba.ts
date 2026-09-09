@@ -91,13 +91,57 @@ export async function vyhodnotitPlatbu(platbaId: string): Promise<VysledekPlatby
    * prošly kontrolou „ještě není zaplaceno" a každý zařadil vlastní úlohu na
    * vygenerování dárkových poukazů. Zákaznice by dostala kódy dvakrát, a to
    * jsou peníze.
+   *
+   * `stav` je v podmínce ze stejného důvodu, jen z druhé strany. Zrušená
+   * objednávka má zboží dávno zpátky na skladě; kdyby ji notifikace přesto
+   * označila za zaplacenou, přegeneroval by se doklad a vygenerovaly poukazy
+   * k nákupu, který neplatí. Dá se to trefit úplně obyčejně: zákaznice nechá
+   * otevřenou bránu, ve vedlejší záložce objednávku stornuje a platbu pak
+   * dokončí. Totéž platí pro `VRACENA` a pro objednávku, kterou majitelka
+   * ručně přepnula na vrácenou platbu – i tu by pozdní notifikace vrátila
+   * zpátky na „zaplaceno".
    */
   const zmeneno = await db.order.updateMany({
-    where: { id: objednavka.id, stavPlatby: { not: 'ZAPLACENO' } },
+    where: {
+      id: objednavka.id,
+      stavPlatby: { not: 'ZAPLACENO' },
+      stav: { notIn: ['ZRUSENA', 'VRACENA'] },
+    },
     data: { stavPlatby: 'ZAPLACENO' },
   });
 
   if (zmeneno.count !== 1) {
+    /*
+     * Zápis neprošel ze dvou různých důvodů a **nesmí se slít do jednoho**.
+     * Když je objednávka zrušená, ohlásit ji jako dávno uhrazenou by zakrylo
+     * přesně ten případ, kvůli kterému je `stav` v podmínce. Dočtení řádku
+     * je jeden dotaz navíc jen na téhle vzácné větvi.
+     */
+    const ted = await db.order.findUnique({
+      where: { id: objednavka.id },
+      select: { stav: true, stavPlatby: true },
+    });
+
+    if (ted && ted.stavPlatby !== 'ZAPLACENO') {
+      /*
+       * Peníze reálně přišly, ale objednávka neplatí. Nezamlčet a nezaúčtovat:
+       * patří to majitelce k ručnímu vyřízení (vrácení platby), stejně jako
+       * nesouhlas částky o pár řádků výš. Tichý souhlas by tu znamenal, že si
+       * e-shop nechal peníze za zrušený nákup.
+       */
+      console.error(
+        `[platba] Objednávka ${objednavka.cisloObjednavky}: brána hlásí uhrazeno, ale objednávka je ve stavu ${ted.stav}. ` +
+          'Platba se neoznačuje – vratku je potřeba vyřídit ručně.'
+      );
+
+      return {
+        stav: 'ceka',
+        orderId: objednavka.id,
+        verejnyToken: objednavka.verejnyToken,
+        stavBrany: stavBrany.stav,
+      };
+    }
+
     return {
       stav: 'zaplaceno',
       orderId: objednavka.id,

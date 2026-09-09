@@ -68,6 +68,21 @@ export async function POST(request: Request) {
       db.passwordReset.deleteMany({ where: { userId: ucet.id } }),
 
       /*
+       * Rozpracovaná změna přihlašovacího e-mailu. Dvě věci najednou:
+       *
+       * `novyEmail` je adresa v otevřeném tvaru – tedy přesně ten údaj,
+       * o jehož výmaz zákaznice požádala, jen uložený v tabulce, kterou
+       * anonymizace míjela. Účet se nemaže fyzicky, takže `onDelete: Cascade`
+       * nikdy nesepne a řádek by tu ležel dál.
+       *
+       * A hlavně: token k té změně platí 24 hodin a potvrzuje se **bez
+       * přihlášení**. Odkaz odeslaný pár minut před výmazem by šel použít
+       * i potom a přepsal by zástupnou adresu zpátky na skutečnou – tedy
+       * vrátil na anonymizovaný účet živý osobní údaj.
+       */
+      db.zmenaEmailu.deleteMany({ where: { userId: ucet.id } }),
+
+      /*
        * Osobní údaje na účtu se přepíšou. Objednávky zůstávají – nesou vlastní
        * snímek doručovací adresy (sekce 7), takže účetně jsou dál v pořádku,
        * ale odkaz na žijící osobu už z účtu nevede.

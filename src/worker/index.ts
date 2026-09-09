@@ -160,6 +160,60 @@ async function spustitWorker() {
       }
     }
 
+    /*
+     * Táž událost z druhé strany: kousek, který má zákaznice mezi oblíbenými.
+     *
+     * Sloupec `Favorite.upozornenoNaSklad` i jeho reset níž tu byly od začátku,
+     * ale na `true` ho nenastavovalo nic – smyčka výš jede jen přes košíky.
+     * Reset tedy napořád trefoval nula řádků a zákaznici, která si kousek
+     * uložila mezi oblíbené, nedorazilo nikdy nic.
+     *
+     * Podmínka je **zrcadlem resetu** o pár řádků níž:
+     *
+     *   `none: { skladem: { gt: 2 } }` – žádná velikost není nad prahem;
+     *   `some: { skladem: { gt: 0 } }` – aspoň jedna je pořád skladem.
+     *
+     * Vyprodané zboží se sem schválně nepočítá. „Došlo to celé" není
+     * docházející sklad a řeší ho hlídání dostupnosti (`StockNotification`),
+     * které zákaznici ozve, až se kousek vrátí.
+     */
+    const oblibene = await db.favorite.findMany({
+      where: {
+        upozornenoNaSklad: false,
+        product: {
+          aktivni: true,
+          variants: {
+            none: { skladem: { gt: 2 } },
+            some: { skladem: { gt: 0 } },
+          },
+        },
+      },
+      include: {
+        user: { select: { email: true } },
+        product: { select: { nazev: true, slug: true } },
+      },
+      take: 200,
+    });
+
+    for (const zaznam of oblibene) {
+      if (!zaznam.user?.email) continue;
+
+      await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'dochazejici-sklad',
+        to: zaznam.user.email,
+        subject: `${zaznam.product.nazev} dochází – LINDA FASHION`,
+        // `slug` odliší tuhle větev od košíkové: e-mail pak vede na produkt
+        // a nemluví o košíku, ve kterém ten kousek neleží.
+        data: { nazev: zaznam.product.nazev, slug: zaznam.product.slug },
+      });
+
+      // Značka hned po zařazení do fronty, ze stejného důvodu jako u košíku.
+      await db.favorite.update({
+        where: { id: zaznam.id },
+        data: { upozornenoNaSklad: true },
+      });
+    }
+
     // Jakmile se sklad doplní nad práh, příznak se vrátí zpět – ať při
     // dalším poklesu přijde upozornění znovu (sekce 14).
     await db.cartItem.updateMany({
