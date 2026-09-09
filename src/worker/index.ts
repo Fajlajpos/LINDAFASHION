@@ -25,6 +25,7 @@ import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
 import { vygenerovatFakturuUloha, type UlohaFaktura } from './jobs/vygenerovat-fakturu';
 import { vygenerovatPoukazyUloha, type UlohaPoukazy } from './jobs/vygenerovat-poukazy';
 import { uklidResetTokenu } from '../lib/reset-hesla';
+import { uklidZmenEmailu } from '../lib/zmena-emailu';
 import { popisVysledku, spustitRetenci } from '../lib/retence';
 import { zavritTransport } from './emaily/transport';
 
@@ -78,6 +79,11 @@ async function spustitWorker() {
 
     const smazano = await uklidResetTokenu();
     if (smazano > 0) console.log(`[úklid] Smazáno ${smazano} prošlých tokenů pro obnovu hesla.`);
+
+    /* Žádosti o změnu e-mailu drží novou adresu, tedy osobní údaj. Použité
+       a propadlé tokeny už k ničemu nejsou, takže nemají důvod ležet dál. */
+    const zmeny = await uklidZmenEmailu();
+    if (zmeny > 0) console.log(`[úklid] Smazáno ${zmeny} vyřízených žádostí o změnu e-mailu.`);
   });
   await boss.schedule(FRONTA_UKLID, '*/15 * * * *');
 

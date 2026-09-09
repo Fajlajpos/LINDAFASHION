@@ -39,6 +39,35 @@ model User {
   favorites   Favorite[]
   cart        Cart?
   resetTokeny PasswordReset[]
+  zmenyEmailu ZmenaEmailu[]
+}
+
+/// Jednorázový token pro změnu přihlašovacího e-mailu.
+///
+/// Čl. 16 GDPR dává právo na opravu nepřesných údajů a e-mail je údaj jako
+/// každý jiný – jenže je to zároveň přihlašovací jméno a adresa, kam chodí
+/// faktury. Do téhle chvíle se opravit nedal vůbec: jedinou cestou bylo
+/// smazat účet.
+///
+/// Proto se nemění rovnou, ale až po potvrzení **z nové schránky**. Bez toho
+/// by pár vteřin u odemčeného prohlížeče stačilo k převzetí účtu: útočník
+/// přepíše e-mail na svůj a pak si přes „zapomenuté heslo" nechá poslat reset.
+///
+/// Ukládá se jen otisk tokenu, stejně jako u `PasswordReset`.
+model ZmenaEmailu {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Adresa, na kterou se má účet přepsat. Kontroluje se znovu při potvrzení –
+  /// mezitím si ji mohl zaregistrovat někdo jiný.
+  novyEmail String
+  tokenHash String    @unique
+  platnyDo  DateTime
+  pouzitoAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 /// Jednorázový token pro obnovu zapomenutého hesla.

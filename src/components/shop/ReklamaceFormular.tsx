@@ -43,6 +43,9 @@ type OdpovedHledani = { nalezeno: true; objednavka: Nalezena } | { nalezeno: fal
 export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
   const [objednavka, setObjednavka] = useState<Nalezena | null>(null);
   const [hotovo, setHotovo] = useState<string | null>(null);
+  /* Klíč k `/reklamace/stav`. Zákaznice bez účtu jinak nemá jak stav sledovat –
+     e-mail o vyřízení dorazí až na konci, a to jen když je nastavené SMTP. */
+  const [tokenZadosti, setTokenZadosti] = useState<string | null>(null);
 
   const [cislo, setCislo] = useState('');
   const [email, setEmail] = useState('');
@@ -93,14 +96,17 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
     setChyba(null);
     setChybyPoli({});
 
-    const odpoved = await poslatJson<{ zprava: string }>('/api/reklamace', {
+    const odpoved = await poslatJson<{ zprava: string; token: string }>('/api/reklamace', {
       token: objednavka.token,
       typ: 'REKLAMACE',
       orderItemId: polozkaId || null,
       duvod: duvod.trim(),
     });
 
-    if (odpoved.ok) setHotovo(odpoved.data.zprava);
+    if (odpoved.ok) {
+      setHotovo(odpoved.data.zprava);
+      setTokenZadosti(odpoved.data.token);
+    }
     else {
       setChyba(odpoved.chyba);
       setChybyPoli(odpoved.pole ?? {});
@@ -128,12 +134,42 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
           (§ 19 odst. 3 zák. č. 634/1992 Sb.). Ozveme se vám e-mailem s tím, jak dál se zbožím.
         </p>
 
-        <Link
-          href="/produkty"
-          className="inline-flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
-        >
-          Zpět do obchodu
-        </Link>
+        {/* Odkaz na stav si zákaznice může uložit hned teď. Je to ta jediná
+            cesta, která nezávisí na doručeném e-mailu – a bez účtu jinak
+            nemá kde stav sledovat. */}
+        {tokenZadosti && (
+          <p className="text-xs leading-relaxed text-linda-espresso/85">
+            Stav žádosti si kdykoliv ověříte na{' '}
+            <Link
+              href={`/reklamace/stav?t=${encodeURIComponent(tokenZadosti)}`}
+              className="font-semibold text-linda-cognac underline"
+            >
+              téhle stránce
+            </Link>
+            . Odkaz si uložte – otevře se rovnou na vaší žádosti. Stav zjistíte i bez něj,
+            stačí číslo objednávky a e-mail.
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={
+              tokenZadosti
+                ? `/reklamace/stav?t=${encodeURIComponent(tokenZadosti)}`
+                : '/reklamace/stav'
+            }
+            className="inline-flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+          >
+            Sledovat stav
+          </Link>
+
+          <Link
+            href="/produkty"
+            className="inline-flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+          >
+            Zpět do obchodu
+          </Link>
+        </div>
       </section>
     );
   }

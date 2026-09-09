@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
+import { overitCaptchu } from '@/lib/captcha';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ const schema = z.object({
     .email('Zadejte prosím platný e-mail.')
     .max(200)
     .transform((v) => v.trim().toLowerCase()),
+  captcha: z.string().max(4000).optional().nullable(),
 });
 
 /**
@@ -31,7 +33,16 @@ export async function POST(request: Request) {
       return odpovedChyba('Příliš mnoho pokusů. Zkuste to prosím později.', 429);
     }
 
-    const { variantId, email } = schema.parse(await request.json());
+    const { variantId, email, captcha } = schema.parse(await request.json());
+
+    /* Formulář bere libovolnou adresu bez předchozího tajemství, takže je to
+       cíl pro roboty. Bez klíčů v `.env` ověření propouští. */
+    const overeni = await overitCaptchu(captcha, klientskaIp(request));
+    if (!overeni.ok) {
+      return odpovedChyba(overeni.zprava ?? 'Ověření se nezdařilo.', 400, {
+        captcha: overeni.zprava ?? '',
+      });
+    }
 
     const varianta = await db.productVariant.findFirst({
       where: { id: variantId, product: { aktivni: true } },

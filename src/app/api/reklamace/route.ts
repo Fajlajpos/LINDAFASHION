@@ -245,9 +245,16 @@ export async function POST(request: Request) {
       });
     }
 
+    /*
+     * `token` jde ven schválně. Je to klíč k `/reklamace/stav`, tedy jediná
+     * cesta, jak si nepřihlášená zákaznice ověří, co se s žádostí děje –
+     * do téhle chvíle se token vygeneroval a zahodil. Vrací se právě té, kdo
+     * žádost podala, takže se nic neprozrazuje.
+     */
     return odpovedOk(
       {
         id: reklamace.id,
+        token: reklamace.token,
         zprava:
           vstup.typ === 'VRACENI'
             ? 'Žádost o vrácení jsme přijali. Ozveme se vám s pokyny, kam zboží poslat.'

@@ -46,6 +46,8 @@ interface Props {
    */
   dodaciLhuta: string;
   dodaciLhutaDnu: number;
+  /** Veřejný klíč Turnstile pro formulář hlídání skladu. */
+  captchaSiteKey?: string | null;
 }
 
 export function DetailProduktu({
@@ -54,6 +56,7 @@ export function DetailProduktu({
   popisDph,
   dodaciLhuta,
   dodaciLhutaDnu,
+  captchaSiteKey = null,
 }: Props) {
   // Předvybereme první variantu, která je skladem – zákaznice tak nezačíná
   // na vyprodané velikosti s neaktivním tlačítkem.
@@ -468,7 +471,11 @@ export function DetailProduktu({
                   Tato velikost je momentálně vyprodaná
                 </p>
                 {varianta && (
-                  <HlidaniSkladu variantId={varianta.id} velikost={varianta.velikost} />
+                  <HlidaniSkladu
+                    variantId={varianta.id}
+                    velikost={varianta.velikost}
+                    captchaSiteKey={captchaSiteKey}
+                  />
                 )}
               </div>
             )}

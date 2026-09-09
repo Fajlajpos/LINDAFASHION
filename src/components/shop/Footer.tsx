@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Facebook, Instagram } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
+import { Captcha } from '@/components/ui/Captcha';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
@@ -22,6 +23,7 @@ interface FooterProps {
   nazevFirmy?: string | null;
   icoFirmy?: string | null;
   zapisVRejstriku?: string | null;
+  captchaSiteKey?: string | null;
 }
 
 /* Kategorie přes vlastní cestu, ne přes `?kategorie=` – viz komentář
@@ -46,6 +48,7 @@ const SERVIS_ODKAZY = [
   { href: '/ochrana-osobnich-udaju', label: 'Ochrana údajů' },
   { href: '/reklamacni-rad', label: 'Reklamační řád' },
   { href: '/reklamace', label: 'Reklamovat zboží' },
+  { href: '/reklamace/stav', label: 'Stav reklamace' },
   { href: '/odstoupeni', label: 'Odstoupit od smlouvy' },
 ];
 
@@ -105,12 +108,16 @@ export const Footer: React.FC<FooterProps> = ({
   nazevFirmy,
   icoFirmy,
   zapisVRejstriku,
+  captchaSiteKey = null,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
 
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');
   const [chyba, setChyba] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  /* Token platí jednou – po neúspěchu se widget musí přegenerovat. */
+  const [resetCaptchy, setResetCaptchy] = useState(0);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,14 +129,17 @@ export const Footer: React.FC<FooterProps> = ({
     const vysledek = await poslatJson<{ zprava: string }>('/api/newsletter', {
       email,
       zdroj: 'paticka',
+      captcha,
     });
 
     if (vysledek.ok) {
       setStav('hotovo');
       setEmail('');
     } else {
-      setChyba(vysledek.pole?.email ?? vysledek.chyba);
+      setChyba(vysledek.pole?.captcha || vysledek.pole?.email || vysledek.chyba);
       setStav('klid');
+      setResetCaptchy((n) => n + 1);
+      setCaptcha(null);
     }
   };
 
@@ -227,6 +237,15 @@ export const Footer: React.FC<FooterProps> = ({
                     />
                   </button>
                 </div>
+
+                {/* Widget se vykreslí jen s vyplněným klíčem, jinak nezabere
+                    žádné místo – patička zůstává beze změny, dokud se captcha
+                    nezapne. */}
+                <Captcha
+                  siteKey={captchaSiteKey}
+                  onToken={setCaptcha}
+                  resetSignal={resetCaptchy}
+                />
 
                 {chyba && (
                   <p

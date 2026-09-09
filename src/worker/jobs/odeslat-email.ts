@@ -39,7 +39,11 @@ export type TypEmailu =
   // proti kterému překladač pozná překlep v názvu typu.
   | 'odstoupeni-potvrzeni'
   | 'reklamace-vyrizena'
-  | 'poukazy-vydane';
+  | 'poukazy-vydane'
+  // Změna přihlašovacího e-mailu (čl. 16 GDPR): potvrzení jde na novou
+  // adresu, upozornění na starou.
+  | 'zmena-emailu-potvrzeni'
+  | 'zmena-emailu-upozorneni';
 
 export interface UlohaEmail {
   typ: TypEmailu;

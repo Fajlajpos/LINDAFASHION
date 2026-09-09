@@ -18,11 +18,22 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 # Schválně `npm install`, ne `npm ci`.
-# package-lock.json vzniká na Windows a neobsahuje platformní balíky pro Linux
-# (@img/sharp-linuxmusl-x64 a spol.), takže `npm ci` tady spadne na "lock není
-# v souladu s package.json". `npm install` lock respektuje a chybějící platformní
-# varianty doplní. Pro plně deterministický build by se lock musel generovat
-# uvnitř téhle image.
+#
+# `package-lock.json` vzniká na Windows a chybí v něm tranzitivní balíčky
+# linuxových variant Sharpu (`@emnapi/runtime`, `@emnapi/core`), takže `npm ci`
+# tady spadne na „lock není v souladu s package.json". `npm install` lock
+# respektuje a chybějící platformní varianty doplní.
+#
+# Přechod na `npm ci` byl vyzkoušený a **vědomě zavržený**. Lock se dá
+# vygenerovat uvnitř tohohle image a `npm ci` pak projde (ověřeno, Sharp se
+# v Alpine načte) — jenže první `npm install` na Windows ty doplněné balíčky
+# zase odstraní a `npm ci` začne padat. Vývojářka by tak běžným příkazem
+# rozbila produkční build, a poznala by to až při nasazení. To je horší vada
+# než ta troška nedeterminismu, kterou `npm install` přináší: lock respektuje,
+# takže se čerstvě řeší jen ty platformní binárky.
+#
+# Skutečné řešení je generovat lock v Linuxu i při vývoji (devcontainer, WSL),
+# ne přepnout tenhle řádek.
 RUN npm install --no-audit --no-fund
 
 # ---------- 2. Build: Prisma client + Next.js + worker ----------

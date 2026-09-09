@@ -262,12 +262,6 @@ konfigurace je vylučuje.
 The shop runs end to end: catalog → cart → checkout → order → invoice → admin.
 What is still missing:
 
-- **Changing the account e-mail is not possible.** `profilSchema` leaves it out on purpose —
-  it is the login name and the address invoices go to, so changing it needs the new mailbox
-  verified, and a few seconds at an unlocked browser would otherwise be enough to take the
-  account over. That verification flow (token table + confirmation e-mail) does not exist,
-  so today the only way to correct the address is to delete the account. Article 16 GDPR
-  wants rectification available, so this is a genuine gap, not a design choice.
 - **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
 - **No carrier integration at all.** `PACKETA_*`, `PPL_*` and `CESKA_POSTA_*` sit in
   `.env.example` and nothing reads them — no labels, no tracking lookup; `cisloZasilky` is
@@ -277,9 +271,6 @@ What is still missing:
   CSV of **confirmed, non-unsubscribed** addresses (that filter is the point — an export of
   unconfirmed ones would be a way around the double opt-in) and logs the export to the audit
   trail. Actually sending a campaign is somebody else's tool.
-- **Complaint status has no public page.** `Reklamace.token` is written and never read. The
-  outcome now reaches the customer by e-mail (`reklamace-vyrizena`), which is what § 19
-  odst. 3 needs, so the token is spare capacity rather than a hole.
 
 ### Other gaps
 
@@ -303,10 +294,17 @@ What is still missing:
 - The limiter keys off `X-Forwarded-For`, which the sender controls. It is only trustworthy
   because `docker-compose.yml` publishes `web` on `127.0.0.1` — reachable through Caddy, not
   from outside. Overriding `WEB_BIND=0.0.0.0` re-opens brute-force on login.
-- The Docker build uses `npm install`, not `npm ci`: `package-lock.json` is generated on
-  Windows and omits the Linux platform binaries (`@img/sharp-linuxmusl-x64` and friends),
-  so `npm ci` fails inside the image. Fully reproducible builds would need the lock file
-  generated on Linux.
+- The Docker build uses `npm install`, not `npm ci`, and **that was re-tested and kept on
+  purpose**. The lock is generated on Windows and omits transitive packages of Sharp's Linux
+  variants (`@emnapi/runtime`, `@emnapi/core` — the `@img/sharp-linuxmusl-x64` entries
+  themselves are present), so `npm ci` fails inside the image with "lock is not in sync".
+  Regenerating the lock inside `node:20-alpine` does fix it — measured: `npm ci` then
+  succeeds and Sharp loads — **but the very next `npm install` on Windows strips those
+  entries again and `npm ci` starts failing.** That trades a small, bounded
+  non-determinism (only the platform binaries are resolved fresh; everything else honours
+  the lock) for a way to break the production build with an ordinary command, discovered
+  only at deploy time. The real fix is generating the lock on Linux during development
+  too (devcontainer, WSL), not flipping that one line.
 - **Captcha (Turnstile) turns on with the keys, on both sides at once.**
   [captcha.ts](src/lib/captcha.ts) passes verification through when
   `TURNSTILE_SECRET_KEY` is missing, and [Captcha.tsx](src/components/ui/Captcha.tsx)
@@ -332,7 +330,26 @@ What is still missing:
   A gateway outage during checkout does not cancel the order: `platebniUrl` comes back null
   and the customer pays by transfer from the confirmation page.
 
-Closed: the § 1830a withdrawal button did not exist and the shop was already two months
+Closed: **changing the account e-mail** (čl. 16 GDPR) — `profilSchema` still leaves it out on
+purpose, because the field is the login name; the change now runs through `/api/ucet/zmena-emailu`
+and needs **two independent proofs**: the current password (that the person at the unlocked browser
+owns the account) and a click from the new mailbox (that the address is hers). Without the second,
+seconds at an unlocked browser would be enough to point the account at an attacker and then pull a
+password reset. Confirming is a **POST**, never the GET that opens the link — a mail client's
+preview robot would otherwise complete the change before she reads the message, the same trap the
+newsletter double opt-in avoids. The confirmation page sits at `/zmena-emailu`, deliberately
+**outside `/muj-ucet`**, because middleware guards that branch and the confirmation arrives in a
+browser where she is not signed in — the same reason `/obnova-hesla` lives outside it. On success
+`tokenVerze` is bumped (every session dies) and `newsletterSouhlas` drops to `false`: consent binds
+to an address, and there is none proven for the new one. `NewsletterSubscriber` rows for the old
+address are left untouched — they are the čl. 7 odst. 1 evidence, and rewriting them onto the new
+address would manufacture a consent nobody gave · `Reklamace.token` was written and never read, so a guest — who may reklamovat exactly
+like a registered customer — had no way to see what was happening with her claim; the only word
+came at the very end, by e-mail. `/reklamace/stav` now reads it, and deliberately offers a second
+way in (order number **plus** e-mail, the same public key as the complaint form, through the same
+`najitObjednavkuKlicem`) so the page does not depend on SMTP being configured. All three failures —
+wrong e-mail, unknown order, bogus token — return one identical answer, or the endpoint would become
+a tool for discovering which order numbers exist · the § 1830a withdrawal button did not exist and the shop was already two months
 past its effective date, so a guest order had no way to withdraw at all · the model
 withdrawal form promised by the confirmation page and by the invoice was nowhere on the
 site (nařízení vlády 363/2013 Sb.) · the order button said „Objednat závazně", which says

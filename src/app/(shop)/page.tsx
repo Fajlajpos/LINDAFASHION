@@ -1,4 +1,5 @@
 import React from 'react';
+import { siteKey } from '@/lib/captcha';
 import { HeroSplit } from '@/components/shop/home/HeroSplit';
 import { CategoryBar } from '@/components/shop/home/CategoryBar';
 import { BestSellers } from '@/components/shop/home/BestSellers';
@@ -68,7 +69,7 @@ export default async function HomePage() {
           </Reveal>
 
           <Reveal>
-            <Newsletter />
+            <Newsletter captchaSiteKey={siteKey()} />
           </Reveal>
         </div>
       </div>

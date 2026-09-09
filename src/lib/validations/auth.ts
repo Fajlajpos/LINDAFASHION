@@ -35,6 +35,10 @@ export const registraceSchema = z
     // Sekce 5 + GDPR: samostatný, dobrovolný souhlas – nesmí být schovaný
     // v souhlasu s obchodními podmínkami.
     newsletterSouhlas: z.boolean().optional().default(false),
+
+    // Token z Turnstile. Nepovinný ve schématu schválně: bez klíčů v `.env`
+    // se widget nevykreslí a formulář by jinak neprošel validací.
+    captcha: z.string().max(4000).optional().nullable(),
   })
   .refine((d) => d.heslo === d.hesloZnovu, {
     message: 'Hesla se neshodují.',

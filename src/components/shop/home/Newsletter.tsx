@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { MediaFrame } from './MediaFrame';
 import { poslatJson } from '@/lib/api-klient';
+import { Captcha } from '@/components/ui/Captcha';
 
 type StavOdeslani = 'klid' | 'odesilam' | 'hotovo';
 
@@ -13,10 +14,15 @@ type StavOdeslani = 'klid' | 'odesilam' | 'hotovo';
  * Formulář dřív odběr jen předstíral – potvrdil přijetí a nikam nic nezapsal.
  * Teď se přihláška ukládá přes `POST /api/newsletter`.
  */
-export const Newsletter: React.FC = () => {
+export const Newsletter: React.FC<{ captchaSiteKey?: string | null }> = ({
+  captchaSiteKey = null,
+}) => {
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<StavOdeslani>('klid');
   const [chyba, setChyba] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  /* Token platí jednou – po neúspěchu se widget musí přegenerovat. */
+  const [resetCaptchy, setResetCaptchy] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,14 +34,17 @@ export const Newsletter: React.FC = () => {
     const vysledek = await poslatJson<{ zprava: string }>('/api/newsletter', {
       email,
       zdroj: 'hero',
+      captcha,
     });
 
     if (vysledek.ok) {
       setStav('hotovo');
       setEmail('');
     } else {
-      setChyba(vysledek.pole?.email ?? vysledek.chyba);
+      setChyba(vysledek.pole?.captcha || vysledek.pole?.email || vysledek.chyba);
       setStav('klid');
+      setResetCaptchy((n) => n + 1);
+      setCaptcha(null);
     }
   };
 
@@ -104,6 +113,8 @@ export const Newsletter: React.FC = () => {
                 {odesilam ? 'Odesílám…' : 'Odebírat'}
               </button>
             </div>
+
+            <Captcha siteKey={captchaSiteKey} onToken={setCaptcha} resetSignal={resetCaptchy} />
           </form>
 
           {/* Chyba patří k poli, ne jen do souhrnu – proto `newsletter-chyba`

@@ -207,6 +207,83 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       };
     }
 
+    /*
+     * Změna přihlašovacího e-mailu, čl. 16 GDPR.
+     *
+     * Potvrzení míří na **novou** adresu – kliknutím se prokáže, že k ní má
+     * zákaznice přístup. Bez toho by pár vteřin u odemčeného prohlížeče
+     * stačilo k převzetí účtu přes „zapomenuté heslo".
+     */
+    case 'zmena-emailu-potvrzeni': {
+      const odkaz = String(data.odkaz ?? '');
+      const puvodni = String(data.puvodniEmail ?? '');
+      const hodin = Number(data.platnostHodin ?? 24);
+      const oslovení = data.jmeno ? `Dobrý den, ${e(data.jmeno)},` : 'Dobrý den,';
+
+      return {
+        html: obalka(
+          'Potvrzení nové e-mailové adresy',
+          odstavec(oslovení) +
+          odstavec(
+            `u účtu LINDA FASHION jste požádala o změnu přihlašovacího e-mailu` +
+              (puvodni ? ` z <strong>${e(puvodni)}</strong>` : '') +
+              ` na tuhle adresu. Potvrďte ji prosím tlačítkem níž – odkaz platí <strong>${hodin} hodin</strong>.`
+          ) +
+          tlacitko('Potvrdit novou adresu', odkaz) +
+          odstavec(
+            `Kdyby tlačítko nefungovalo, zkopírujte si do prohlížeče tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
+          ) +
+          odstavec(
+            '<strong>O nic jste nežádala?</strong> Pak tenhle e-mail smažte – bez potvrzení se ' +
+              'na účtu nic nezmění a přihlašujete se dál původní adresou.'
+          )
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          'u účtu LINDA FASHION jste požádala o změnu přihlašovacího e-mailu na tuhle adresu.',
+          `Potvrďte ji prosím odkazem, platí ${hodin} hodin:`,
+          odkaz,
+          '',
+          'Pokud jste o nic nežádala, e-mail smažte – bez potvrzení se nic nezmění.',
+        ].join('\n'),
+      };
+    }
+
+    /*
+     * Upozornění na **starou** adresu. Poslední pojistka: kdyby se někdo
+     * k účtu dostal a zkusil ho přesměrovat na sebe, majitelka se to dozví
+     * do schránky, ke které pořád má přístup.
+     */
+    case 'zmena-emailu-upozorneni': {
+      const novy = String(data.novyEmail ?? '');
+      const oslovení = data.jmeno ? `Dobrý den, ${e(data.jmeno)},` : 'Dobrý den,';
+
+      return {
+        html: obalka(
+          'Žádost o změnu e-mailu',
+          odstavec(oslovení) +
+          odstavec(
+            `u vašeho účtu někdo požádal o změnu přihlašovacího e-mailu na <strong>${e(novy)}</strong>. ` +
+              'Potvrzovací odkaz jsme poslali na tuhle novou adresu; dokud na něj nikdo neklikne, ' +
+              'zůstává vše beze změny.'
+          ) +
+          odstavec(
+            '<strong>Nebyla jste to vy?</strong> Změňte si prosím hned heslo – někdo se dostal ' +
+              'k vašemu přihlášení. Změnou hesla se zároveň odhlásí všechna ostatní zařízení.'
+          )
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          `u vašeho účtu někdo požádal o změnu přihlašovacího e-mailu na ${novy}.`,
+          'Potvrzovací odkaz šel na tu novou adresu; dokud na něj nikdo neklikne, nic se nemění.',
+          '',
+          'Nebyla jste to vy? Změňte si hned heslo – tím se odhlásí i všechna ostatní zařízení.',
+        ].join('\n'),
+      };
+    }
+
     case 'potvrzeni-objednavky': {
       const cislo = String(data.cisloObjednavky ?? '');
       const token = tokenZDat(data);
@@ -684,6 +761,15 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       const poznamka = data.poznamka ? String(data.poznamka) : null;
       const nazev = jeVraceni ? 'Vrácení zboží' : 'Reklamace';
 
+      /* Odkaz na stav žádosti. `Reklamace.token` se generoval od začátku, ale
+         nikam se neposílal, takže se k němu zákaznice neměla jak dostat.
+         Bez tokenu odkaz míří na vyhledávací formulář – ten funguje taky,
+         jen po ní chce číslo objednávky a e-mail. */
+      const tokenZadosti = data.token ? String(data.token) : null;
+      const odkazNaStav = `${adresaWebu()}/reklamace/stav${
+        tokenZadosti ? `?t=${encodeURIComponent(tokenZadosti)}` : ''
+      }`;
+
       const radky: Array<[string, string]> = [
         ['Objednávka', cislo],
         ['Výsledek', uznano ? 'Uznáno' : 'Zamítnuto'],
@@ -705,7 +791,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           ) +
           panel(radky) +
           (poznamka ? odstavec(`<strong>Vyjádření:</strong> ${e(poznamka)}`) : '') +
-          odstavec(zaver)
+          odstavec(zaver) +
+          tlacitko('Zobrazit stav žádosti', odkazNaStav)
         ),
         text: [
           'Dobrý den,',
@@ -716,6 +803,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           poznamka ? `Vyjádření: ${poznamka}` : '',
           '',
           zaver,
+          '',
+          `Stav žádosti: ${odkazNaStav}`,
         ]
           .filter(Boolean)
           .join('\n'),

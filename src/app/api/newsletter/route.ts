@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { prihlasitKOdberu } from '@/lib/newsletter';
+import { overitCaptchu } from '@/lib/captcha';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ const schema = z.object({
     .transform((v) => v.trim().toLowerCase()),
   // Jen pro měření, odkud přihlášky chodí. Neznámou hodnotu zahodíme.
   zdroj: z.enum(['hero', 'paticka']).optional(),
+  captcha: z.string().max(4000).optional().nullable(),
 });
 
 /**
@@ -35,7 +37,22 @@ export async function POST(request: Request) {
       return odpovedChyba('Příliš mnoho pokusů. Zkuste to prosím později.', 429);
     }
 
-    const { email, zdroj } = schema.parse(await request.json());
+    const { email, zdroj, captcha } = schema.parse(await request.json());
+
+    /*
+     * Druhá vrstva po limitu podle IP. Přihlašovací formulář bere libovolnou
+     * adresu bez jakéhokoli předchozího tajemství, takže je to typický cíl
+     * pro roboty – na rozdíl od reklamace nebo odstoupení, kam se bez tokenu
+     * objednávky (nebo čísla a e-mailu) nikdo nedostane.
+     *
+     * Bez klíčů v `.env` ověření propouští, takže formulář funguje i teď.
+     */
+    const overeni = await overitCaptchu(captcha, klientskaIp(request));
+    if (!overeni.ok) {
+      return odpovedChyba(overeni.zprava ?? 'Ověření se nezdařilo.', 400, {
+        captcha: overeni.zprava ?? '',
+      });
+    }
 
     /*
      * Vlastní práci dělá `prihlasitKOdberu` – tentýž kód používá i registrace

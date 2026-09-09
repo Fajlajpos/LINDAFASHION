@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { KeyRound, Loader2, Mail, UserRound } from 'lucide-react';
+import { ChevronDown, KeyRound, Loader2, Mail, UserRound } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { Hlaska, PoleFormulare } from '@/components/ui/PoleFormulare';
 
@@ -94,9 +94,24 @@ export function UdajeKarta({ profil }: { profil: Profil }) {
               />
             </div>
             <p id="ucet-email-napoveda" className="mt-1.5 text-[11px] text-linda-espresso/70">
-              E-mail slouží k přihlášení a chodí na něj doklady. Potřebujete-li ho změnit, napište
-              nám prosím přes kontaktní formulář.
+              E-mail slouží k přihlášení a chodí na něj doklady. Změnit se dá – potvrdíte ji
+              odkazem, který pošleme na novou adresu.
             </p>
+
+            {/* Změna e-mailu je schovaná do `<details>`, ne rozbalená natrvalo.
+                Většina zákaznic ji nikdy nepotřebuje a rozbalený formulář se
+                dvěma poli by z karty s údaji udělal zeď. */}
+            <details className="group mt-3 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+              <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-linda-espresso [&::-webkit-details-marker]:hidden">
+                Změnit e-mailovou adresu
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 text-linda-cognac transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+
+              <ZmenaEmailu />
+            </details>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -281,5 +296,98 @@ function HesloKarta() {
         </button>
       </form>
     </section>
+  );
+}
+
+/**
+ * Změna přihlašovacího e-mailu (čl. 16 GDPR – právo na opravu).
+ *
+ * Do téhle chvíle se e-mail opravit nedal vůbec a karta odkazovala na
+ * kontaktní formulář. Změna stojí na dvou nezávislých důkazech: stávajícím
+ * heslu (že u prohlížeče sedí majitelka) a potvrzení z nové schránky (že jí
+ * ta adresa patří). Formulář proto jen odešle žádost — účet se přepíše až
+ * kliknutím na odkaz v e-mailu.
+ */
+function ZmenaEmailu() {
+  const [novyEmail, setNovyEmail] = useState('');
+  const [heslo, setHeslo] = useState('');
+  const [odesila, setOdesila] = useState(false);
+  const [hotovo, setHotovo] = useState<string | null>(null);
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [chybyPoli, setChybyPoli] = useState<Record<string, string>>({});
+
+  const odeslat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (odesila) return;
+
+    setOdesila(true);
+    setChyba(null);
+    setChybyPoli({});
+
+    const vysledek = await poslatJson<{ zprava: string }>('/api/ucet/zmena-emailu', {
+      novyEmail,
+      heslo,
+    });
+
+    if (vysledek.ok) {
+      setHotovo(vysledek.data.zprava);
+      setNovyEmail('');
+      // Heslo se maže vždycky – nemá cenu ho držet v paměti déle, než je nutné.
+      setHeslo('');
+    } else {
+      setChyba(vysledek.chyba);
+      setChybyPoli(vysledek.pole ?? {});
+    }
+
+    setHeslo('');
+    setOdesila(false);
+  };
+
+  if (hotovo) {
+    return (
+      <div className="mt-3 space-y-3">
+        <Hlaska druh="uspech">{hotovo}</Hlaska>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={(e) => void odeslat(e)} className="mt-3 space-y-4">
+      <PoleFormulare
+        id="novy-email"
+        label="Nová e-mailová adresa"
+        type="email"
+        inputMode="email"
+        value={novyEmail}
+        onChange={setNovyEmail}
+        chyba={chybyPoli.novyEmail}
+        required
+        disabled={odesila}
+      />
+
+      <PoleFormulare
+        id="zmena-emailu-heslo"
+        label="Stávající heslo"
+        type="password"
+        value={heslo}
+        onChange={setHeslo}
+        chyba={chybyPoli.heslo}
+        napoveda="Ověřujeme, že u prohlížeče sedíte opravdu vy."
+        required
+        disabled={odesila}
+      />
+
+      {chyba && <Hlaska druh="chyba">{chyba}</Hlaska>}
+
+      <button
+        type="submit"
+        disabled={odesila}
+        aria-busy={odesila}
+        className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+      >
+        {odesila && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+        Poslat potvrzovací odkaz
+      </button>
+    </form>
   );
 }

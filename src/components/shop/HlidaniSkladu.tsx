@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, BellRing, Check, Loader2 } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
+import { Captcha } from '@/components/ui/Captcha';
 
 interface Props {
   variantId: string;
   velikost: string;
+  /** Veřejný klíč Turnstile. `null` = captcha vypnutá, widget se nevykreslí. */
+  captchaSiteKey?: string | null;
 }
 
 /**
@@ -15,12 +18,16 @@ interface Props {
  * Tlačítko bylo dřív natrvalo zakázané – nebylo kam požadavek poslat.
  * Rozbalí se do jednoho pole, ne do modálu: jde o jeden e-mail, ne o formulář.
  */
-export function HlidaniSkladu({ variantId, velikost }: Props) {
+export function HlidaniSkladu({ variantId, velikost, captchaSiteKey = null }: Props) {
   const [otevreno, setOtevreno] = useState(false);
   const [email, setEmail] = useState('');
   const [odesila, setOdesila] = useState(false);
   const [hotovo, setHotovo] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  /* Token z Turnstile platí jednou. Po odeslání se widget musí přegenerovat,
+     jinak by druhý pokus poslal už spotřebovaný token. */
+  const [resetCaptchy, setResetCaptchy] = useState(0);
 
   // Přepnutí na jinou vyprodanou velikost je nový požadavek – potvrzení
   // z té předchozí by tvrdilo něco, co pro tuhle neplatí.
@@ -40,13 +47,16 @@ export function HlidaniSkladu({ variantId, velikost }: Props) {
     const vysledek = await poslatJson<{ zprava: string }>('/api/hlidani-skladu', {
       variantId,
       email,
+      captcha,
     });
 
     if (vysledek.ok) {
       setHotovo(true);
       setEmail('');
     } else {
-      setChyba(vysledek.pole?.email ?? vysledek.chyba);
+      setChyba(vysledek.pole?.captcha || vysledek.pole?.email || vysledek.chyba);
+      setResetCaptchy((n) => n + 1);
+      setCaptcha(null);
     }
 
     setOdesila(false);
@@ -122,6 +132,8 @@ export function HlidaniSkladu({ variantId, velikost }: Props) {
           Hlídat
         </button>
       </div>
+
+      <Captcha siteKey={captchaSiteKey} onToken={setCaptcha} resetSignal={resetCaptchy} />
 
       {chyba && (
         <p

@@ -124,6 +124,63 @@ describe('sestavitEmail', () => {
     expect(uznana!.html).toContain('14 dnů');
   });
 
+  /*
+   * `Reklamace.token` se generoval od začátku, ale nikam se neposílal, takže
+   * se k němu zákaznice bez účtu neměla jak dostat a stav žádosti nezjistila.
+   * Odkaz musí mířit na `?t=`, ne `?token=` – stejná past, na kterou se
+   * jednou naletělo u potvrzení objednávky.
+   */
+  it('vyřízená reklamace nese odkaz na stav žádosti', () => {
+    const sTokenem = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'REKLAMACE',
+      stav: 'VYRIZENA_UZNANA',
+      token: 'abc123token',
+    });
+
+    expect(sTokenem!.html).toContain('/reklamace/stav?t=abc123token');
+    expect(sTokenem!.text).toContain('/reklamace/stav?t=abc123token');
+
+    // Bez tokenu odkaz pořád vede na stránku, jen na vyhledávací formulář.
+    const bezTokenu = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'REKLAMACE',
+      stav: 'VYRIZENA_UZNANA',
+    });
+
+    expect(bezTokenu!.html).toContain('/reklamace/stav');
+    expect(bezTokenu!.html).not.toContain('?t=');
+  });
+
+  /*
+   * Změna e-mailu (čl. 16 GDPR). Potvrzení musí jít na novou adresu a nést
+   * odkaz; upozornění na starou naopak odkaz nést nesmí – kdyby ho neslo,
+   * stačilo by převzít starou schránku a změnu potvrdit z ní, čímž by celé
+   * dvojité ověření ztratilo smysl.
+   */
+  it('potvrzení změny e-mailu nese odkaz, upozornění na starou adresu ne', () => {
+    const potvrzeni = sestavitEmail('zmena-emailu-potvrzeni', {
+      odkaz: 'https://obchod.cz/muj-ucet/zmena-emailu?t=tok123',
+      jmeno: 'Linda',
+      puvodniEmail: 'stara@example.cz',
+      platnostHodin: 24,
+    });
+
+    expect(potvrzeni!.html).toContain('zmena-emailu?t=tok123');
+    expect(potvrzeni!.html).toContain('24 hodin');
+    expect(potvrzeni!.text).toContain('zmena-emailu?t=tok123');
+
+    const upozorneni = sestavitEmail('zmena-emailu-upozorneni', {
+      novyEmail: 'nova@example.cz',
+      jmeno: 'Linda',
+    });
+
+    expect(upozorneni!.html).toContain('nova@example.cz');
+    expect(upozorneni!.html).not.toContain('zmena-emailu?t=');
+    // Musí poradit, co dělat, když o změnu nežádala.
+    expect(upozorneni!.html).toContain('heslo');
+  });
+
   it('změna stavu si upřesní předmět podle stavu objednávky', () => {
     const expedovana = sestavitEmail('zmena-stavu-objednavky', {
       cisloObjednavky: '2026-00042',

@@ -4,6 +4,7 @@ import { registraceSchema } from '@/lib/validations/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { prihlasitKOdberu } from '@/lib/newsletter';
+import { overitCaptchu } from '@/lib/captcha';
 
 /** Sekce 10: 5 registrací za hodinu z jedné IP – brzda na spam boty. */
 const MAX_REGISTRACI = 5;
@@ -21,6 +22,15 @@ export async function POST(request: Request) {
     }
 
     const vstup = registraceSchema.parse(await request.json());
+
+    /* Limit podle IP zdrží člověka, ne botnet – captcha je druhá vrstva.
+       Bez klíčů v `.env` ověření propouští, takže registrace funguje i teď. */
+    const overeni = await overitCaptchu(vstup.captcha, klientskaIp(request));
+    if (!overeni.ok) {
+      return odpovedChyba(overeni.zprava ?? 'Ověření se nezdařilo.', 400, {
+        captcha: overeni.zprava ?? '',
+      });
+    }
 
     const obsazeny = await db.user.findUnique({
       where: { email: vstup.email },

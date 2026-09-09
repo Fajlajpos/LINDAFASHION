@@ -192,6 +192,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             typ: reklamace.typ,
             stav: vstup.stav,
             poznamka: vstup.poznamkaAdmina,
+            /* Klíč k `/reklamace/stav`. Bez něj vede odkaz v e-mailu jen na
+               vyhledávací formulář a zákaznice musí znovu opisovat číslo
+               objednávky s e-mailem. */
+            token: reklamace.token,
           },
         });
       }

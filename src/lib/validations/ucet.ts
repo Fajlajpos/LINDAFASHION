@@ -47,6 +47,30 @@ export const profilSchema = z.object({
   newsletterSouhlas: z.boolean().optional(),
 });
 
+/**
+ * Žádost o změnu přihlašovacího e-mailu (čl. 16 GDPR).
+ *
+ * `profilSchema` e-mail schválně nemá — měnit se smí jen touhle cestou, tedy
+ * se stávajícím heslem a potvrzením z nové schránky. Heslo se vyžaduje ze
+ * stejného důvodu jako u změny hesla: bez něj by změnu provedl kdokoli, kdo
+ * se dostane k odemčenému prohlížeči, a přes „zapomenuté heslo" by si pak
+ * účet převzal.
+ */
+export const zmenaEmailuSchema = z.object({
+  novyEmail: z
+    .string()
+    .min(1, 'Zadejte prosím novou e-mailovou adresu.')
+    .email('Zadejte prosím platný e-mail.')
+    .max(200)
+    .transform((v) => v.trim().toLowerCase()),
+  heslo: z.string().min(1, 'Pro potvrzení zadejte stávající heslo.'),
+});
+
+/** Potvrzení z odkazu v e-mailu. */
+export const potvrzeniEmailuSchema = z.object({
+  token: z.string().min(20, 'Odkaz je neplatný.').max(400),
+});
+
 export const zmenaHeslaSchema = z
   .object({
     // Staré heslo se vyžaduje i u přihlášené zákaznice: bez něj by změnu
@@ -115,5 +139,6 @@ export const reklamaceSchema = z
 
 export type ProfilVstup = z.infer<typeof profilSchema>;
 export type ZmenaHeslaVstup = z.infer<typeof zmenaHeslaSchema>;
+export type ZmenaEmailuVstup = z.infer<typeof zmenaEmailuSchema>;
 export type AdresaVstup = z.infer<typeof adresaSchema>;
 export type ReklamaceVstup = z.infer<typeof reklamaceSchema>;

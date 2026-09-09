@@ -16,6 +16,8 @@ interface Props {
   nazevFirmy?: string | null;
   icoFirmy?: string | null;
   zapisVRejstriku?: string | null;
+  /** Veřejný klíč Turnstile pro newsletter v patičce. */
+  captchaSiteKey?: string | null;
   /**
    * Přihlášené zákaznici se košík i oblíbené synchronizují s účtem.
    * Klientské kontexty samy o přihlášení nevědí, dostanou to z layoutu.
@@ -40,6 +42,7 @@ export function ShopProviders({
   nazevFirmy,
   icoFirmy,
   zapisVRejstriku,
+  captchaSiteKey = null,
   prihlasen = false,
 }: Props) {
   const [nastaveniCookiesOtevreno, setNastaveniCookiesOtevreno] = useState(false);
@@ -67,6 +70,7 @@ export function ShopProviders({
             nazevFirmy={nazevFirmy}
             icoFirmy={icoFirmy}
             zapisVRejstriku={zapisVRejstriku}
+            captchaSiteKey={captchaSiteKey}
           />
         </div>
 

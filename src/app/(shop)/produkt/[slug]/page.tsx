@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { DetailProduktu } from '@/components/shop/DetailProduktu';
+import { siteKey } from '@/lib/captcha';
 import { JsonLd } from '@/components/shop/JsonLd';
 import { KostraMrizky } from '@/components/ui/Kostra';
 import { nacistPodobne, nacistProdukt, type ProduktDetail } from '@/lib/katalog';
@@ -120,6 +121,7 @@ export default async function DetailProduktPage({ params }: Props) {
         popisDph={popisDph(nastaveni)}
         dodaciLhuta={popisDodaciLhuty(nastaveni)}
         dodaciLhutaDnu={nastaveni.dodaciLhutaDnu}
+        captchaSiteKey={siteKey()}
       />
 
       <Suspense

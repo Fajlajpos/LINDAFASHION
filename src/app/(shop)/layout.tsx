@@ -1,4 +1,5 @@
 import React from 'react';
+import { siteKey } from '@/lib/captcha';
 import { Header } from '@/components/shop/Header';
 import { ShopProviders } from '@/components/shop/ShopProviders';
 import { JsonLd } from '@/components/shop/JsonLd';
@@ -27,6 +28,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       nazevFirmy={nastaveni.nazevFirmy}
       icoFirmy={nastaveni.icoFirmy}
       zapisVRejstriku={nastaveni.zapisVRejstriku}
+      captchaSiteKey={siteKey()}
       prihlasen={session !== null}
     >
       {/* Bez vlastního pozadí – zem stránky (`linda-paper` + zrno) drží `body`
