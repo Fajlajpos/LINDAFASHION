@@ -9,11 +9,10 @@
  * Je **idempotentní**: pouští se opakovaně a zapisuje jen to, co je vypsané
  * níž. Nedotýká se cen dopravy, režimu dovolené ani `verzePodminek`.
  *
- * `emailFirmy` a `emailProGdpr` schválně **nenastavuje**. Adresa se teprve
- * zakládá a napsat sem zástupnou by bylo horší než prázdno: prázdné pole se
- * nikde nevykreslí, kdežto nefunkční e-mail v zásadách zpracování je kontakt,
- * na kterém se zákaznice nedovolá svých práv podle čl. 15 až 22 GDPR.
- * Až adresa vznikne, doplní se v administraci.
+ * `emailFirmy` a `emailProGdpr` zapisuje od chvíle, kdy schránka doopravdy
+ * existuje. Do té doby zůstávaly schválně prázdné a bylo to správně: prázdné
+ * pole se nikde nevykreslí, kdežto nefunkční e-mail v zásadách zpracování je
+ * kontakt, na kterém se zákaznice nedovolá svých práv podle čl. 15 až 22 GDPR.
  *
  * Spuštění:  npm run nastaveni:firma
  */
@@ -52,23 +51,27 @@ const UDAJE = {
   telefonFirmy: '+420 607 030 764',
 
   /*
+   * Kontakt obchodu a zároveň kontakt pro žádosti podle GDPR.
+   *
+   * Jedna adresa pro obojí je u jednoosobového obchodu záměr, ne zjednodušení:
+   * druhá schránka by byla místo, kam se nikdo nedívá, a žádost o výmaz, která
+   * zapadne, je horší než chybějící pole. Až bude schránek víc, odděluje se
+   * `emailProGdpr` jako první.
+   *
+   * Publikovaný kontakt je doručovací adresa prodávajícího – odstoupení od
+   * smlouvy poslané sem je účinné už okamžikem odeslání (§ 1830a o. z.).
+   * Tuhle schránku tedy musí někdo skutečně číst; není to jen údaj na web.
+   */
+  emailFirmy: 'lindafashioneshop@gmail.com',
+  emailProGdpr: 'lindafashioneshop@gmail.com',
+
+  /*
    * § 435 o. z. vyžaduje údaj o zápisu. Přesné znění (který úřad živnost
    * vydal) je potřeba ověřit na rzp.gov.cz – proto je tu jako konstanta
    * na jednom místě, ne rozepsané po šablonách.
    */
   zapisVRejstriku: 'Zapsána v živnostenském rejstříku vedeném Městským úřadem Sokolov',
 } as const;
-
-/**
- * E-maily zaseté `prisma/seed.ts`. Nejsou to adresy majitelky.
- *
- * Ponechat je je horší než mít pole prázdné: publikovaný kontakt se považuje
- * za doručovací adresu prodávajícího, takže odstoupení od smlouvy poslané na
- * tuhle adresu je účinné okamžikem odeslání (§ 1830a o. z.) – a majitelka by
- * se o něm nedozvěděla. Prázdné pole se aspoň nikde nevykreslí a zákaznice
- * dostane telefon a kontaktní formulář.
- */
-const DEMO_EMAILY = ['info@lindafashion.cz', 'admin@lindafashion.cz'];
 
 async function vyplnitUdajeFirmy() {
   console.log('📇 Zapisuji identifikaci prodávajícího do Settings…');
@@ -77,53 +80,22 @@ async function vyplnitUdajeFirmy() {
    * Upsert na pevné id: řádek `Settings` je vždy nejvýš jeden. `create`
    * dostane tytéž hodnoty, aby se skript dal spustit i na prázdné databázi.
    */
-  const pred = await db.settings.findUnique({
+  await db.settings.upsert({
     where: { id: ID_NASTAVENI },
-    select: { emailFirmy: true, emailProGdpr: true },
-  });
-
-  /*
-   * Skutečně vyplněný e-mail se nepřepíše – skript se pouští opakovaně a nesmí
-   * majitelce smazat adresu, kterou si zadala v administraci. Vyčistí se jen
-   * demo hodnota ze seedu.
-   */
-  const vymazat = (hodnota: string | null | undefined) =>
-    hodnota && DEMO_EMAILY.includes(hodnota.toLowerCase().trim()) ? { hodnota: null } : null;
-
-  const emailFirmyVymaz = vymazat(pred?.emailFirmy);
-  const emailGdprVymaz = vymazat(pred?.emailProGdpr);
-
-  const ulozeno = await db.settings.upsert({
-    where: { id: ID_NASTAVENI },
-    update: {
-      ...UDAJE,
-      ...(emailFirmyVymaz ? { emailFirmy: null } : {}),
-      ...(emailGdprVymaz ? { emailProGdpr: null } : {}),
-    },
+    update: UDAJE,
     create: { id: ID_NASTAVENI, ...UDAJE },
   });
-
-  if (emailFirmyVymaz || emailGdprVymaz) {
-    console.log('   (vyčištěn demo e-mail ze seedu – není to adresa majitelky)');
-  }
 
   for (const [klic, hodnota] of Object.entries(UDAJE)) {
     console.log(`   ${klic}: ${hodnota === null ? '—' : String(hodnota)}`);
   }
 
-  const chybi = [
-    ulozeno.emailFirmy ? null : 'emailFirmy',
-    ulozeno.emailProGdpr ? null : 'emailProGdpr',
-  ].filter(Boolean);
-
-  if (chybi.length > 0) {
-    console.warn(
-      `\n⚠️  Nevyplněno: ${chybi.join(', ')}. Dokud tam e-mail není, zásady ` +
-        'zpracování odkazují na kontaktní formulář a doklad neuvádí e-mail ' +
-        'prodávajícího. Doplňte v /admin/nastaveni, až bude schránka hotová.',
-    );
-  }
-
+  /*
+   * Zápis je bezpodmínečný, stejně jako u IČO a sídla: skript je zdroj pravdy
+   * pro identifikaci prodávajícího. Kdyby si majitelka změnila e-mail
+   * v administraci, další spuštění ho vrátí zpátky – proto změna patří sem
+   * do `UDAJE`, ne jen do formuláře.
+   */
   console.log('\n✅ Hotovo.');
   process.exit(0);
 }

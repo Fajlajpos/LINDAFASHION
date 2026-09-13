@@ -80,10 +80,24 @@ async function main() {
   }
 
   // 3. Vytvoření Uživatelů
-  // Admin se bere z .env, ne natvrdo – jinak by seed přepsal heslo, které si
-  // majitelka nastavila, a v produkci by vznikl účet se známým heslem.
-  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim() || 'admin@lindafashion.cz';
-  const adminHeslo = process.env.ADMIN_PASSWORD || 'adminpassword123';
+  /*
+   * Admin se bere z .env, ne natvrdo – jinak by v produkci vznikl účet se
+   * známým heslem.
+   *
+   * Záložní hodnoty (`admin@lindafashion.cz` / `adminpassword123`) tu byly
+   * a popíraly přesně to, co ten komentář slibuje: bez vyplněného `.env`
+   * seed založil administrátorku s heslem, které je v repozitáři k přečtení.
+   * Chybějící konfigurace proto seed zastaví.
+   */
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+  const adminHeslo = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminHeslo) {
+    throw new Error(
+      'Chybí ADMIN_EMAIL nebo ADMIN_PASSWORD v .env – bez nich seed nemá z čeho ' +
+        'založit admin účet a zástupné heslo by bylo veřejně známé.',
+    );
+  }
   const customerPasswordHash = await bcrypt.hash('heslo123', 12);
 
   await prisma.user.create({
