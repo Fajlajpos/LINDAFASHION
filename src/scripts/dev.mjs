@@ -33,17 +33,58 @@ const COMPOSE = 'docker compose -f docker-compose.dev.yml';
 /* Databáze                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Adresa databáze z prostředí, jinak z `.env`. Vitest ani ts-node `.env` nečtou. */
-function adresaDatabaze() {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  if (!existsSync('.env')) return null;
+/**
+ * Přečte celý `.env` do mapy.
+ *
+ * **Vitest ani ts-node `.env` nečtou** – na rozdíl od Nextu, který si ho
+ * načte sám. Worker běží pod ts-node, takže do téhle chvíle neviděl z `.env`
+ * ani jednu proměnnou. Databáze mu fungovala jen shodou okolností:
+ * `DATABASE_URL` si načítá Prisma Client vlastními silami.
+ *
+ * Následek byl tichý a drahý. `SMTP_HOST` se k workeru nikdy nedostal, úloha
+ * `odeslat-email` proto spadla do větve „SMTP není nastavené", zprávu jen
+ * vypsala do logu a **ohlásila úspěch**. Odeslání e-mailu tak nešlo lokálně
+ * vyzkoušet vůbec a navenek to vypadalo, že všechno funguje – přesně to ticho,
+ * kvůli kterému existuje provozní kontrola.
+ *
+ * V produkci se to neprojevuje: tam proměnné dodá `env_file` v compose jako
+ * skutečné proměnné prostředí. Je to výhradně vada vývojového prostředí.
+ *
+ * (Platí pro `npm run dev`. Kdo si pouští `npm run worker` samostatně, musí
+ * si proměnné dodat sám – launcher je jediné místo, které `.env` čte.)
+ */
+function nacistEnvSoubor() {
+  if (!existsSync('.env')) return {};
+
+  const hodnoty = {};
 
   for (const radek of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-    const shoda = radek.trim().match(/^DATABASE_URL\s*=\s*(.+)$/);
-    if (shoda) return shoda[1].trim().replace(/^(['"])(.*)\1$/, '$2');
+    const orezany = radek.trim();
+    if (!orezany || orezany.startsWith('#')) continue;
+
+    const shoda = orezany.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$/);
+    if (!shoda) continue;
+
+    // Uvozovky se sundají, obsah se nechává být – v heslech bývá cokoliv.
+    hodnoty[shoda[1]] = shoda[2].trim().replace(/^(['"])([\s\S]*)\1$/, '$2');
   }
 
-  return null;
+  return hodnoty;
+}
+
+const ENV_SOUBOR = nacistEnvSoubor();
+
+/**
+ * Prostředí pro web i worker.
+ *
+ * Skutečné proměnné prostředí mají přednost před souborem: kdo si spustí
+ * `SMTP_HOST=jinak npm run dev`, musí přebít `.env`, ne naopak.
+ */
+const PROSTREDI_POTOMKU = { ...ENV_SOUBOR, ...process.env };
+
+/** Adresa databáze z prostředí, jinak z `.env`. */
+function adresaDatabaze() {
+  return process.env.DATABASE_URL || ENV_SOUBOR.DATABASE_URL || null;
 }
 
 /** Odpovídá na daném portu někdo? Levnější a spolehlivější než parsovat docker. */
@@ -256,7 +297,9 @@ function spustitProcesy() {
     const dite = spawn(prikaz, {
       shell: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: process.env,
+      // `.env` doplněné o skutečné prostředí – jinak worker (ts-node) nevidí
+      // nic z konfigurace a tiše se chová, jako by nebyla vyplněná.
+      env: PROSTREDI_POTOMKU,
     });
 
     dite.stdout.on('data', (data) => prefixovat(nazev, barva, process.stdout, data));

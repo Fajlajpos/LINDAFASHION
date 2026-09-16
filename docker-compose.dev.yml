@@ -1,4 +1,4 @@
-# Lokální vývoj: v Dockeru běží JEN databáze.
+# Lokální vývoj: v Dockeru běží databáze a lapač e-mailů.
 # `web` a `worker` si pouštíš nativně (`npm run dev` / `npm run worker`),
 # protože hot reload uvnitř kontejneru je na Windows pomalý.
 #
@@ -26,5 +26,37 @@ services:
       timeout: 5s
       retries: 12
 
+  # Lapač e-mailů. Zachytí všechno, co worker odešle, a ukáže to na
+  # http://localhost:8025 – nic neodejde ven.
+  #
+  # Ve vývoji se schválně nepoužívá skutečná schránka obchodu: testovací
+  # objednávky by chodily zákaznicím i majitelce do pošty a počítaly by se
+  # do denního limitu odesílání. Do `.env` proto patří `SMTP_HOST=localhost`
+  # a `SMTP_PORT=1025`; ostrá SMTP konfigurace žije jen na produkci.
+  #
+  # Bez tohohle kontejneru měl vývoj jen dvě polohy: buď `SMTP_HOST` prázdný
+  # a zprávy se jen vypisovaly do logu, nebo ostrý Gmail. Ověřit, že e-mail
+  # opravdu odejde a jak vypadá, tak nešlo vůbec.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: linda_mailpit_dev
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP pro worker
+      - '8025:8025' # webové rozhraní
+    environment:
+      MP_MAX_MESSAGES: 500
+      # Zprávy přežijí restart kontejneru – jinak se po `down` ztratí i to,
+      # co jsme si zrovna chtěli prohlédnout.
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_dev_data:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8025/readyz']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
 volumes:
   postgres_dev_data:
+  mailpit_dev_data:
