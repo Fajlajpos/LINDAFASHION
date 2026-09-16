@@ -49,11 +49,18 @@ export default async function ReklamacniRadPage() {
         <div className="space-y-2 rounded-2xl bg-linda-cream p-6 shadow-neuSm">
           <h2 className="font-serif text-lg text-linda-espresso">Zboží je vadné</h2>
           <p className="text-xs leading-relaxed text-linda-espresso/85">
-            Reklamaci uplatníte v zákaznickém účtu u konkrétní objednávky. Vyřídíme ji do{' '}
-            {DNU_NA_REKLAMACI} dnů.
+            Reklamaci uplatníte formulářem, stačí číslo objednávky a e-mail. Přihlašovat se nemusíte.
+            Vyřídíme ji do {DNU_NA_REKLAMACI} dnů.
           </p>
+          {/*
+            Míří na veřejný formulář, ne na `/muj-ucet`.
+            Práva z vadného plnění nezávisí na tom, jestli má zákaznice účet –
+            objednávka bez registrace ho mít ani nemůže. Odkaz na účet posílal
+            hosta na přihlašovací formulář, kterým se k reklamaci nedostane.
+            Stejná past jako u odstoupení od smlouvy vedle.
+          */}
           <Link
-            href="/muj-ucet"
+            href="/reklamace"
             className="inline-flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
           >
             Uplatnit reklamaci

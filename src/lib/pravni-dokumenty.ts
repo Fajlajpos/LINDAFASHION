@@ -154,6 +154,8 @@ Tyto všeobecné obchodní podmínky (dále jen „VOP") upravují práva a povi
 
 Je-li kupujícím spotřebitel, řídí se vztahy neupravené těmito VOP občanským zákoníkem (zák. č. 89/2012 Sb.) a zákonem o ochraně spotřebitele (zák. č. 634/1992 Sb.).
 
+Smlouva se uzavírá v českém jazyce. Náklady na použití prostředků komunikace na dálku (připojení k internetu, telefon) si hradí kupující sám; neliší se od jeho běžné sazby a prodávající si za ně nic neúčtuje.
+
 ## 2. Objednávka a uzavření kupní smlouvy
 
 Prezentace zboží v e-shopu je informativního charakteru a nejde o návrh na uzavření smlouvy. Kupní smlouva vzniká doručením potvrzení objednávky na e-mail kupujícího.
@@ -162,15 +164,19 @@ Před odesláním objednávky má kupující možnost zkontrolovat a měnit úda
 
 Objednávka zavazuje kupujícího k zaplacení; tlačítko, kterým se objednávka odesílá, je proto označeno „Objednat a zaplatit".
 
+Uzavřenou smlouvu prodávající uchovává v elektronické podobě. Kupující se k ní dostane přes odkaz v potvrzení objednávky, a to i bez registrace. Součástí záznamu je i označení verze těchto VOP účinné v okamžiku odeslání objednávky; toto znění zůstává dostupné i po pozdější změně podmínek.
+
 ## 3. Ceny a platební podmínky
 
-Ceny jsou uvedeny v korunách českých a jsou konečné. Platit lze převodem na účet s QR platbou, nebo online kartou přes platební bránu. Dobírka není podporována.
+Ceny jsou uvedeny v korunách českých a jsou konečné. Platit lze bankovním převodem na účet; platební údaje včetně QR kódu obdrží kupující ihned po odeslání objednávky. Je-li v pokladně nabídnuta platba kartou přes platební bránu, lze zaplatit i tímto způsobem. Dobírka není podporována.
 
 Je-li u zboží uvedena sleva, uvádíme zároveň nejnižší cenu, za kterou jsme zboží nabízeli v posledních 30 dnech před poskytnutím slevy (§ 12a zák. č. 634/1992 Sb.).
 
 ## 4. Dodací lhůta a doprava
 
 Zboží skladem expedujeme ve lhůtě uvedené u produktu a v pokladně. K této době je třeba připočíst dobu přepravy podle zvoleného dopravce. O odeslání zásilky informujeme e-mailem.
+
+Doručujeme na území České republiky. Cena dopravy je u každého způsobu doručení uvedena v pokladně, tedy před odesláním objednávky.
 
 Nebezpečí škody na zboží přechází na kupujícího převzetím zásilky.
 
@@ -180,23 +186,33 @@ Kupující spotřebitel má právo odstoupit od smlouvy bez udání důvodu ve l
 
 Odstoupit lze jednoznačným prohlášením – nejrychleji formulářem na stránce „Odstoupení od smlouvy", který je dostupný bez přihlášení, dále e-mailem, dopisem nebo vyplněným vzorovým formulářem. Přijetí odstoupení potvrdíme s uvedením data a času.
 
+Odstoupit lze i od části objednávky. Kupující tedy může vrátit jen některé kusy a ostatní si ponechat.
+
 Zboží kupující odešle zpět nejpozději do 14 dnů od odstoupení. Přímé náklady na vrácení zboží nese kupující. Kupující odpovídá za snížení hodnoty zboží, které vzniklo nakládáním s ním jinak, než je nutné k obeznámení se s jeho povahou a vlastnostmi.
 
-Peníze vrátíme nejpozději do 14 dnů od doručení odstoupení, stejným způsobem, jakým byly přijaty. S vrácením můžeme počkat, dokud zboží neobdržíme zpět nebo dokud kupující neprokáže, že je odeslal.
+Peníze vrátíme nejpozději do 14 dnů od doručení odstoupení, a to stejným způsobem, jakým jsme je přijali. Vracíme kupní cenu **včetně nákladů na dodání zboží**, které kupující zaplatil. Zvolil-li kupující jiný než nejlevnější nabízený způsob dodání, vrátíme náklady na dodání ve výši odpovídající nejlevnějšímu nabízenému způsobu (§ 1832 odst. 1 občanského zákoníku). S vrácením peněz můžeme počkat, dokud zboží neobdržíme zpět nebo dokud kupující neprokáže, že je odeslal.
 
-## 6. Práva z vadného plnění
+## 6. Kdy od smlouvy odstoupit nelze
+
+Zákon vylučuje odstoupení u některých druhů zboží (§ 1837 občanského zákoníku). Z naší nabídky se to může týkat zboží upraveného na přání kupujícího a zboží v uzavřeném obalu, které kupující z obalu vyňal a které z hygienických důvodů není možné vrátit.
+
+U ostatního zboží se právo na odstoupení do 14 dnů uplatní bez omezení.
+
+## 7. Práva z vadného plnění
 
 Práva z vadného plnění a postup při reklamaci upravuje reklamační řád, který je nedílnou součástí těchto VOP. Reklamaci vyřídíme nejpozději do 30 dnů od uplatnění.
 
-## 7. Mimosoudní řešení sporů
+## 8. Mimosoudní řešení sporů a dozor
 
 K mimosoudnímu řešení spotřebitelských sporů z kupní smlouvy je příslušná Česká obchodní inspekce, se sídlem Štěpánská 567/15, 120 00 Praha 2, internetová adresa www.coi.cz. Návrh na zahájení mimosoudního řešení sporu podává spotřebitel; řízení je pro něj bezplatné.
 
-## 8. Ochrana osobních údajů
+Dozor nad dodržováním povinností podle zákona o ochraně spotřebitele vykonává Česká obchodní inspekce. Dozor nad zpracováním osobních údajů vykonává Úřad pro ochranu osobních údajů.
+
+## 9. Ochrana osobních údajů
 
 Zpracování osobních údajů je popsáno v samostatném dokumentu „Ochrana osobních údajů", dostupném v patičce webu.
 
-## 9. Závěrečná ustanovení
+## 10. Závěrečná ustanovení
 
 Znění VOP může prodávající měnit či doplňovat. Pro objednávku platí vždy to znění, které bylo účinné v okamžiku jejího odeslání; jeho verze je u objednávky zaznamenána.`,
     },
@@ -212,9 +228,11 @@ Kupující spotřebitel může vadu vytknout ve lhůtě dvou let od převzetí z
 
 ## 2. Uplatnění reklamace
 
-Reklamaci lze uplatnit e-mailem, dopisem nebo přes formulář v zákaznickém účtu. Popište prosím vadu a přiložte doklad o koupi – stačí číslo objednávky.
+Reklamaci lze uplatnit formulářem na stránce „Reklamace", e-mailem nebo dopisem. Formulář je dostupný **i bez přihlášení**: práva z vadného plnění nezávisí na tom, zda má kupující u prodávajícího účet. Popište prosím vadu a uveďte číslo objednávky spolu s e-mailem, se kterým byla objednávka pořízena.
 
-O uplatnění reklamace vydáme potvrzení s uvedením data, obsahu reklamace a požadovaného způsobu vyřízení.
+O uplatnění reklamace vydáme potvrzení s uvedením data, obsahu reklamace a požadovaného způsobu vyřízení. Stav reklamace může kupující kdykoli sledovat na stránce „Stav reklamace", a to rovněž bez přihlášení.
+
+Kam reklamované zboží zaslat, sdělíme v potvrzení reklamace; jde o tutéž adresu, která je uvedena v poučení o odstoupení od smlouvy.
 
 ## 3. Vyřízení reklamace
 

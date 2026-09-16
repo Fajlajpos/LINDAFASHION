@@ -71,7 +71,19 @@ export default async function ReklamacePage({
           >
             reklamačním řádu
           </Link>
-          . Máte-li u nás účet, uvidíte stav žádosti v{' '}
+          . Stav žádosti kdykoli zjistíte na stránce{' '}
+          {/*
+            Veřejná stránka je uvedená jako první, účet až za ní. Obráceně to
+            hostovi říkalo, že bez účtu se stav nedozví – a objednávka bez
+            registrace účet mít nemůže, přestože reklamovat smí stejně.
+          */}
+          <Link
+            href="/reklamace/stav"
+            className="font-semibold text-linda-cognac underline underline-offset-2"
+          >
+            Stav reklamace
+          </Link>
+          , stačí číslo objednávky a e-mail. Máte-li u nás účet, uvidíte ji i v{' '}
           <Link
             href="/muj-ucet"
             className="font-semibold text-linda-cognac underline underline-offset-2"

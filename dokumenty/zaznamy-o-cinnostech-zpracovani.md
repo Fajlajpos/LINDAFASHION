@@ -23,8 +23,8 @@
 | Provozovna | Linda Fashion, Rokycanova 1929, 356 01 Sokolov |
 | IČO | 02688468 |
 | Telefon | +420 607 030 764 |
-| Kontaktní e-mail | [DOPLNIT] |
-| Kontakt pro subjekty údajů | [DOPLNIT — např. gdpr@…, zadává se i v administraci jako `emailProGdpr`] |
+| Kontaktní e-mail | lindafashioneshop@gmail.com |
+| Kontakt pro subjekty údajů | lindafashioneshop@gmail.com (v administraci jako `emailProGdpr`) |
 | Pověřenec (DPO) | **Nejmenován.** Nejde o orgán veřejné moci, hlavní činností není rozsáhlé pravidelné monitorování ani zpracování zvláštních kategorií údajů (čl. 37 odst. 1). |
 
 **Zástupce podle čl. 27:** nerelevantní, správce je usazen v ČR.

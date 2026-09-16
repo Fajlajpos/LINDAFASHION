@@ -1,49 +1,99 @@
 /**
- * Vloží výchozí znění právních dokumentů do databáze.
+ * Vydá znění právních dokumentů z `VYCHOZI_ZNENI` do databáze.
  *
  * Oddělené od `prisma/seed.ts` schválně: seed maže katalog, tohle ne.
  * Na běžícím e-shopu je potřeba doplnit podmínky, ne přijít o produkty.
  *
- * Existující znění nikdy nepřepisuje – text, na který odkazuje objednávka,
- * je důkaz o tom, s čím zákaznice souhlasila.
+ * ## Přidává, nikdy nepřepisuje
  *
- *   npx ts-node -P tsconfig.node.json src/scripts/vlozit-pravni-dokumenty.ts
+ * Text, na který odkazuje byť jediná objednávka, je důkaz o tom, s čím
+ * zákaznice souhlasila. Skript proto **žádný uložený řádek nemění**:
+ *
+ * - v tabulce nic není → vloží se jako první verze,
+ * - poslední uložené znění je shodné → nedělá se nic,
+ * - poslední uložené znění se liší → vznikne **nová verze** účinná ode dneška.
+ *
+ * Do téhle chvíle uměl jen první případ a u existujícího znění se zastavil.
+ * Oprava v textu se tím nedala vydat jinak než ručně přes administraci, takže
+ * `VYCHOZI_ZNENI` a to, co četla zákaznice, se mohlo tiše rozejít.
+ *
+ *   npm run pravni:vlozit
  */
 import { PrismaClient } from '@prisma/client';
-import { VYCHOZI_ZNENI } from '../lib/pravni-dokumenty';
+import { VYCHOZI_ZNENI, type DruhDokumentu } from '../lib/pravni-dokumenty';
 
 const prisma = new PrismaClient();
+
+/** Druhy, jejichž text se opravdu ukládá. */
+const SPRAVOVANE: DruhDokumentu[] = ['obchodni-podminky', 'reklamacni-rad'];
+
+/**
+ * Volné označení verze pro dnešek.
+ *
+ * Dvojice (druh, verze) je v databázi unikátní. Když se v jeden den vydávají
+ * dvě znění, dostane druhé příponu – kolize by jinak skript shodila uprostřed
+ * a část dokumentů by zůstala nevydaná.
+ */
+async function volneOznaceni(druh: DruhDokumentu, zaklad: string): Promise<string> {
+  for (let poradi = 0; poradi < 26; poradi += 1) {
+    const verze = poradi === 0 ? zaklad : `${zaklad}-${String.fromCharCode(97 + poradi)}`;
+    const obsazeno = await prisma.pravniDokument.findUnique({
+      where: { druh_verze: { druh, verze } },
+      select: { id: true },
+    });
+
+    if (!obsazeno) return verze;
+  }
+
+  throw new Error(`Pro ${druh} se dnes nepodařilo najít volné označení verze.`);
+}
 
 async function main() {
   const dnes = new Date().toISOString().slice(0, 10);
 
-  for (const druh of ['obchodni-podminky', 'reklamacni-rad'] as const) {
-    const uzJe = await prisma.pravniDokument.findFirst({ where: { druh } });
+  for (const druh of SPRAVOVANE) {
+    const vychozi = VYCHOZI_ZNENI[druh];
 
-    if (uzJe) {
-      console.log(`⏭  ${druh}: už existuje znění (verze ${uzJe.verze}), nechávám být.`);
+    // Nejnovější podle účinnosti – to je znění, které dnes vidí zákaznice.
+    const posledni = await prisma.pravniDokument.findFirst({
+      where: { druh },
+      orderBy: { ucinnostOd: 'desc' },
+      select: { verze: true, obsah: true, nadpis: true },
+    });
+
+    if (posledni && posledni.obsah === vychozi.obsah && posledni.nadpis === vychozi.nadpis) {
+      console.log(`⏭  ${druh}: verze ${posledni.verze} odpovídá textu v kódu, není co vydávat.`);
       continue;
     }
 
-    const vychozi = VYCHOZI_ZNENI[druh];
+    const verze = await volneOznaceni(druh, dnes);
 
     await prisma.pravniDokument.create({
       data: {
         druh,
-        verze: dnes,
+        verze,
         nadpis: vychozi.nadpis,
         obsah: vychozi.obsah,
         ucinnostOd: new Date(),
       },
     });
 
-    console.log(`📜 ${druh}: vloženo výchozí znění jako verze ${dnes}.`);
+    if (posledni) {
+      console.log(`📜 ${druh}: vydána nová verze ${verze} (předchozí ${posledni.verze} zůstává).`);
+    } else {
+      console.log(`📜 ${druh}: vloženo první znění jako verze ${verze}.`);
+    }
   }
+
+  console.log(
+    '\nStarší znění zůstávají v databázi kvůli objednávkám, které na ně odkazují.\n' +
+      'Otevřou se odkazem /obchodni-podminky?verze=<označení>.',
+  );
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Vložení selhalo:', e);
+    console.error('❌ Vydání selhalo:', e);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
