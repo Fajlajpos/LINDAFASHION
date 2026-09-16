@@ -10,6 +10,7 @@ import { usePrilepenyPanel } from '@/lib/prilepeny-panel';
 import { poslatJson } from '@/lib/api-klient';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
 import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
+import { vybratVydejniMisto } from '@/lib/packeta-widget';
 
 /* ------------------------------------------------------------------ */
 /* Stavební prvky pokladny – tvar nese stav, ne jen barva              */
@@ -167,6 +168,14 @@ interface Props {
    * znovu sestavovat celý web.
    */
   platbaKartouDostupna: boolean;
+  /**
+   * Klíč k widgetu Zásilkovny, nebo `null`, když ještě není zapojená.
+   *
+   * Čte se na serveru ze stejného důvodu jako `platbaKartouDostupna`:
+   * `NEXT_PUBLIC_` proměnná zamrzne v buildu, takže by se po vyplnění `.env`
+   * musel přestavět celý image. Bez klíče se pobočka zadává ručně.
+   */
+  packetaKlicWidgetu: string | null;
 }
 
 interface UplatnenySleva {
@@ -189,6 +198,7 @@ export function PokladnaFormular({
   popisDph,
   dodaciLhuta,
   platbaKartouDostupna,
+  packetaKlicWidgetu,
 }: Props) {
   const router = useRouter();
   const { cart, totalCartValue, clearCart } = useCart();
@@ -198,6 +208,15 @@ export function PokladnaFormular({
   const [vydejniMisto, setVydejniMisto] = useState<{ id: string; nazev: string } | null>(null);
   /** Rozepsaný text pobočky – oddělený od potvrzené volby, ať jde psát plynule. */
   const [vydejniMistoText, setVydejniMistoText] = useState('');
+  /** Běží stahování knihovny Zásilkovny? Mapa se otevře až po něm. */
+  const [otviraMapu, setOtviraMapu] = useState(false);
+  /**
+   * Mapu se nepodařilo načíst (blokovaný skript, výpadek).
+   *
+   * Nespadne kvůli tomu celá pokladna: přepne se na ruční zápis pobočky,
+   * tedy na stav, ve kterém e-shop fungoval, než widget existoval.
+   */
+  const [mapaSelhala, setMapaSelhala] = useState(false);
 
   /*
    * Uložená adresa má při předvyplnění přednost před jménem z profilu –
@@ -240,6 +259,39 @@ export function PokladnaFormular({
   }, [sleva, poukaz]);
 
   const vybranaDoprava = dopravy.find((d) => d.id === zpusobDopravy) ?? null;
+
+  /*
+   * Mapu nabízíme jen u Zásilkovny, ne u každé dopravy s výdejním místem.
+   * Widget zná výhradně pobočky Packety – otevřít ho nad Balíkovnou (až
+   * přibude) by zákaznici nechalo vybrat místo, kam žádná zásilka nepřijde.
+   */
+  const mapaDostupna =
+    Boolean(packetaKlicWidgetu) && vybranaDoprava?.id === 'zasilkovna' && !mapaSelhala;
+
+  async function otevritMapu() {
+    if (!packetaKlicWidgetu) return;
+
+    setOtviraMapu(true);
+    try {
+      /*
+       * „Načítám" končí ve chvíli, kdy je mapa na obrazovce, ne až po výběru.
+       * Jinak tlačítko hlásí „Otevírám mapu…" po celou dobu prohlížení poboček
+       * a po zavření křížkem zůstane zablokované – zákaznice by se k výběru
+       * už nedostala.
+       */
+      const misto = await vybratVydejniMisto(packetaKlicWidgetu, () => setOtviraMapu(false));
+      // `null` = zavřela okno bez výběru. Dosavadní volbu jí nebereme.
+      if (misto) {
+        setVydejniMisto(misto);
+        setChybyPoli((p) => ({ ...p, vydejniMistoId: '' }));
+      }
+    } catch {
+      // Detail chyby je z cizího skriptu; zákaznici pomůže jen náhradní cesta.
+      setMapaSelhala(true);
+    } finally {
+      setOtviraMapu(false);
+    }
+  }
 
   /** Rozpis počítáme v haléřích – stejnou logikou jako server (sekce 6.11). */
   const rozpis = useMemo(() => {
@@ -513,8 +565,18 @@ export function PokladnaFormular({
                   value={d.id}
                   checked={zpusobDopravy === d.id}
                   onSelect={() => {
+                    if (d.id === zpusobDopravy) return;
                     setZpusobDopravy(d.id);
-                    if (!d.vyzadujeVydejniMisto) setVydejniMisto(null);
+                    /*
+                     * Pobočka patří ke konkrétnímu dopravci, takže se při
+                     * přepnutí zahodí vždycky. Dřív se mazala jen tehdy, když
+                     * nová doprava výdejní místo nechtěla – mezi dvěma
+                     * dopravci s pobočkami by si tak objednávka odnesla id
+                     * z cizí sítě.
+                     */
+                    setVydejniMisto(null);
+                    setVydejniMistoText('');
+                    setChybyPoli((p) => ({ ...p, vydejniMistoId: '' }));
                   }}
                   disabled={odesila}
                   nadpis={d.nazev}
@@ -541,16 +603,53 @@ export function PokladnaFormular({
                       {vydejniMisto.nazev}
                       <button
                         type="button"
-                        onClick={() => setVydejniMisto(null)}
-                        className="min-h-touch cursor-pointer text-[11px] font-semibold text-linda-cognac underline"
+                        onClick={() => {
+                          // S mapou je „Změnit" nová volba, bez ní vymazání.
+                          if (mapaDostupna) {
+                            void otevritMapu();
+                            return;
+                          }
+                          setVydejniMisto(null);
+                          setVydejniMistoText('');
+                        }}
+                        disabled={odesila || otviraMapu}
+                        className="min-h-touch shrink-0 cursor-pointer text-[11px] font-semibold text-linda-cognac underline disabled:opacity-60"
                       >
                         Změnit
                       </button>
                     </p>
+                  ) : mapaDostupna ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void otevritMapu()}
+                        disabled={odesila || otviraMapu}
+                        className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-linda-cream px-4 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {otviraMapu ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            Otevírám mapu…
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                            Vybrat výdejní místo nebo Z-BOX
+                          </>
+                        )}
+                      </button>
+
+                      {chybyPoli.vydejniMistoId && (
+                        <p role="alert" className="text-[11px] font-medium text-red-800">
+                          {chybyPoli.vydejniMistoId}
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <>
-                      {/* Widget Zásilkovny se zapojí, až budou API klíče (sekce 8).
-                          Do té doby zadá zákaznice pobočku ručně, ať objednávka projde. */}
+                      {/* Ruční zápis. Platí, dokud Zásilkovna nemá v `.env` klíč –
+                          a taky když se mapu nepodaří načíst. Ani jedno nesmí
+                          zákaznici zabránit objednávku dokončit. */}
                       <Pole
                         id="pokladna-vydejni-misto"
                         label="Název pobočky nebo Z-BOXu"
@@ -564,7 +663,9 @@ export function PokladnaFormular({
                         chyba={chybyPoli.vydejniMistoId}
                       />
                       <p className="text-[10px] text-linda-espresso/70">
-                        Výběr z mapy doplníme, jakmile napojíme Zásilkovnu.
+                        {mapaSelhala
+                          ? 'Mapu výdejních míst se teď nepodařilo načíst. Napište prosím pobočku ručně – objednávku to nezdrží.'
+                          : 'Výběr z mapy doplníme, jakmile napojíme Zásilkovnu.'}
                       </p>
                     </>
                   )}

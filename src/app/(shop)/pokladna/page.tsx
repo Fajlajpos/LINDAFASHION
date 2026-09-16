@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { PokladnaFormular, type MoznostDopravy } from '@/components/shop/PokladnaFormular';
 import { jeNastaveno } from '@/lib/gopay';
+import { klicWidgetu } from '@/lib/packeta';
 import { overitUzivatele } from '@/lib/auth';
 import { nacistAdresy } from '@/lib/adresy';
 import { nacistNastaveni, popisDodaciLhuty, popisDph, zpravaODovolene } from '@/lib/nastaveni';
@@ -54,6 +55,7 @@ export default async function PokladnaPage() {
         popisDph={popisDph(nastaveni)}
         dodaciLhuta={popisDodaciLhuty(nastaveni)}
         platbaKartouDostupna={jeNastaveno()}
+        packetaKlicWidgetu={klicWidgetu()}
       />
     </div>
   );

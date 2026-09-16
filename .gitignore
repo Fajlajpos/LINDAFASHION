@@ -22,10 +22,13 @@ yarn-error.log*
 /docker-build.log
 
 # local env files
-.env
-.env.production
-.env.local
-.env*.local
+#
+# Plošně všechny varianty, ne jen vyjmenované. Dřív tu stálo `.env`,
+# `.env.production`, `.env.local` a `.env*.local` – takže `.env.test` nebo
+# `.env.staging` by se bez varování commitly i s obsahem. Vzor `.env.example`
+# je jediná výjimka a commituje se schválně.
+.env*
+!.env.example
 
 # uploads – hotové WebP varianty
 /public/uploads/*
@@ -36,6 +39,24 @@ yarn-error.log*
 
 # zálohy databáze a souborů (deploy/zaloha.sh je tam ukládá)
 /zalohy
+
+# klíče a certifikáty
+#
+# Pojistka, ne popis skutečnosti: dnes v repozitáři žádný takový soubor není
+# a nemá tu co dělat. Klíče k bráně, SMTP i TLS chodí přes `.env`, případně je
+# vyrábí Caddy sám ve svém svazku. Kdyby sem někdy nějaký patřil, musí se
+# přidat vědomě přes `git add -f`.
+*.pem
+*.key
+*.p12
+*.pfx
+
+# výstup z `vitest --coverage`
+/coverage
+
+# smetí z operačního systému
+.DS_Store
+Thumbs.db
 
 # vercel
 .vercel
