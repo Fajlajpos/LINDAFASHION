@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle, Loader2, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle, ExternalLink, Loader2, Package, Printer, Save } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { STAV_OBJEDNAVKY, STAV_PLATBY } from '@/lib/objednavka-popisky';
 import { Vyber } from '@/components/ui/Vyber';
@@ -13,6 +13,17 @@ interface Props {
   stavPlatby: string;
   cisloZasilky: string | null;
   polozky: Array<{ id: string; popis: string }>;
+  /** Způsob dopravy objednávky – zásilku umíme založit jen u Zásilkovny. */
+  zpusobDopravy: string;
+  /** Má objednávka vybrané výdejní místo? Bez něj Zásilkovna zásilku nepřijme. */
+  maVydejniMisto: boolean;
+  /**
+   * Je zakládání zásilek zapojené (API heslo i označení odesílatele v `.env`)?
+   *
+   * Rozhoduje se na serveru, stejně jako u platební brány: tajné heslo do
+   * prohlížeče nepatří a `NEXT_PUBLIC_` proměnná by navíc zamrzla v buildu.
+   */
+  zasilkovnaDostupna: boolean;
 }
 
 const STAVY = ['NOVA', 'ZPRACOVAVA_SE', 'EXPEDOVANA', 'DORUCENA', 'ZRUSENA', 'VRACENA'];
@@ -27,7 +38,16 @@ const POLE =
  * Zrušení objednávky vrací zboží na sklad, proto se na něj ptáme zvlášť –
  * není to akce, kterou chce majitelka spustit omylem výběrem v seznamu.
  */
-export function SpravaObjednavky({ orderId, stav, stavPlatby, cisloZasilky, polozky }: Props) {
+export function SpravaObjednavky({
+  orderId,
+  stav,
+  stavPlatby,
+  cisloZasilky,
+  polozky,
+  zpusobDopravy,
+  maVydejniMisto,
+  zasilkovnaDostupna,
+}: Props) {
   const router = useRouter();
 
   const [novyStav, setNovyStav] = useState(stav);
@@ -42,6 +62,34 @@ export function SpravaObjednavky({ orderId, stav, stavPlatby, cisloZasilky, polo
   const [polozkaId, setPolozkaId] = useState('');
   const [duvod, setDuvod] = useState('');
   const [zakladaReklamaci, setZakladaReklamaci] = useState(false);
+
+  // Zásilka
+  const [zakladaZasilku, setZakladaZasilku] = useState(false);
+  const [chybaZasilky, setChybaZasilky] = useState<string | null>(null);
+
+  /*
+   * Prázdný řetězec je rozdělaná rezervace z routy `…/zasilka` – zásilka se
+   * zrovna zakládá. Brát ho jako hotové číslo by nabídlo tisk štítku, který
+   * ještě neexistuje.
+   */
+  const maZasilku = Boolean(cisloZasilky?.trim());
+
+  const zalozitZasilku = async () => {
+    if (zakladaZasilku) return;
+
+    setZakladaZasilku(true);
+    setChybaZasilky(null);
+
+    const vysledek = await poslatJson(`/api/admin/objednavky/${orderId}/zasilka`, {});
+
+    if (vysledek.ok) {
+      router.refresh();
+    } else {
+      setChybaZasilky(vysledek.chyba);
+    }
+
+    setZakladaZasilku(false);
+  };
 
   const ulozit = async () => {
     if (uklada) return;
@@ -109,6 +157,99 @@ export function SpravaObjednavky({ orderId, stav, stavPlatby, cisloZasilky, polo
           <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
           {chyba}
         </p>
+      )}
+
+      {/*
+        Zásilkovna. Nabízí se jen tam, kde dává smysl: u dopravy `zasilkovna`
+        a jen když jsou v `.env` klíče. Ruční pole „číslo zásilky" níž zůstává
+        beze změny – je to záchrana při výpadku API a jediná cesta pro ostatní
+        dopravce.
+      */}
+      {zpusobDopravy === 'zasilkovna' && zasilkovnaDostupna && (
+        <section className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu">
+          <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
+            <Package className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+            Zásilka
+          </h2>
+
+          {chybaZasilky && (
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-xl bg-linda-sandLight p-3 text-xs font-medium text-red-800 shadow-neuInsetSm"
+            >
+              <AlertCircle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+              {chybaZasilky}
+            </p>
+          )}
+
+          {maZasilku ? (
+            <>
+              <p className="rounded-xl bg-linda-sandLight p-3 text-xs text-linda-espresso shadow-neuInsetSm">
+                Číslo zásilky{' '}
+                <strong className="font-semibold tabular-nums">{cisloZasilky}</strong>
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`/api/admin/objednavky/${orderId}/stitek`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-5 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+                >
+                  <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                  Štítek (PDF)
+                </a>
+
+                <a
+                  href={`https://tracking.packeta.com/cs/?id=${encodeURIComponent(cisloZasilky ?? '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  Sledovat
+                </a>
+              </div>
+
+              <p className="text-[11px] text-linda-espresso/70">
+                Doručení se doplní samo – worker se Zásilkovny ptá každou hodinu. Od převzetí
+                běží zákaznici čtrnáctidenní lhůta pro odstoupení.
+              </p>
+            </>
+          ) : !maVydejniMisto ? (
+            <p className="rounded-xl bg-linda-sandLight p-3 text-xs text-linda-espresso/85 shadow-neuInsetSm">
+              Objednávka nemá vybrané výdejní místo, takže zásilku nejde založit. Je to
+              objednávka z doby před zapojením mapy – podejte ji prosím ručně v klientské sekci
+              a číslo zásilky dopište níž.
+            </p>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => void zalozitZasilku()}
+                disabled={zakladaZasilku || stav === 'ZRUSENA'}
+                className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {zakladaZasilku ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Zakládám zásilku…
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-3.5 w-3.5" aria-hidden="true" />
+                    Vytvořit zásilku
+                  </>
+                )}
+              </button>
+
+              <p className="text-[11px] text-linda-espresso/70">
+                Založí zásilku u Zásilkovny, uloží její číslo, přepne objednávku na
+                „Expedována&ldquo; a dá o tom vědět zákaznici. Štítek se pak vytiskne odsud.
+              </p>
+            </>
+          )}
+        </section>
       )}
 
       <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu">

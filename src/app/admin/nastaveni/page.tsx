@@ -40,6 +40,7 @@ interface Nastaveni {
   cenaDopravyPPL: number | null;
   cenaDopravyCeskaPosta: number | null;
   prahDopravaZdarma: number | null;
+  hmotnostBalikuGramu: number;
 
   zapisVRejstriku: string | null;
   sazbaDph: number;
@@ -68,6 +69,7 @@ const PRAZDNE: Nastaveni = {
   cenaDopravyPPL: null,
   cenaDopravyCeskaPosta: null,
   prahDopravaZdarma: null,
+  hmotnostBalikuGramu: 500,
   zapisVRejstriku: null,
   sazbaDph: 21,
   adresaProVraceni: null,
@@ -553,6 +555,31 @@ export default function AdminNastaveniPage() {
               className={POLE}
             />
             <p className="mt-1 text-[11px] text-linda-espresso/70">Prázdné = doprava zdarma se nenabízí.</p>
+          </div>
+
+          <div className="sm:max-w-xs">
+            <label
+              htmlFor="hmotnostBalikuGramu"
+              className="mb-1 block text-xs font-semibold text-linda-espresso"
+            >
+              Hmotnost jednoho kusu (g)
+            </label>
+            <input
+              id="hmotnostBalikuGramu"
+              type="number"
+              min="1"
+              max="30000"
+              step="10"
+              disabled={ukladam}
+              value={n.hmotnostBalikuGramu}
+              onChange={(e) => setN({ ...n, hmotnostBalikuGramu: Number(e.target.value) })}
+              placeholder="500"
+              className={POLE}
+            />
+            <p className="mt-1 text-[11px] text-linda-espresso/70">
+              Z toho se počítá hmotnost zásilky pro Zásilkovnu: vynásobí se počtem kusů
+              v objednávce. Odhad stačí, jde o zařazení do cenového pásma.
+            </p>
           </div>
         </section>
 

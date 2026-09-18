@@ -24,6 +24,7 @@ import { uklidUlozisteUloha } from './jobs/uklid-uloziste';
 import { odeslatEmailUloha, type UlohaEmail } from './jobs/odeslat-email';
 import { vygenerovatFakturuUloha, type UlohaFaktura } from './jobs/vygenerovat-fakturu';
 import { vygenerovatPoukazyUloha, type UlohaPoukazy } from './jobs/vygenerovat-poukazy';
+import { hlidaniZasilekUloha } from './jobs/hlidani-zasilek';
 import { uklidResetTokenu } from '../lib/reset-hesla';
 import { uklidZmenEmailu } from '../lib/zmena-emailu';
 import { popisVysledku, spustitRetenci } from '../lib/retence';
@@ -34,6 +35,7 @@ const FRONTA_OPUSTENE_KOSIKY = 'opustene-kosiky';
 const FRONTA_NIZKY_SKLAD = 'nizky-sklad-upozorneni';
 const FRONTA_HLIDANI_SKLADU = 'hlidani-skladu';
 const FRONTA_RETENCE = 'retence-osobnich-udaju';
+const FRONTA_HLIDANI_ZASILEK = 'hlidani-zasilek';
 
 async function spustitWorker() {
   console.log('🚀 Spouštím worker LINDA FASHION…');
@@ -72,6 +74,19 @@ async function spustitWorker() {
   await boss.work<UlohaPoukazy>(FRONTY.VYGENEROVAT_POUKAZY, async (job) => {
     await vygenerovatPoukazyUloha(job.data);
   });
+
+  // --- Hlídání zásilek u Zásilkovny ---------------------------------------
+  //
+  // `work()` i `schedule()`: naplánovaná fronta bez obsluhy se jen plní
+  // a nikdo ji nevyzvedne.
+  //
+  // Jednou za hodinu, mimo celou. Častěji nemá smysl – Zásilkovna si sama
+  // synchronizuje stavy s navazujícími dopravci třikrát denně, takže dřív
+  // se doručení nedozvíme, ať se ptáme jakkoli často.
+  await boss.work(FRONTA_HLIDANI_ZASILEK, async () => {
+    await hlidaniZasilekUloha();
+  });
+  await boss.schedule(FRONTA_HLIDANI_ZASILEK, '17 * * * *');
 
   // --- Úklid úložiště -----------------------------------------------------
   await boss.work(FRONTA_UKLID, async () => {
@@ -288,6 +303,7 @@ async function spustitWorker() {
   console.log(`   • ${FRONTA_OPUSTENE_KOSIKY} (každé 4 hodiny)`);
   console.log(`   • ${FRONTA_NIZKY_SKLAD} (každé 2 hodiny)`);
   console.log(`   • ${FRONTA_HLIDANI_SKLADU} (každých 30 minut)`);
+  console.log(`   • ${FRONTA_HLIDANI_ZASILEK} (doručení zásilek, každou hodinu)`);
   console.log(`   • ${FRONTA_RETENCE} (denně ve 3:20)`);
 }
 

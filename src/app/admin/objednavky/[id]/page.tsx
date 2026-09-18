@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, FileText, Gift, MapPin, User } from 'lucide-react';
 import { db } from '@/lib/db';
+import { jeNastaveno as zasilkovnaNastavena } from '@/lib/packeta-api';
 import { SpravaObjednavky } from '@/components/admin/SpravaObjednavky';
 import {
   NAZEV_DOPRAVY,
@@ -299,6 +300,9 @@ export default async function DetailObjednavkyPage({ params }: { params: { id: s
         stav={objednavka.stav}
         stavPlatby={objednavka.stavPlatby}
         cisloZasilky={objednavka.cisloZasilky}
+        zpusobDopravy={objednavka.zpusobDopravy}
+        maVydejniMisto={Boolean(objednavka.vydejniMistoId)}
+        zasilkovnaDostupna={zasilkovnaNastavena()}
         polozky={objednavka.items.map((i) => ({
           id: i.id,
           popis: `${i.variant.product.nazev} (${i.variant.velikost}) · ${i.mnozstvi} ks`,

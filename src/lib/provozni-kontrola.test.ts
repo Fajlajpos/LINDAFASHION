@@ -36,6 +36,7 @@ const VYPLNENO: NastaveniWebu = {
   cenaDopravyPPL: 109,
   cenaDopravyCeskaPosta: 99,
   prahDopravaZdarma: 2500,
+  hmotnostBalikuGramu: 500,
 
   zapisVRejstriku: 'Zapsána v živnostenském rejstříku',
   sazbaDph: 21,

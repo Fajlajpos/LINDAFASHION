@@ -32,6 +32,8 @@ export interface NastaveniWebu {
   cenaDopravyPPL: number | null;
   cenaDopravyCeskaPosta: number | null;
   prahDopravaZdarma: number | null;
+  /** Hmotnost jednoho kusu v gramech – podklad pro zásilku Zásilkovny. */
+  hmotnostBalikuGramu: number;
 
   /** Údaj o zápisu v obchodním či živnostenském rejstříku (§ 435 o. z.). */
   zapisVRejstriku: string | null;
@@ -77,6 +79,7 @@ export const VYCHOZI_NASTAVENI: NastaveniWebu = {
   cenaDopravyPPL: null,
   cenaDopravyCeskaPosta: null,
   prahDopravaZdarma: null,
+  hmotnostBalikuGramu: 500,
   zapisVRejstriku: null,
   sazbaDph: 21,
   adresaProVraceni: null,
@@ -116,6 +119,7 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
       cenaDopravyPPL: zaznam.cenaDopravyPPL === null ? null : Number(zaznam.cenaDopravyPPL),
       cenaDopravyCeskaPosta: zaznam.cenaDopravyCeskaPosta === null ? null : Number(zaznam.cenaDopravyCeskaPosta),
       prahDopravaZdarma: zaznam.prahDopravaZdarma === null ? null : Number(zaznam.prahDopravaZdarma),
+      hmotnostBalikuGramu: zaznam.hmotnostBalikuGramu,
       zapisVRejstriku: zaznam.zapisVRejstriku,
       sazbaDph: zaznam.sazbaDph,
       adresaProVraceni: zaznam.adresaProVraceni,

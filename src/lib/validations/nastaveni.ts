@@ -53,6 +53,13 @@ export const nastaveniSchema = z
     cenaDopravyCeskaPosta: volitelnaCena,
     prahDopravaZdarma: volitelnaCena,
 
+    /*
+     * Hmotnost jednoho kusu v gramech. Nula ani prázdno nedávají smysl –
+     * zásilku bez hmotnosti Zásilkovna odmítne. Horní hranice je 30 kg,
+     * tedy limit jedné zásilky; víc je překlep, ne balík.
+     */
+    hmotnostBalikuGramu: z.coerce.number().int().min(1).max(30_000).optional().default(500),
+
     // § 435 o. z. – údaj o zápisu v rejstříku patří na obchodní listiny i na web.
     zapisVRejstriku: volitelnyText(300),
 

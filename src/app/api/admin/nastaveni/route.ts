@@ -25,6 +25,7 @@ export async function GET() {
         cenaDopravyPPL: zaznam.cenaDopravyPPL === null ? null : Number(zaznam.cenaDopravyPPL),
         cenaDopravyCeskaPosta: zaznam.cenaDopravyCeskaPosta === null ? null : Number(zaznam.cenaDopravyCeskaPosta),
         prahDopravaZdarma: zaznam.prahDopravaZdarma === null ? null : Number(zaznam.prahDopravaZdarma),
+        hmotnostBalikuGramu: zaznam.hmotnostBalikuGramu,
       },
     });
   } catch (err) {
@@ -61,6 +62,7 @@ export async function PUT(request: Request) {
       cenaDopravyCeskaPosta:
         vstup.cenaDopravyCeskaPosta === null ? null : new Prisma.Decimal(vstup.cenaDopravyCeskaPosta),
       prahDopravaZdarma: vstup.prahDopravaZdarma === null ? null : new Prisma.Decimal(vstup.prahDopravaZdarma),
+      hmotnostBalikuGramu: vstup.hmotnostBalikuGramu,
 
       zapisVRejstriku: vstup.zapisVRejstriku,
       sazbaDph: vstup.sazbaDph,

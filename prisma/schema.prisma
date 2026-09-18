@@ -555,6 +555,17 @@ model Settings {
   cenaDopravyCeskaPosta Decimal?
   prahDopravaZdarma     Decimal?
 
+  /// Hmotnost jednoho kusu v gramech, ze které se počítá zásilka pro Zásilkovnu.
+  ///
+  /// Jedno číslo pro celý obchod, ne sloupec u produktu. U boutique s lehkým
+  /// textilem se cena dopravy stejně vejde do jednoho pásma, kdežto vyplňovat
+  /// hmotnost u každého kusu je práce, která se nikdy nedodělá — a prázdná
+  /// hmotnost by znamenala zásilku, kterou Zásilkovna odmítne.
+  ///
+  /// V gramech schválně: „500" se zadává líp a s menší šancí na překlep
+  /// než „0,5". Na kilogramy to převádí `hmotnostKg()` v packeta-api.ts.
+  hmotnostBalikuGramu   Int       @default(500)
+
   /// --- Údaje povinné na obchodních listinách (§ 435 o. z.) ---
   ///
   /// Podnikatel musí na svých listinách i webu uvádět údaj o zápisu ve
