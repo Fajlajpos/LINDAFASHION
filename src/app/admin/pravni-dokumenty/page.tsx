@@ -311,7 +311,7 @@ export default function AdminPravniDokumentyPage() {
                     </p>
                     <p className="mt-0.5 text-[11px] text-linda-espresso/70">
                       {d.nadpis} · účinné od{' '}
-                      {new Date(d.ucinnostOd).toLocaleDateString('cs-CZ')}
+                      {new Date(d.ucinnostOd).toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}
                       {d.pocetObjednavek > 0 && (
                         <> · odkazuje se na něj {d.pocetObjednavek} objednávek</>
                       )}

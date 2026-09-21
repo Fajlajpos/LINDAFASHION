@@ -65,9 +65,16 @@ interface OdpovedPrijeti {
 
 type Krok = 'hledani' | 'rekapitulace' | 'hotovo';
 
+/*
+ * Česká zóna i tady, přestože komponenta běží v prohlížeči. Čas přijetí je
+ * součást potvrzení podle § 1830a a stejný údaj přichází e-mailem, kde je
+ * pevně v `Europe/Prague`. Zákaznice nakupující ze zahraničí by jinak viděla
+ * na stránce jiný čas než v potvrzení – dva různé „okamžiky přijetí".
+ */
 function datum(hodnota: string | null): string {
   if (!hodnota) return '—';
   return new Date(hodnota).toLocaleDateString('cs-CZ', {
+    timeZone: 'Europe/Prague',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -76,6 +83,7 @@ function datum(hodnota: string | null): string {
 
 function datumACas(hodnota: string): string {
   return new Date(hodnota).toLocaleString('cs-CZ', {
+    timeZone: 'Europe/Prague',
     day: 'numeric',
     month: 'long',
     year: 'numeric',

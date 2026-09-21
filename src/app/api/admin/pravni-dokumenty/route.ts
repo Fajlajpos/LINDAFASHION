@@ -134,7 +134,7 @@ export async function POST(request: Request) {
         verze: dokument.verze,
         zprava:
           dokument.ucinnostOd > new Date()
-            ? `Znění je uložené a nabude účinnosti ${dokument.ucinnostOd.toLocaleDateString('cs-CZ')}. Do té doby platí předchozí verze.`
+            ? `Znění je uložené a nabude účinnosti ${dokument.ucinnostOd.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}. Do té doby platí předchozí verze.`
             : 'Znění je uložené a od teď platí pro nové objednávky.',
       },
       201

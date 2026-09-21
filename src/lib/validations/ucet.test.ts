@@ -117,4 +117,43 @@ describe('reklamaceSchema', () => {
 
     expect(v.orderItemId).toBeNull();
   });
+
+  /*
+   * § 19 odst. 1 zák. č. 634/1992 Sb.: potvrzení o uplatnění reklamace uvádí
+   * i způsob vyřízení, který spotřebitelka požaduje. Bez něj ve formuláři
+   * potvrzení tu část obsahovat nemůže.
+   */
+  describe('požadovaný způsob vyřízení', () => {
+    const reklamace = {
+      orderId: 'o1',
+      typ: 'REKLAMACE',
+      duvod: 'Po prvním praní se rozpáral šev na rukávu.',
+    };
+
+    it('je u reklamace povinný a chyba míří na správné pole', () => {
+      const vysledek = reklamaceSchema.safeParse(reklamace);
+
+      expect(vysledek.success).toBe(false);
+      if (!vysledek.success) {
+        expect(vysledek.error.issues[0].path).toEqual(['pozadovanyZpusob']);
+      }
+    });
+
+    it('s vybraným způsobem reklamace projde', () => {
+      for (const zpusob of ['OPRAVA', 'VYMENA', 'SLEVA', 'ODSTOUPENI']) {
+        expect(reklamaceSchema.safeParse({ ...reklamace, pozadovanyZpusob: zpusob }).success, zpusob).toBe(
+          true,
+        );
+      }
+    });
+
+    it('u vrácení do 14 dnů se nevyžaduje', () => {
+      // Vrácení bez udání důvodu není reklamace – žádný způsob vyřízení nemá.
+      expect(reklamaceSchema.safeParse(zaklad).success).toBe(true);
+    });
+
+    it('odmítne neznámou hodnotu', () => {
+      expect(reklamaceSchema.safeParse({ ...reklamace, pozadovanyZpusob: 'DAREK' }).success).toBe(false);
+    });
+  });
 });

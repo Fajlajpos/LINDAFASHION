@@ -9,6 +9,7 @@
  * Hlášky jsou česky a rovnou takové, jak je uvidí u příslušného pole.
  */
 import { z } from 'zod';
+import { ZPUSOBY_VYRIZENI } from '../objednavka-popisky';
 
 /** Stejná politika jako u registrace – heslo se nesmí jinde měnit volněji. */
 export const hesloSchema = z
@@ -131,10 +132,23 @@ export const reklamaceSchema = z
       .min(10, 'Popište prosím alespoň pár větami, co se stalo.')
       .max(2000, 'Popis je příliš dlouhý.')
       .transform((v) => v.trim()),
+    pozadovanyZpusob: z.enum(ZPUSOBY_VYRIZENI).optional().nullable(),
   })
   .refine((d) => !!d.orderId || !!d.token || (!!d.cisloObjednavky && !!d.email), {
     message: 'Vyberte objednávku, nebo zadejte její číslo a e-mail.',
     path: ['orderId'],
+  })
+  /*
+   * U reklamace je způsob vyřízení povinný, u vrácení do 14 dnů nedává smysl.
+   *
+   * § 19 odst. 1 zák. č. 634/1992 Sb. chce, aby potvrzení o uplatnění
+   * reklamace uvádělo, jaký způsob vyřízení spotřebitelka požaduje. Když se
+   * na to formulář nezeptá, potvrzení tu část obsahovat nemůže – a dohledávat
+   * to dodatečně e-mailem je přesně ta nejistota, kterou má potvrzení odstranit.
+   */
+  .refine((d) => d.typ !== 'REKLAMACE' || !!d.pozadovanyZpusob, {
+    message: 'Vyberte, jak chcete reklamaci vyřídit.',
+    path: ['pozadovanyZpusob'],
   });
 
 export type ProfilVstup = z.infer<typeof profilSchema>;

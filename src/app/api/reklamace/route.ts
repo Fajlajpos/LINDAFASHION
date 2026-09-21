@@ -5,6 +5,7 @@ import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { reklamaceSchema } from '@/lib/validations/ucet';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { poslatPotvrzeniReklamace, popisPolozky } from '@/lib/potvrzeni-reklamace';
 import { lhutaNaVyrizeni } from '@/lib/lhuty';
 import { najitObjednavkuKlicem, type VerejnyKlic } from '@/lib/odstoupeni';
 
@@ -218,6 +219,8 @@ export async function POST(request: Request) {
         orderItemId: vstup.orderItemId || null,
         typ: vstup.typ,
         duvod: vstup.duvod,
+        // Jen u reklamace; u vrácení do 14 dnů se neptáme a nic neukládáme.
+        pozadovanyZpusob: vstup.typ === 'REKLAMACE' ? vstup.pozadovanyZpusob ?? null : null,
         datumPrijeti: prijeti,
         lhutaDo: lhutaNaVyrizeni(prijeti),
         // Kontakt patří k žádosti, ne k účtu: objednávka bez registrace žádný
@@ -226,7 +229,7 @@ export async function POST(request: Request) {
         // se kvůli tomu odmítnout nesmí.
         email: objednavka.email ?? uzivatel?.email ?? null,
       },
-      select: { id: true, token: true },
+      select: { id: true, token: true, lhutaDo: true, email: true },
     });
 
     // Notifikace majitelce. Bez SMTP skončí v logu workeru – žádost samotná
@@ -242,6 +245,23 @@ export async function POST(request: Request) {
           cisloObjednavky: objednavka.cisloObjednavky,
           typ: vstup.typ,
         },
+      });
+    }
+
+    // Potvrzení pro zákaznici (§ 19 odst. 1). Jen u reklamace – vrácení
+    // do 14 dnů má vlastní potvrzení s poučením o odstoupení.
+    if (vstup.typ === 'REKLAMACE') {
+      await poslatPotvrzeniReklamace({
+        reklamaceId: reklamace.id,
+        token: reklamace.token,
+        email: reklamace.email,
+        cisloObjednavky: objednavka.cisloObjednavky,
+        polozka: await popisPolozky(vstup.orderItemId || null),
+        duvod: vstup.duvod,
+        pozadovanyZpusob: vstup.pozadovanyZpusob ?? null,
+        prijato: prijeti,
+        lhutaDo: reklamace.lhutaDo,
+        adresaProVraceni: nastaveni.adresaProVraceni,
       });
     }
 

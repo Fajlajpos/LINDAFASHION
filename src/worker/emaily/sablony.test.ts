@@ -334,6 +334,86 @@ describe('sestavitEmail', () => {
     });
   });
 
+  /*
+   * Potvrzení o uplatnění reklamace (§ 19 odst. 1 zák. 634/1992): kdy,
+   * co a do kdy. Do téhle chvíle zákaznice žádné nedostávala, přestože jí
+   * ho reklamační řád sliboval – i s adresou pro zaslání zboží.
+   */
+  describe('potvrzení reklamace', () => {
+    const prijato = new Date('2026-06-30T22:30:00Z');
+    const lhutaDo = new Date('2026-07-30T22:30:00Z');
+
+    const zaklad = {
+      cisloObjednavky: '2026-00042',
+      token: 'tok123',
+      prijatoAt: prijato.toISOString(),
+      lhutaDo: lhutaDo.toISOString(),
+      duvod: 'Rozpáraný šev na rukávu',
+    };
+
+    it('nese datum a čas uplatnění v české zóně', () => {
+      const email = sestavitEmail('reklamace-prijata', zaklad);
+
+      // 22:30 UTC je v Praze už 1. 7. 00:30. Od uplatnění běží třicetidenní
+      // lhůta, takže posunutý den by posunul i ji.
+      expect(email!.text).toContain('1. 7. 2026');
+      expect(email!.text).toContain('00:30');
+    });
+
+    it('uvádí obsah reklamace a lhůtu na vyřízení', () => {
+      const email = sestavitEmail('reklamace-prijata', zaklad);
+
+      expect(email!.predmet).toContain('2026-00042');
+      expect(email!.text).toContain('Rozpáraný šev na rukávu');
+      expect(email!.text).toContain('31. 7. 2026');
+      expect(email!.text).toContain('30 dnů');
+    });
+
+    it('bez vybraného kusu říká, že jde o celou objednávku', () => {
+      const email = sestavitEmail('reklamace-prijata', zaklad);
+      expect(email!.text).toContain('celá objednávka');
+
+      const sKusem = sestavitEmail('reklamace-prijata', { ...zaklad, polozka: 'Šaty Bellissima (L)' });
+      expect(sKusem!.text).toContain('Šaty Bellissima (L)');
+    });
+
+    it('uvádí požadovaný způsob vyřízení (§ 19 odst. 1)', () => {
+      const email = sestavitEmail('reklamace-prijata', { ...zaklad, pozadovanyZpusob: 'VYMENA' });
+
+      expect(email!.text).toContain('Požadujete: Výměna za nový kus');
+      expect(email!.html).toContain('Výměna za nový kus');
+    });
+
+    it('bez uvedeného způsobu řádek vynechá a nic si nedomyslí', () => {
+      // Reklamace zapsaná v administraci ho znát nemusí.
+      const email = sestavitEmail('reklamace-prijata', zaklad);
+      expect(email!.text).not.toContain('Požadujete');
+
+      const nesmysl = sestavitEmail('reklamace-prijata', { ...zaklad, pozadovanyZpusob: 'DAREK' });
+      expect(nesmysl!.text).not.toContain('Požadujete');
+    });
+
+    it('odkaz na stav reklamace nese token v parametru t', () => {
+      const email = sestavitEmail('reklamace-prijata', zaklad);
+
+      // Stránka stavu čte `?t=`, ne `?token=` – stejná past, jaká už jednou
+      // rozbila odkaz v potvrzení objednávky.
+      expect(email!.text).toContain('/reklamace/stav?t=tok123');
+      expect(email!.html).toContain('/reklamace/stav?t=tok123');
+    });
+
+    it('s adresou pro vrácení ji uvede, bez ní si žádnou nevymyslí', () => {
+      const sAdresou = sestavitEmail('reklamace-prijata', {
+        ...zaklad,
+        adresaProVraceni: 'Linda Fashion, Rokycanova 1929, 356 01 Sokolov',
+      });
+      expect(sAdresou!.text).toContain('Rokycanova 1929');
+
+      const bezAdresy = sestavitEmail('reklamace-prijata', zaklad);
+      expect(bezAdresy!.text).toContain('pokyny');
+    });
+  });
+
   it('každá šablona má neprázdnou textovou i HTML verzi', () => {
     const typy = [
       'obnova-hesla',
@@ -347,6 +427,7 @@ describe('sestavitEmail', () => {
       'nova-zprava-z-formulare',
       'nova-reklamace',
       'odstoupeni-potvrzeni',
+      'reklamace-prijata',
     ];
 
     for (const typ of typy) {

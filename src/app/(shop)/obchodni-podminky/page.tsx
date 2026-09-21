@@ -63,7 +63,7 @@ export default async function ObchodniPodminkyPage({
         <p className="text-xs text-linda-espresso/70">
           Verze <strong className="font-semibold">{zneni.verze}</strong>
           {zneni.zDatabaze && (
-            <> · účinné od {zneni.ucinnostOd.toLocaleDateString('cs-CZ')}</>
+            <> · účinné od {zneni.ucinnostOd.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}</>
           )}
         </p>
       </header>

@@ -33,12 +33,29 @@ export const NAZEV_PLATBY: Record<string, string> = {
   gopay: 'Platba kartou (GoPay)',
 };
 
+/**
+ * Česká časová zóna pro všechna data, která e-shop ukazuje.
+ *
+ * Většina volajících jsou Server Components v administraci, tedy kód, který
+ * v produkci běží v kontejneru bez `tzdata` – v UTC. Bez zóny ukazovala
+ * administrace časy o hodinu až dvě posunuté a objednávku z půlnoci pod
+ * datem předchozího dne. Node si zónová data nese v sobě (ICU), takže
+ * `Europe/Prague` funguje i tam, kde operační systém žádná nemá.
+ */
+const ZONA = 'Europe/Prague';
+
 export function formatDatum(datum: Date): string {
-  return datum.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+  return datum.toLocaleDateString('cs-CZ', {
+    timeZone: ZONA,
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
 }
 
 export function formatDatumCas(datum: Date): string {
   return datum.toLocaleString('cs-CZ', {
+    timeZone: ZONA,
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',
@@ -46,3 +63,29 @@ export function formatDatumCas(datum: Date): string {
     minute: '2-digit',
   });
 }
+
+/**
+ * Způsob vyřízení reklamace, jak ho požaduje zákaznice.
+ *
+ * Jedno místo pro formuláře, administraci i e-mailové potvrzení – worker ho
+ * importuje relativně, proto tu nesmí přibýt žádný import z `next/*` ani `@/`.
+ * Pořadí odpovídá tomu, jak zákon možnosti řadí: nejdřív oprava a výměna.
+ */
+export const ZPUSOBY_VYRIZENI = ['OPRAVA', 'VYMENA', 'SLEVA', 'ODSTOUPENI'] as const;
+
+export type ZpusobVyrizeni = (typeof ZPUSOBY_VYRIZENI)[number];
+
+export const NAZEV_ZPUSOBU_VYRIZENI: Record<ZpusobVyrizeni, string> = {
+  OPRAVA: 'Oprava',
+  VYMENA: 'Výměna za nový kus',
+  SLEVA: 'Přiměřená sleva',
+  ODSTOUPENI: 'Odstoupení od smlouvy (vrácení peněz)',
+};
+
+/**
+ * Věta pod výběrem. Formulář nesmí slibovat, že vybraná možnost je nárok –
+ * sleva a vrácení peněz přicházejí na řadu, až když oprava ani výměna nejde.
+ */
+export const NAPOVEDA_ZPUSOBU_VYRIZENI =
+  'Vada se podle zákona nejdřív řeší opravou nebo výměnou. Slevu nebo vrácení peněz můžete požadovat, ' +
+  'když to nejde, trvalo by to příliš dlouho, nebo jde o závažnou vadu.';

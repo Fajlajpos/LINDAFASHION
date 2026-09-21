@@ -173,7 +173,7 @@ export function zpravaODovolene(nastaveni: NastaveniWebu): string | null {
   if (!nastaveni.rezimDovolene) return null;
 
   const datum = nastaveni.datumNavratu
-    ? nastaveni.datumNavratu.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? nastaveni.datumNavratu.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'long', year: 'numeric' })
     : null;
 
   const sablona =
@@ -200,7 +200,7 @@ export function zpravaODovolene(nastaveni: NastaveniWebu): string | null {
 export function popisDodaciLhuty(nastaveni: NastaveniWebu): string {
   if (nastaveni.rezimDovolene) {
     const datum = nastaveni.datumNavratu
-      ? nastaveni.datumNavratu.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })
+      ? nastaveni.datumNavratu.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'long' })
       : null;
 
     return datum

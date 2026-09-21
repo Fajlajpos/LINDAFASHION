@@ -157,9 +157,19 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
     .font('bezny')
     .fontSize(9)
     .fillColor(SEDA)
-    .text(`Vystaveno ${podklad.datumVystaveni.toLocaleDateString('cs-CZ')}`, 50, 70, {
-      align: 'right',
-    });
+    /*
+     * Datum v české zóně, ne v zóně procesu. Doklad vzniká ve workeru a
+     * kontejnery nemají `tzdata`, takže běží v UTC: objednávka z 1. října
+     * v 00:30 SELČ je v UTC ještě 30. září. Bez `timeZone` by doklad nesl
+     * datum z předchozího dne – a na přelomu měsíce z předchozího účetního
+     * období. Stejná oprava, jakou už má šablona potvrzení odstoupení.
+     */
+    .text(
+      `Vystaveno ${podklad.datumVystaveni.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}`,
+      50,
+      70,
+      { align: 'right' },
+    );
 
   doc.moveTo(50, 100).lineTo(545, 100).strokeColor(COGNAC).lineWidth(1).stroke();
 

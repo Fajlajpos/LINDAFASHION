@@ -758,6 +758,18 @@ model Reklamace {
   /// zpracování fronty neposlalo zákaznici totéž potvrzení podruhé.
   potvrzeniOdeslanoAt DateTime?
 
+  /// Jak chce zákaznice reklamaci vyřídit.
+  ///
+  /// § 19 odst. 1 zák. č. 634/1992 Sb. chce v potvrzení o uplatnění reklamace
+  /// i „jaký způsob vyřízení spotřebitel požaduje" – a formulář se na to do
+  /// téhle chvíle vůbec neptal, takže potvrzení tu část nemohlo obsahovat.
+  ///
+  /// Nepovinné ve schématu schválně: vrácení do 14 dnů ho nemá, reklamace
+  /// zapsané v administraci ho nemusí znát a starší řádky ho nemají. Zpětně
+  /// se nedoplňuje – vymyšlený požadavek je horší než přiznaná mezera.
+  /// U zákaznického formuláře ho vynucuje validace, ne databáze.
+  pozadovanyZpusob ZpusobVyrizeni?
+
   // Zákaznice si v účtu vypisuje reklamace ke svým objednávkám; admin je
   // řadí podle stavu. Bez indexu na `orderId` je první z toho sekvenční sken.
   @@index([orderId])
@@ -769,6 +781,19 @@ model Reklamace {
 enum ReklamaceTyp {
   REKLAMACE
   VRACENI
+}
+
+/// Způsob vyřízení reklamace, který zákaznice požaduje (§ 2169 o. z.).
+///
+/// Zákon dává přednost opravě a výměně; slevu nebo odstoupení lze žádat,
+/// když to nejde, trvalo by to nepřiměřeně dlouho nebo jde o podstatnou vadu.
+/// Tady se ale eviduje **požadavek**, ne rozhodnutí – o vyřízení rozhoduje
+/// prodávající podle zákona, ne podle toho, co se vybralo ve formuláři.
+enum ZpusobVyrizeni {
+  OPRAVA
+  VYMENA
+  SLEVA
+  ODSTOUPENI
 }
 
 enum ReklamaceStav {

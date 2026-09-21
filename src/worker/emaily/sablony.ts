@@ -17,6 +17,9 @@
  * změní, je potřeba je přepsat i tady.
  */
 
+// Relativně, ne přes `@/` – soubor se kompiluje do buildu workeru.
+import { NAZEV_ZPUSOBU_VYRIZENI, type ZpusobVyrizeni } from '../../lib/objednavka-popisky';
+
 const BARVY = {
   paper: '#F6F3EC',
   cream: '#FAF8F4',
@@ -657,6 +660,105 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           '',
           'Peníze vám vrátíme do 14 dnů od doručení odstoupení.',
           'Tenhle e-mail je dokladem o tom, kdy odstoupení dorazilo – uschovejte si ho.',
+        ].join('\n'),
+      };
+    }
+
+    /*
+     * Potvrzení o uplatnění reklamace – povinné podle § 19 odst. 1 zák.
+     * č. 634/1992 Sb.: kdy spotřebitelka právo uplatnila, co je obsahem
+     * reklamace a jak se vyřídí. Do téhle chvíle chodilo jen upozornění
+     * majitelce a zákaznice neměla v ruce nic – přestože reklamační řád jí
+     * potvrzení výslovně slibuje, i s adresou pro zaslání zboží.
+     *
+     * Čas v české zóně ze stejného důvodu jako u odstoupení: kontejner běží
+     * v UTC a reklamace podaná po půlnoci by nesla předchozí den – a od
+     * uplatnění běží třicetidenní lhůta na vyřízení.
+     */
+    case 'reklamace-prijata': {
+      const cislo = String(data.cisloObjednavky ?? '');
+      const prijato = data.prijatoAt ? new Date(String(data.prijatoAt)) : new Date();
+      const lhuta = data.lhutaDo ? new Date(String(data.lhutaDo)) : null;
+
+      const kdy = prijato.toLocaleString('cs-CZ', {
+        timeZone: 'Europe/Prague',
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const doKdy = lhuta
+        ? lhuta.toLocaleDateString('cs-CZ', {
+          timeZone: 'Europe/Prague',
+          day: 'numeric',
+          month: 'numeric',
+          year: 'numeric',
+        })
+        : null;
+
+      const zbozi = data.polozka ? String(data.polozka) : 'celá objednávka';
+      const adresa = data.adresaProVraceni ? String(data.adresaProVraceni) : null;
+
+      // Požadovaný způsob vyřízení (§ 19 odst. 1). U reklamace zapsané
+      // v administraci může chybět – pak se řádek vynechá, nic se nedomýšlí.
+      const zpusob =
+        typeof data.pozadovanyZpusob === 'string' && data.pozadovanyZpusob in NAZEV_ZPUSOBU_VYRIZENI
+          ? NAZEV_ZPUSOBU_VYRIZENI[data.pozadovanyZpusob as ZpusobVyrizeni]
+          : null;
+      const token = data.token ? String(data.token) : null;
+      // Parametr je `t`, stejně jako u potvrzení objednávky – viz stránka stavu.
+      const odkaz = token ? `${web}/reklamace/stav?t=${encodeURIComponent(token)}` : `${web}/reklamace/stav`;
+
+      return {
+        predmet: `Potvrzení reklamace – objednávka ${cislo}`,
+        html: obalka(
+          'Reklamaci jsme přijali',
+          odstavec('Dobrý den,') +
+          odstavec(
+            'potvrzujeme, že jsme přijali vaši reklamaci. Tenhle e-mail je zároveň dokladem o tom, kdy jste ji uplatnila – uschovejte si ho prosím.'
+          ) +
+          panel([
+            ['Objednávka', cislo],
+            ['Uplatněno', kdy],
+            ['Reklamované zboží', zbozi],
+            ...(zpusob ? ([['Požadujete', zpusob]] as Array<[string, string]>) : []),
+            ...(doKdy ? ([['Vyřídíme nejpozději', doKdy]] as Array<[string, string]>) : []),
+          ]) +
+          (data.duvod ? odstavec(`<strong>Popis vady:</strong> ${e(data.duvod)}`) : '') +
+          odstavec(
+            adresa
+              ? `Reklamované zboží posílejte na adresu:<br><strong>${e(adresa)}</strong><br>Nejdřív ale prosím počkejte na naši odpověď – někdy stačí fotka a posílat nic nemusíte.`
+              : 'Ozveme se vám s pokyny, kam zboží poslat. Než odpovíme, nic prosím neposílejte – někdy stačí fotka.'
+          ) +
+          odstavec(
+            'Reklamaci vyřídíme nejpozději do 30 dnů od uplatnění. Pokud to nestihneme, máte právo od smlouvy odstoupit nebo požadovat přiměřenou slevu.'
+          ) +
+          tlacitko('Sledovat stav reklamace', odkaz)
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          'potvrzujeme přijetí vaší reklamace.',
+          '',
+          `Objednávka: ${cislo}`,
+          `Uplatněno: ${kdy}`,
+          `Reklamované zboží: ${zbozi}`,
+          ...(zpusob ? [`Požadujete: ${zpusob}`] : []),
+          ...(doKdy ? [`Vyřídíme nejpozději: ${doKdy}`] : []),
+          ...(data.duvod ? ['', `Popis vady: ${String(data.duvod)}`] : []),
+          '',
+          adresa
+            ? `Reklamované zboží posílejte na adresu: ${adresa} – ale až po naší odpovědi.`
+            : 'Ozveme se vám s pokyny, kam zboží poslat. Než odpovíme, nic neposílejte.',
+          '',
+          'Reklamaci vyřídíme nejpozději do 30 dnů od uplatnění. Pokud to nestihneme,',
+          'máte právo od smlouvy odstoupit nebo požadovat přiměřenou slevu.',
+          '',
+          `Stav reklamace: ${odkaz}`,
+          '',
+          'Tenhle e-mail je dokladem o tom, kdy jste reklamaci uplatnila – uschovejte si ho.',
         ].join('\n'),
       };
     }

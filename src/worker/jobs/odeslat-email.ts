@@ -39,6 +39,8 @@ export type TypEmailu =
   // proti kterému překladač pozná překlep v názvu typu.
   | 'odstoupeni-potvrzeni'
   | 'reklamace-vyrizena'
+  // Potvrzení o uplatnění reklamace pro zákaznici (§ 19 odst. 1 zák. 634/1992).
+  | 'reklamace-prijata'
   | 'poukazy-vydane'
   // Změna přihlašovacího e-mailu (čl. 16 GDPR): potvrzení jde na novou
   // adresu, upozornění na starou.

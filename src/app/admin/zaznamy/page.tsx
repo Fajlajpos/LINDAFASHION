@@ -37,6 +37,7 @@ function popisAkce(akce: string): string {
 
 function formatCas(datum: Date): string {
   return datum.toLocaleString('cs-CZ', {
+    timeZone: 'Europe/Prague',
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',

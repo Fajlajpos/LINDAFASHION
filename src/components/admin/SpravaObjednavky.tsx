@@ -4,7 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle, ExternalLink, Loader2, Package, Printer, Save } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
-import { STAV_OBJEDNAVKY, STAV_PLATBY } from '@/lib/objednavka-popisky';
+import {
+  NAZEV_ZPUSOBU_VYRIZENI,
+  STAV_OBJEDNAVKY,
+  STAV_PLATBY,
+  ZPUSOBY_VYRIZENI,
+} from '@/lib/objednavka-popisky';
 import { Vyber } from '@/components/ui/Vyber';
 
 interface Props {
@@ -61,6 +66,7 @@ export function SpravaObjednavky({
   const [typReklamace, setTypReklamace] = useState<'REKLAMACE' | 'VRACENI'>('REKLAMACE');
   const [polozkaId, setPolozkaId] = useState('');
   const [duvod, setDuvod] = useState('');
+  const [zpusobVyrizeni, setZpusobVyrizeni] = useState('');
   const [zakladaReklamaci, setZakladaReklamaci] = useState(false);
 
   // Zásilka
@@ -134,11 +140,13 @@ export function SpravaObjednavky({
       orderItemId: polozkaId || null,
       typ: typReklamace,
       duvod: duvod || null,
+      pozadovanyZpusob: typReklamace === 'REKLAMACE' ? zpusobVyrizeni || null : null,
     });
 
     if (vysledek.ok) {
       setDuvod('');
       setPolozkaId('');
+      setZpusobVyrizeni('');
       router.refresh();
     } else {
       setChyba(vysledek.chyba);
@@ -389,6 +397,34 @@ export function SpravaObjednavky({
               className={POLE}
             />
           </div>
+
+          {/*
+            Nepovinné: reklamace přichází telefonem a na prodejnu a zapsat ji
+            je potřeba, i když se na to majitelka nezeptala. Vyplněné se ale
+            dostane do potvrzení, které zákaznici odejde – § 19 odst. 1 tam
+            požadovaný způsob vyřízení chce.
+          */}
+          {typReklamace === 'REKLAMACE' && (
+            <div>
+              <label htmlFor="zpusobVyrizeni" className="mb-1 block text-xs font-semibold text-linda-espresso">
+                Požadovaný způsob vyřízení
+              </label>
+              <Vyber
+                id="zpusobVyrizeni"
+                hodnota={zpusobVyrizeni}
+                disabled={zakladaReklamaci}
+                onZmena={setZpusobVyrizeni}
+                trida="w-full"
+                moznosti={[
+                  { hodnota: '', popisek: 'Neuvedeno' },
+                  ...ZPUSOBY_VYRIZENI.map((z) => ({ hodnota: z, popisek: NAZEV_ZPUSOBU_VYRIZENI[z] })),
+                ]}
+              />
+              <p className="mt-1 text-[11px] text-linda-espresso/70">
+                Zákaznici odejde e-mailem potvrzení reklamace – i s tímhle údajem, když ho vyplníte.
+              </p>
+            </div>
+          )}
 
           <p className="rounded-xl bg-linda-sandLight p-3 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
             Až vrácení označíte jako uznané, kusy se automaticky vrátí na sklad. U reklamace se

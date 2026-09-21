@@ -4,7 +4,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, AlertTriangle, CalendarClock, Loader2 } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
-import { STAV_REKLAMACE } from '@/lib/objednavka-popisky';
+import {
+  NAZEV_ZPUSOBU_VYRIZENI,
+  STAV_REKLAMACE,
+  type ZpusobVyrizeni,
+} from '@/lib/objednavka-popisky';
 import { DNU_NA_REKLAMACI, stavLhuty, zbyvaDnu } from '@/lib/lhuty';
 import { Vyber } from '@/components/ui/Vyber';
 
@@ -13,6 +17,7 @@ interface Reklamace {
   typ: 'REKLAMACE' | 'VRACENI';
   stav: string;
   duvod: string | null;
+  pozadovanyZpusob: string | null;
   poznamkaAdmina: string | null;
   datumPrijeti: string;
   datumVyrizeni: string | null;
@@ -68,7 +73,7 @@ function StitekLhuty({ lhutaDo, stav }: { lhutaDo: string | null; stav: string }
      Na telefonu se `title` nezobrazí vůbec – a tohle je zákonná lhůta podle
      § 19 odst. 3 zák. č. 634/1992 Sb., ne doplňková informace. Píšeme ho
      proto natvrdo vedle počtu dnů; `title` zůstává jako celá věta. */
-  const datumKonce = konec.toLocaleDateString('cs-CZ');
+  const datumKonce = konec.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
 
   return (
     <span
@@ -259,6 +264,12 @@ export default function AdminReklamacePage() {
                       {!r.polozka && ' · celá objednávka'}
                     </p>
                     {r.duvod && <p className="mt-1 text-xs text-linda-espresso/85">{r.duvod}</p>}
+                    {r.pozadovanyZpusob && (
+                      <p className="mt-1 text-xs text-linda-espresso/85">
+                        <span className="font-semibold">Požaduje:</span>{' '}
+                        {NAZEV_ZPUSOBU_VYRIZENI[r.pozadovanyZpusob as ZpusobVyrizeni] ?? r.pozadovanyZpusob}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-2">

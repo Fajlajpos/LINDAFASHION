@@ -88,6 +88,8 @@ const TLACITKO =
 function cas(hodnota: string | null): string {
   if (!hodnota) return '—';
   return new Date(hodnota).toLocaleString('cs-CZ', {
+    // Výtisk pro úřad nese český čas bez ohledu na prohlížeč, ve kterém se tiskne.
+    timeZone: 'Europe/Prague',
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',
@@ -98,7 +100,7 @@ function cas(hodnota: string | null): string {
 
 function den(hodnota: string | null): string {
   if (!hodnota) return '—';
-  return new Date(hodnota).toLocaleDateString('cs-CZ');
+  return new Date(hodnota).toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
 }
 
 function koruny(castka: number | null): string {

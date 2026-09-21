@@ -7,6 +7,11 @@ import { nacist, poslatJson } from '@/lib/api-klient';
 import { OblastFormulare, PoleFormulare, Hlaska } from '@/components/ui/PoleFormulare';
 import { DNU_NA_REKLAMACI } from '@/lib/lhuty';
 import { Vyber } from '@/components/ui/Vyber';
+import {
+  NAPOVEDA_ZPUSOBU_VYRIZENI,
+  NAZEV_ZPUSOBU_VYRIZENI,
+  ZPUSOBY_VYRIZENI,
+} from '@/lib/objednavka-popisky';
 
 /**
  * Reklamace vady **bez přihlášení**.
@@ -51,6 +56,8 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
   const [email, setEmail] = useState('');
   const [polozkaId, setPolozkaId] = useState('');
   const [duvod, setDuvod] = useState('');
+  /** Požadovaný způsob vyřízení – bez něj nejde vystavit úplné potvrzení (§ 19). */
+  const [zpusob, setZpusob] = useState('');
 
   const [nacitam, setNacitam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -92,6 +99,13 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
     e.preventDefault();
     if (!objednavka || nacitam) return;
 
+    // Hláška rovnou u pole, bez cesty na server – stejné pravidlo hlídá
+    // i validace v endpointu, tohle je jen rychlejší odpověď.
+    if (!zpusob) {
+      setChybyPoli({ pozadovanyZpusob: 'Vyberte, jak chcete reklamaci vyřídit.' });
+      return;
+    }
+
     setNacitam(true);
     setChyba(null);
     setChybyPoli({});
@@ -101,6 +115,7 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
       typ: 'REKLAMACE',
       orderItemId: polozkaId || null,
       duvod: duvod.trim(),
+      pozadovanyZpusob: zpusob,
     });
 
     if (odpoved.ok) {
@@ -237,6 +252,48 @@ export function ReklamaceFormular({ tokenZOdkazu }: { tokenZOdkazu?: string }) {
           disabled={nacitam}
           chyba={chybyPoli.duvod}
         />
+
+        <div>
+          <label
+            htmlFor="reklamace-zpusob"
+            className="mb-1 block text-xs font-semibold text-linda-espresso"
+          >
+            Jak chcete reklamaci vyřídit?
+          </label>
+          <Vyber
+            id="reklamace-zpusob"
+            hodnota={zpusob}
+            disabled={nacitam}
+            onZmena={(v) => {
+              setZpusob(v);
+              setChybyPoli((p) => ({ ...p, pozadovanyZpusob: '' }));
+            }}
+            povinne
+            trida="w-full"
+            zastupnyText="Vyberte způsob vyřízení"
+            ariaDescribedBy={
+              chybyPoli.pozadovanyZpusob
+                ? 'reklamace-zpusob-chyba reklamace-zpusob-napoveda'
+                : 'reklamace-zpusob-napoveda'
+            }
+            moznosti={ZPUSOBY_VYRIZENI.map((z) => ({
+              hodnota: z,
+              popisek: NAZEV_ZPUSOBU_VYRIZENI[z],
+            }))}
+          />
+          {chybyPoli.pozadovanyZpusob && (
+            <p
+              id="reklamace-zpusob-chyba"
+              role="alert"
+              className="mt-1.5 text-[11px] font-medium text-red-800"
+            >
+              {chybyPoli.pozadovanyZpusob}
+            </p>
+          )}
+          <p id="reklamace-zpusob-napoveda" className="mt-1.5 text-[11px] text-linda-espresso/70">
+            {NAPOVEDA_ZPUSOBU_VYRIZENI}
+          </p>
+        </div>
 
         {chyba && <Hlaska druh="chyba">{chyba}</Hlaska>}
 

@@ -3,6 +3,9 @@ import { db } from '@/lib/db';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
 import { overitAdmina, odpovedNeautorizovano, zapsatDoAuditu } from '@/lib/admin';
 import { lhutaNaVyrizeni } from '@/lib/lhuty';
+import { poslatPotvrzeniReklamace, popisPolozky } from '@/lib/potvrzeni-reklamace';
+import { nacistNastaveni } from '@/lib/nastaveni';
+import { ZPUSOBY_VYRIZENI } from '@/lib/objednavka-popisky';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +14,13 @@ const vytvoreniSchema = z.object({
   orderItemId: z.string().min(1).optional().nullable(),
   typ: z.enum(['REKLAMACE', 'VRACENI']),
   duvod: z.string().max(2000).optional().nullable(),
+  /*
+   * V administraci nepovinné: reklamace přichází telefonem a na prodejnu
+   * a majitelka ji musí jít zapsat, i když se na způsob vyřízení nestihla
+   * zeptat. Zapsat reklamaci bez něj je lepší než nezapsat ji vůbec – lhůta
+   * běží od uplatnění, ne od zápisu.
+   */
+  pozadovanyZpusob: z.enum(ZPUSOBY_VYRIZENI).optional().nullable(),
 });
 
 /**
@@ -48,6 +58,7 @@ export async function GET() {
         typ: r.typ,
         stav: r.stav,
         duvod: r.duvod,
+        pozadovanyZpusob: r.pozadovanyZpusob,
         poznamkaAdmina: r.poznamkaAdmina,
         datumPrijeti: r.datumPrijeti,
         datumVyrizeni: r.datumVyrizeni,
@@ -120,11 +131,35 @@ export async function POST(request: Request) {
         orderItemId: vstup.orderItemId || null,
         typ: vstup.typ,
         duvod: vstup.duvod?.trim() || null,
+        pozadovanyZpusob: vstup.typ === 'REKLAMACE' ? vstup.pozadovanyZpusob ?? null : null,
         datumPrijeti: prijeti,
         lhutaDo: lhutaNaVyrizeni(prijeti),
         email: objednavka.email,
       },
     });
+
+    /*
+     * Potvrzení zákaznici i u reklamace zapsané v administraci. Povinnost
+     * vydat ho (§ 19 odst. 1) nezávisí na tom, kudy reklamace přišla – a tahle
+     * cesta je ta častější: telefon a prodejna. Vrácení do 14 dnů má vlastní
+     * potvrzení v toku odstoupení.
+     */
+    if (vstup.typ === 'REKLAMACE') {
+      const nastaveni = await nacistNastaveni();
+
+      await poslatPotvrzeniReklamace({
+        reklamaceId: reklamace.id,
+        token: reklamace.token,
+        email: objednavka.email,
+        cisloObjednavky: objednavka.cisloObjednavky,
+        polozka: await popisPolozky(vstup.orderItemId || null),
+        duvod: vstup.duvod?.trim() || null,
+        pozadovanyZpusob: vstup.pozadovanyZpusob ?? null,
+        prijato: prijeti,
+        lhutaDo: reklamace.lhutaDo,
+        adresaProVraceni: nastaveni.adresaProVraceni,
+      });
+    }
 
     await zapsatDoAuditu(admin.email, 'reklamace.zalozena', 'Reklamace', reklamace.id, {
       nazev: objednavka.cisloObjednavky,

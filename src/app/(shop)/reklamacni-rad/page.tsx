@@ -37,7 +37,7 @@ export default async function ReklamacniRadPage() {
         <h1 className="font-serif text-4xl text-linda-espresso">{zneni.nadpis}</h1>
         <p className="text-xs text-linda-espresso/70">
           Verze <strong className="font-semibold">{zneni.verze}</strong>
-          {zneni.zDatabaze && <> · účinné od {zneni.ucinnostOd.toLocaleDateString('cs-CZ')}</>}
+          {zneni.zDatabaze && <> · účinné od {zneni.ucinnostOd.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}</>}
         </p>
       </header>
 

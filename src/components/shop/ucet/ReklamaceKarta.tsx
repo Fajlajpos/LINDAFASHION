@@ -4,7 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, PackageOpen, RotateCcw } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
 import { Hlaska, OblastFormulare } from '@/components/ui/PoleFormulare';
-import { STAV_REKLAMACE, formatDatum } from '@/lib/objednavka-popisky';
+import {
+  NAPOVEDA_ZPUSOBU_VYRIZENI,
+  NAZEV_ZPUSOBU_VYRIZENI,
+  STAV_REKLAMACE,
+  ZPUSOBY_VYRIZENI,
+  formatDatum,
+} from '@/lib/objednavka-popisky';
 import { Vyber } from '@/components/ui/Vyber';
 
 export interface ObjednavkaProReklamaci {
@@ -54,6 +60,8 @@ export function ReklamaceKarta({
   const [orderItemId, setOrderItemId] = useState(CELA_OBJEDNAVKA);
   const [typ, setTyp] = useState<'REKLAMACE' | 'VRACENI'>('VRACENI');
   const [duvod, setDuvod] = useState('');
+  /** Jen u reklamace – vrácení do 14 dnů způsob vyřízení nemá. */
+  const [zpusob, setZpusob] = useState('');
 
   const [odesila, setOdesila] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -89,11 +97,13 @@ export function ReklamaceKarta({
       orderItemId: orderItemId === CELA_OBJEDNAVKA ? null : orderItemId,
       typ,
       duvod,
+      pozadovanyZpusob: typ === 'REKLAMACE' ? zpusob || null : null,
     });
 
     if (vysledek.ok) {
       setHlaska(vysledek.data.zprava);
       setDuvod('');
+      setZpusob('');
       setOrderId('');
       setOrderItemId(CELA_OBJEDNAVKA);
       await nacistReklamace();
@@ -258,6 +268,50 @@ export function ReklamaceKarta({
               }
               napoveda="Čím konkrétnější popis, tím rychleji to vyřídíme."
             />
+
+            {typ === 'REKLAMACE' && (
+              <div>
+                <label
+                  htmlFor="reklamace-zpusob"
+                  className="mb-1.5 block text-xs font-semibold text-linda-espresso"
+                >
+                  Jak chcete reklamaci vyřídit?
+                </label>
+                <Vyber
+                  id="reklamace-zpusob"
+                  hodnota={zpusob}
+                  disabled={odesila}
+                  onZmena={setZpusob}
+                  povinne
+                  trida="w-full"
+                  zastupnyText="Vyberte způsob vyřízení"
+                  ariaDescribedBy={
+                    poleChyby.pozadovanyZpusob
+                      ? 'reklamace-zpusob-chyba reklamace-zpusob-napoveda'
+                      : 'reklamace-zpusob-napoveda'
+                  }
+                  moznosti={ZPUSOBY_VYRIZENI.map((z) => ({
+                    hodnota: z,
+                    popisek: NAZEV_ZPUSOBU_VYRIZENI[z],
+                  }))}
+                />
+                {poleChyby.pozadovanyZpusob && (
+                  <p
+                    id="reklamace-zpusob-chyba"
+                    role="alert"
+                    className="mt-1.5 text-[11px] font-medium text-red-800"
+                  >
+                    {poleChyby.pozadovanyZpusob}
+                  </p>
+                )}
+                <p
+                  id="reklamace-zpusob-napoveda"
+                  className="mt-1.5 text-[11px] text-linda-espresso/70"
+                >
+                  {NAPOVEDA_ZPUSOBU_VYRIZENI}
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
