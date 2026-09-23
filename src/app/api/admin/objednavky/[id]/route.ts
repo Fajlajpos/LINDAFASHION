@@ -165,6 +165,33 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (vstup.stavPlatby === 'ZAPLACENO') {
       await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: params.id });
       await publishJob(FRONTY.VYGENEROVAT_POUKAZY, { orderId: params.id });
+
+      /*
+       * Zpráva „platbu jsme přijali".
+       *
+       * Posílala se jedině z platební brány ([platba.ts](src/lib/platba.ts)),
+       * takže u bankovního převodu – dnes jediného způsobu platby – se
+       * zákaznice o přijetí peněz nedozvěděla vůbec. U převodu je to přitom
+       * ta jediná zpráva, na kterou čeká: odeslala peníze a do téhle chvíle
+       * neměla jak zjistit, jestli dorazily.
+       *
+       * Podmínka na **předchozí** stav brání druhému odeslání, když se táž
+       * hodnota uloží znovu. Objednávka zaplacená přes bránu už `ZAPLACENO`
+       * má, takže jí tudy druhá zpráva nepřijde.
+       */
+      if (objednavka.stavPlatby !== 'ZAPLACENO' && kontakt) {
+        await publishJob(FRONTY.ODESLAT_EMAIL, {
+          typ: 'platba-prijata',
+          to: kontakt,
+          subject: `Platba k objednávce ${objednavka.cisloObjednavky} přijata – LINDA FASHION`,
+          data: {
+            cisloObjednavky: objednavka.cisloObjednavky,
+            // Bez tokenu vede odkaz na `/muj-ucet`, kam objednávka bez
+            // registrace nedohlédne.
+            verejnyToken: objednavka.verejnyToken,
+          },
+        });
+      }
     }
 
     await zapsatDoAuditu(admin.email, 'objednavka.upravena', 'Order', params.id, {

@@ -56,6 +56,10 @@ Do administrace se přihlásíš na `/prihlaseni` údaji z `ADMIN_EMAIL` / `ADMI
 
 ## Nasazení (produkce)
 
+> **Nasazuješ poprvé?** Postup krok za krokem – doména, VPS, DNS, kontrolní
+> seznam a časté chyby – je v [`dokumenty/nasazeni.md`](dokumenty/nasazeni.md).
+> Tahle sekce popisuje jen mechaniku.
+
 Celý stack v Dockeru na VPS – `web` + `worker` + `postgres`, volitelně Caddy
 jako reverzní proxy s automatickým HTTPS.
 
@@ -117,6 +121,8 @@ Když zálohy přestanou běžet, řekne to `/admin` v sekci „Vyžaduje pozorn
 | `npm run admin:reset-heslo -- <email> <heslo>` | reset hesla administrátorky |
 | `npm test` | testy (peníze, slugy, validace uploadu, limity požadavků) |
 | `docker compose run --rm zalohy sh /zaloha.sh --jednou` | záloha databáze a souborů hned teď |
+| `docker compose run --rm worker node dist/scripts/vyplnit-udaje-firmy.js` | identifikace prodávajícího do `Settings` (produkce) |
+| `docker compose run --rm worker node dist/scripts/vlozit-pravni-dokumenty.js` | vydání obchodních podmínek a reklamačního řádu (produkce) |
 
 ---
 

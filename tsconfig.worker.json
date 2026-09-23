@@ -13,7 +13,19 @@
     "sourceMap": false,
     "incremental": false
   },
-  "include": ["src/worker/**/*.ts"],
+  // Vedle workeru i provozní skripty.
+  //
+  // Bez nich se na produkci nedaly spustit vůbec: `ts-node` je vývojová
+  // závislost a produkční image se staví s `npm install --omit=dev`. Vložení
+  // obchodních podmínek a identifikace prodávajícího by tak zbylo na ruční
+  // přepisování několikatisícového textu v administraci – tedy přesně ten
+  // druh kroku, u kterého vznikne překlep v dokumentu, na který se odkazuje
+  // každá objednávka. V kontejneru se pak pouští jako
+  // `node dist/scripts/vlozit-pravni-dokumenty.js`.
+  //
+  // Oba skripty používají relativní importy, takže do buildu workeru zapadnou
+  // beze změny – alias `@/` by `tsc` v outputu nepřepsal a spadlo by to až za běhu.
+  "include": ["src/worker/**/*.ts", "src/scripts/vlozit-pravni-dokumenty.ts", "src/scripts/vyplnit-udaje-firmy.ts"],
 
   // Testy do produkčního obrazu nepatří – a nejde jen o pár kilobajtů.
   // Testovací pomocníci (`src/test/data.ts`) importují validace, ty zase
