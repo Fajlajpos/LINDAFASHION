@@ -254,12 +254,21 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
         >
           Pokračovat v nákupu
         </Link>
-        <Link
-          href="/muj-ucet"
-          className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
-        >
-          Moje objednávky
-        </Link>
+        {/*
+          Jen u objednávky, která má účet.
+          Nákup bez registrace žádný nemá, takže „Moje objednávky" vedly hosta
+          na přihlašovací formulář, kterým se ke své objednávce nedostane –
+          stejná past jako u odkazů v e-mailech, kde ji řeší `verejnyToken`.
+          Tady odkaz prostě nepatří: na objednávku se zákaznice dívá právě teď.
+        */}
+        {objednavka.userId && (
+          <Link
+            href="/muj-ucet"
+            className="flex min-h-touch cursor-pointer items-center rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+          >
+            Moje objednávky
+          </Link>
+        )}
         {/* Token jde rovnou do odkazu, takže odstoupení přeskočí hledání
             objednávky. § 1830a chce funkci **snadno dostupnou** – tady je
             nejblíž tomu, co zákaznice zrovna koupila. */}

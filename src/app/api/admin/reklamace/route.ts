@@ -6,6 +6,7 @@ import { lhutaNaVyrizeni } from '@/lib/lhuty';
 import { poslatPotvrzeniReklamace, popisPolozky } from '@/lib/potvrzeni-reklamace';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { ZPUSOBY_VYRIZENI } from '@/lib/objednavka-popisky';
+import { FRONTY, publishJob } from '@/lib/queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,15 +139,21 @@ export async function POST(request: Request) {
       },
     });
 
+    const nastaveni = await nacistNastaveni();
+
     /*
-     * Potvrzení zákaznici i u reklamace zapsané v administraci. Povinnost
-     * vydat ho (§ 19 odst. 1) nezávisí na tom, kudy reklamace přišla – a tahle
-     * cesta je ta častější: telefon a prodejna. Vrácení do 14 dnů má vlastní
-     * potvrzení v toku odstoupení.
+     * Potvrzení zákaznici i u žádosti zapsané v administraci. Povinnost vydat
+     * ho nezávisí na tom, kudy žádost přišla – a tahle cesta je ta častější:
+     * telefon a prodejna.
+     *
+     * Reklamace: § 19 odst. 1 zák. č. 634/1992 Sb.
+     * Vrácení (odstoupení od smlouvy): § 1830a o. z. chce potvrzení přijetí
+     * s datem a časem. Formulář na webu ho posílá odjakživa, zápis
+     * v administraci ne – a zákaznice, která odstoupila telefonem, tak
+     * neměla v ruce žádný doklad o tom, kdy to udělala. Lhůta se přitom
+     * počítá na dny.
      */
     if (vstup.typ === 'REKLAMACE') {
-      const nastaveni = await nacistNastaveni();
-
       await poslatPotvrzeniReklamace({
         reklamaceId: reklamace.id,
         token: reklamace.token,
@@ -159,6 +166,28 @@ export async function POST(request: Request) {
         lhutaDo: reklamace.lhutaDo,
         adresaProVraceni: nastaveni.adresaProVraceni,
       });
+    } else if (objednavka.email) {
+      const zarazeno = await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'odstoupeni-potvrzeni',
+        to: objednavka.email,
+        subject: `Potvrzení odstoupení od smlouvy – objednávka ${objednavka.cisloObjednavky}`,
+        data: {
+          cisloObjednavky: objednavka.cisloObjednavky,
+          prijatoAt: prijeti.toISOString(),
+          duvod: vstup.duvod?.trim() || null,
+          adresaProVraceni: nastaveni.adresaProVraceni,
+          celaObjednavka: !vstup.orderItemId,
+        },
+      });
+
+      // Až po zařazení: značka „potvrzeno" u něčeho, co zákaznici nedorazilo,
+      // je horší než prázdný sloupec – hlídání by to přestalo připomínat.
+      if (zarazeno) {
+        await db.reklamace.update({
+          where: { id: reklamace.id },
+          data: { potvrzeniOdeslanoAt: new Date() },
+        });
+      }
     }
 
     await zapsatDoAuditu(admin.email, 'reklamace.zalozena', 'Reklamace', reklamace.id, {

@@ -349,8 +349,11 @@ came at the very end, by e-mail. `/reklamace/stav` now reads it, and deliberatel
 way in (order number **plus** e-mail, the same public key as the complaint form, through the same
 `najitObjednavkuKlicem`) so the page does not depend on SMTP being configured. All three failures —
 wrong e-mail, unknown order, bogus token — return one identical answer, or the endpoint would become
-a tool for discovering which order numbers exist · the § 1830a withdrawal button did not exist and the shop was already two months
-past its effective date, so a guest order had no way to withdraw at all · the model
+a tool for discovering which order numbers exist · the § 1830a withdrawal button did not exist, so a
+guest order had no way to withdraw at all (the note here used to say the shop was past the deadline —
+it was not: the Czech novela was approved by the Chamber on 10 July 2026 and takes effect **1 January
+2027**, so the flow is ready ahead of it, and the EU deadline of 19 June 2026 was the source of the
+confusion) · the model
 withdrawal form promised by the confirmation page and by the invoice was nowhere on the
 site (nařízení vlády 363/2013 Sb.) · the order button said „Objednat závazně", which says
 that it binds but not to what (§ 1826 odst. 3) · `Reklamace.lhutaDo` was stored and
@@ -603,6 +606,10 @@ deleted with her browser history. That is not evidence.
   The time comes from the server and is fixed once (`prijeti`) so the database row and the
   e-mail cannot disagree. `potvrzeniOdeslanoAt` is set only **after** the job is queued —
   setting it first would mark as confirmed something the customer never received.
+  **The same confirmation goes out when the owner records a withdrawal in admin**
+  ([api/admin/reklamace](src/app/api/admin/reklamace/route.ts)), because most of them arrive by
+  phone: without it a customer who withdrew by telephone held no proof of *when* she did, and the
+  deadline is counted in days. Same rule as the complaint confirmation next to it.
 - **Odstoupit lze i částečně.** § 1829 nikde neříká, že se odstupuje od celé
   objednávky, takže formulář nechá vybrat kusy. Vrácení všeho je **jeden** řádek
   s `orderItemId: null`, částečné vrácení jeden řádek na kus — rozepsat celou
