@@ -262,11 +262,20 @@ konfigurace je vylučuje.
 The shop runs end to end: catalog → cart → checkout → order → invoice → admin.
 What is still missing:
 
-- **Zásilkovna pickup point** is a free-text field. The map widget needs the Packeta API key.
-- **No carrier integration at all.** `PACKETA_*`, `PPL_*` and `CESKA_POSTA_*` sit in
-  `.env.example` and nothing reads them — no labels, no tracking lookup; `cisloZasilky` is
-  typed in by hand. Same for `CLOUD_STORAGE_*`, `GOOGLE_MERCHANT_ID` and
-  `META_CATALOG_FEED_URL`.
+- **Only Zásilkovna is integrated.** [packeta.ts](src/lib/packeta.ts) serves the pickup-point
+  widget key, [packeta-api.ts](src/lib/packeta-api.ts) creates the parcel, prints the label
+  and reads its status, and [hlidani-zasilek.ts](src/worker/jobs/hlidani-zasilek.ts) fills
+  `datumDoruceni` from it. All of it switches on with `PACKETA_*`; without the key the
+  checkout falls back to a free-text pickup point. **PPL and Česká pošta have no
+  integration and no keys** — they are offered only when their price is filled in, and
+  `cisloZasilky` is typed in by hand. The unused `PPL_*`, `CESKA_POSTA_*`,
+  `CLOUD_STORAGE_*`, `GOOGLE_MERCHANT_ID` and `META_CATALOG_FEED_URL` were removed from
+  `.env.example`: Google and Meta only need the feed URL `/api/feed/xml` entered on their side.
+- **Backups stay on the server.** `deploy/zaloha.sh` writes to `./zalohy` on the same VPS, so
+  losing the server loses them too. Pushing them off-site needs encryption, remote deletion
+  after the same `ZALOHY_DNU`, and the storage provider listed as a processor in
+  [zpracovatele-a-smlouvy.md](dokumenty/zpracovatele-a-smlouvy.md). Until then, pull them with
+  `rsync` as described in [zalohy-a-obnova.md](dokumenty/zalohy-a-obnova.md).
 - **The newsletter can be exported, not sent.** `/api/admin/newsletter/export` hands over a
   CSV of **confirmed, non-unsubscribed** addresses (that filter is the point — an export of
   unconfirmed ones would be a way around the double opt-in) and logs the export to the audit
