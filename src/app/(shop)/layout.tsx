@@ -6,6 +6,24 @@ import { JsonLd } from '@/components/shop/JsonLd';
 import { getSession } from '@/lib/auth';
 import { nacistNastaveni, zpravaODovolene } from '@/lib/nastaveni';
 import { mistniProvozovnaLd, organizaceLd } from '@/lib/strukturovana-data';
+import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
+import { dostupneDopravy } from '@/lib/shipping';
+
+/**
+ * Lišta služeb v patičce – jen to, co obchod právě opravdu nabízí.
+ *
+ * Stálo tu natvrdo „GoPay · QR platba · Zásilkovna · PPL" na každé stránce,
+ * i když brána neměla klíče a PPL nemělo cenu, takže se v pokladně vůbec
+ * nenabízelo. Platí stejné podmínky jako v pokladně a na potvrzovací stránce:
+ * GoPay s klíči, QR s vyplněným `BANK_IBAN`, dopravce s cenou v administraci.
+ */
+function nabizeneSluzby(nastaveni: Awaited<ReturnType<typeof nacistNastaveni>>): string[] {
+  return [
+    ...(platbaKartouNastavena() ? ['GoPay'] : []),
+    ...(process.env.BANK_IBAN?.trim() ? ['QR platba'] : []),
+    ...dostupneDopravy(nastaveni).map((d) => d.dopravce),
+  ];
+}
 
 /**
  * Layout obchodu je Server Component, aby si mohl přečíst přihlášenou
@@ -28,6 +46,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       nazevFirmy={nastaveni.nazevFirmy}
       icoFirmy={nastaveni.icoFirmy}
       zapisVRejstriku={nastaveni.zapisVRejstriku}
+      sluzby={nabizeneSluzby(nastaveni)}
       captchaSiteKey={siteKey()}
       prihlasen={session !== null}
     >

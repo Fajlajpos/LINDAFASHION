@@ -149,7 +149,7 @@ export function DetailProduktu({
                 </div>
                 <span className="font-serif text-3xl text-linda-espresso">LINDA FASHION</span>
                 <span className="mt-1 text-xs font-medium uppercase tracking-widest text-linda-cognac">
-                  Moda Italiana &bull; Pečlivě vybráno v Itálii
+                  Moda Italiana
                 </span>
               </div>
             )}

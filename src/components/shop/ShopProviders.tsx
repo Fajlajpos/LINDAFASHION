@@ -16,6 +16,8 @@ interface Props {
   nazevFirmy?: string | null;
   icoFirmy?: string | null;
   zapisVRejstriku?: string | null;
+  /** Platby a dopravci, které obchod právě nabízí – viz `(shop)/layout.tsx`. */
+  sluzby?: string[];
   /** Veřejný klíč Turnstile pro newsletter v patičce. */
   captchaSiteKey?: string | null;
   /**
@@ -42,6 +44,7 @@ export function ShopProviders({
   nazevFirmy,
   icoFirmy,
   zapisVRejstriku,
+  sluzby = [],
   captchaSiteKey = null,
   prihlasen = false,
 }: Props) {
@@ -70,6 +73,7 @@ export function ShopProviders({
             nazevFirmy={nazevFirmy}
             icoFirmy={icoFirmy}
             zapisVRejstriku={zapisVRejstriku}
+            sluzby={sluzby}
             captchaSiteKey={captchaSiteKey}
           />
         </div>

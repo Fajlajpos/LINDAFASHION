@@ -124,10 +124,12 @@ patří **produkční blok pro Gmail**, který je v `.env` připravený zakoment
 Když se zkopíruje vývojová verze, e-shop se tváří, že e-maily odesílá, ale
 zákaznice nedostane nic – a potvrzení objednávky je povinné (§ 1822 o. z.).
 
-**`NEXT_PUBLIC_*` se vpéká do stránky při buildu.** `NEXT_PUBLIC_GA_ID`
-a `NEXT_PUBLIC_META_PIXEL_ID` proto musí být v `.env` **před** prvním
-`up -d --build`. Doplnit je později znamená image přestavět, samotný restart
-nestačí.
+**`NEXT_PUBLIC_*` a `APP_URL` se vpékají do stránky při buildu.**
+`NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` i `APP_URL` proto musí být
+v `.env` **před** prvním `up -d --build`. Doplnit je později znamená image
+přestavět, samotný restart nestačí. U `APP_URL` je to vidět hůř než
+u analytiky: web běží normálně, jen `robots.txt` a odkazy pro vyhledávače
+míří na náhradní `lindafashion.cz`.
 
 **`WEB_BIND` nech na `127.0.0.1`.** Znamená to, že se na web dá jen přes Caddy.
 Kdo ho přepne na `0.0.0.0`, otevře hádání hesel: brzda se řídí hlavičkou

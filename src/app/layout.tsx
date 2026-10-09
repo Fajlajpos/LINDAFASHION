@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/globals.css';
+import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
 
 // Samohostované fonty: bez render-blocking requestu na Google a bez CLS
 // (`display: swap` + automatický fallback s upravenými metrikami).
@@ -19,16 +20,25 @@ const jakarta = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+/*
+ * Adresa webu z `APP_URL`, ne natvrdo. Doména ještě není koupená, a kdyby
+ * nakonec nebyla `lindafashion.cz`, posílaly by canonical a Open Graph
+ * vyhledávače na cizí web. Statické stránky se skládají při `next build`,
+ * proto `APP_URL` chodí do Docker buildu jako build arg (viz Dockerfile).
+ *
+ * Popis tvrdil „dovážené přímo z Itálie" – o původu jednotlivých kusů ale
+ * mluví jen `Product.zemePuvodu`, takže tvrzení o celém sortimentu sem nepatří.
+ */
 export const metadata: Metadata = {
-  metadataBase: new URL('https://lindafashion.cz'),
+  metadataBase: new URL(ZAKLADNI_URL),
   title: 'LINDA FASHION | Luxusní italská dámská móda',
-  description: 'Butik s nadčasovou a kvalitní italskou dámskou módou. Hedvábné šaty, lněné halenky, kašmírové svetry a vlněné kabáty dovážené přímo z Itálie.',
+  description: 'Butik s nadčasovou dámskou módou v italském stylu. Šaty, halenky, svetry, saka a kabáty.',
   keywords: 'italská móda, dámské oblečení, hedvábné šaty, lněná halenky, kašmírový svetr, vlněný kabát, Linda Fashion',
   authors: [{ name: 'LINDA FASHION' }],
   openGraph: {
     title: 'LINDA FASHION | Luxusní italská dámská móda',
-    description: 'Nadčasová elegance a kvalita z Itálie. Objevit novou kolekci.',
-    url: 'https://lindafashion.cz',
+    description: 'Nadčasová elegance v italském stylu. Objevte kolekci.',
+    url: ZAKLADNI_URL,
     siteName: 'LINDA FASHION',
     locale: 'cs_CZ',
     type: 'website',
@@ -46,7 +56,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'LINDA FASHION | Luxusní italská dámská móda',
-    description: 'Nadčasová elegance a kvalita z Itálie.',
+    description: 'Nadčasová elegance v italském stylu.',
     images: ['/og-image.png'],
   },
 };

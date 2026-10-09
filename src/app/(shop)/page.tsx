@@ -9,6 +9,7 @@ import { Newsletter } from '@/components/shop/home/Newsletter';
 import { Reveal } from '@/components/shop/home/Reveal';
 import { Sev } from '@/components/shop/home/Sev';
 import { nacistNastaveni } from '@/lib/nastaveni';
+import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 
 /**
  * Domovská stránka.
@@ -65,7 +66,10 @@ export default async function HomePage() {
 
         <div className="space-y-10 sm:space-y-14">
           <Reveal>
-            <TrustBar prahDopravaZdarma={nastaveni.prahDopravaZdarma} />
+            <TrustBar
+              prahDopravaZdarma={nastaveni.prahDopravaZdarma}
+              platbaKartouDostupna={platbaKartouNastavena()}
+            />
           </Reveal>
 
           <Reveal>

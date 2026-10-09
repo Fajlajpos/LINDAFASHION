@@ -73,8 +73,7 @@ export const Newsletter: React.FC<{ captchaSiteKey?: string | null }> = ({
           </h2>
 
           <p className="max-w-lg text-sm text-linda-espresso/70">
-            Novinky z italských dílen, přednostní přístup ke kolekcím a tipy na styling.
-            Odhlásit se můžete kdykoli.
+            Novinky z butiku a tipy na styling. Odhlásit se můžete kdykoli.
           </p>
 
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-2">

@@ -142,8 +142,8 @@ export const HeroSplit: React.FC<{ prahDopravaZdarma: number | null }> = ({
           </h1>
 
           <p className="mt-8 max-w-sm text-base leading-relaxed text-linda-espresso/75">
-            Kousky z tradičních italských dílen. Přírodní materiály, poctivé krejčovství a
-            styl, který vydrží roky.
+            Dámská móda v italském stylu. Kousky, které se dají nosit každý den
+            i na výjimečnou příležitost.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">

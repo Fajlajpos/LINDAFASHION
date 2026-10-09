@@ -60,6 +60,13 @@ ARG NEXT_PUBLIC_META_PIXEL_ID=""
 ENV NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID
 ENV NEXT_PUBLIC_META_PIXEL_ID=$NEXT_PUBLIC_META_PIXEL_ID
 
+# Adresa webu. Statické stránky (`robots.txt`, přihlášení) a `metadataBase`
+# v layoutu se skládají při buildu, kdy runtime `.env` ještě není – bez tohohle
+# by `robots.txt` i canonical odkazy navždy mířily na náhradní `lindafashion.cz`,
+# ať je doména jakákoli. Za běhu ji kontejner dostává znovu přes `env_file`.
+ARG APP_URL=""
+ENV APP_URL=$APP_URL
+
 # `npm run build` = prisma generate + next build + tsc workeru do dist/
 RUN npm run build
 

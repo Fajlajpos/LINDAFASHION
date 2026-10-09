@@ -23,6 +23,8 @@ interface FooterProps {
   nazevFirmy?: string | null;
   icoFirmy?: string | null;
   zapisVRejstriku?: string | null;
+  /** Platby a dopravci, které obchod právě nabízí. Prázdné = lišta se nevykreslí. */
+  sluzby?: string[];
   captchaSiteKey?: string | null;
 }
 
@@ -108,6 +110,7 @@ export const Footer: React.FC<FooterProps> = ({
   nazevFirmy,
   icoFirmy,
   zapisVRejstriku,
+  sluzby = [],
   captchaSiteKey = null,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
@@ -164,8 +167,10 @@ export const Footer: React.FC<FooterProps> = ({
               </span>
             </Link>
 
+            {/* Stálo tu „Kousky vybírané osobně na cestách po Itálii" – tvrzení
+                o původu zboží, které nikdo neověřil. Viz komentář v `o-mne`. */}
             <p className="mt-2 max-w-xs text-xs leading-relaxed text-linda-cream/75">
-              Kousky vybírané osobně na cestách po Itálii.
+              Dámská móda v italském stylu.
             </p>
           </div>
 
@@ -308,16 +313,21 @@ export const Footer: React.FC<FooterProps> = ({
             </p>
           </div>
 
-          <ul className="flex flex-wrap items-center justify-center gap-2 text-[11px] uppercase tracking-wider text-linda-sand/85">
-            {['GoPay', 'QR platba', 'Zásilkovna', 'PPL'].map((sluzba) => (
-              <li
-                key={sluzba}
-                className="rounded-md bg-white/[0.04] px-2 py-1 shadow-neuOnDark"
-              >
-                {sluzba}
-              </li>
-            ))}
-          </ul>
+          {sluzby.length > 0 && (
+            <ul
+              aria-label="Platby a doprava"
+              className="flex flex-wrap items-center justify-center gap-2 text-[11px] uppercase tracking-wider text-linda-sand/85"
+            >
+              {sluzby.map((sluzba) => (
+                <li
+                  key={sluzba}
+                  className="rounded-md bg-white/[0.04] px-2 py-1 shadow-neuOnDark"
+                >
+                  {sluzba}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </footer>

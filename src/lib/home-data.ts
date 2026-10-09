@@ -95,8 +95,16 @@ export const PROMO_BANNERY: HomePromo[] = [
  *
  * Číslo formátuje `toLocaleString('cs-CZ')`, které mezi řády vkládá
  * nezlomitelnou mezeru samo; „2 500 Kč“ se tedy neláme uprostřed čísla.
+ *
+ * Totéž platí pro „Bezpečná platba – Ověřená brána". Bez klíčů GoPay žádná
+ * brána není a pokladna nabízí jen převod, takže dlaždice svítila u obchodu,
+ * který kartou platit vůbec neumí. Řídí se proto `jeNastaveno()` z `gopay.ts`,
+ * stejně jako dlaždice na `/doprava-a-platba` a volba v pokladně.
  */
-export function vyhody(prahDopravaZdarma: number | null): HomeTrustItem[] {
+export function vyhody(
+  prahDopravaZdarma: number | null,
+  platbaKartouDostupna: boolean,
+): HomeTrustItem[] {
   return [
     // Bez nastaveného prahu se dlaždice vynechá celá – slib, který pokladna
     // nedodrží, je horší než chybějící dlaždice.
@@ -114,11 +122,15 @@ export function vyhody(prahDopravaZdarma: number | null): HomeTrustItem[] {
       title: 'Vrácení do 14 dnů',
       description: 'Bez udání důvodu',
     },
-    {
-      icon: 'shield',
-      title: 'Bezpečná platba',
-      description: 'Ověřená brána',
-    },
+    ...(platbaKartouDostupna
+      ? [
+          {
+            icon: 'shield' as const,
+            title: 'Bezpečná platba',
+            description: 'Ověřená brána',
+          },
+        ]
+      : []),
     {
       icon: 'headset',
       title: 'Osobní poradenství',

@@ -23,6 +23,8 @@ import type { NastaveniWebu } from './nastaveni';
 export interface PopisDopravy {
   id: string;
   nazev: string;
+  /** Jméno dopravce do lišty služeb v patičce. */
+  dopravce: string;
   popis: string;
   vyzadujeVydejniMisto: boolean;
 }
@@ -36,18 +38,21 @@ export const ZPUSOBY_DOPRAVY: readonly PopisDopravy[] = [
   {
     id: 'zasilkovna',
     nazev: 'Zásilkovna – výdejní místo nebo Z-BOX',
+    dopravce: 'Zásilkovna',
     popis: 'Doručení na vybrané výdejní místo nebo do samoobslužného Z-BOXu.',
     vyzadujeVydejniMisto: true,
   },
   {
     id: 'ppl',
     nazev: 'PPL – doručení na adresu',
+    dopravce: 'PPL',
     popis: 'Kurýr doveze zásilku až k vašim dveřím.',
     vyzadujeVydejniMisto: false,
   },
   {
     id: 'ceska_posta',
     nazev: 'Česká pošta – Balík Do ruky',
+    dopravce: 'Česká pošta',
     popis: 'Doručení na uvedenou doručovací adresu.',
     vyzadujeVydejniMisto: false,
   },

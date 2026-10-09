@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { popisDopravyZdarma } from '@/lib/shipping';
+import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
 
 /**
  * `/llms.txt` – strojově čitelný souhrn obchodu pro jazykové modely.
@@ -13,6 +14,11 @@ import { popisDopravyZdarma } from '@/lib/shipping';
  * pochází z administrace.
  *
  * Nevyplněný údaj se prostě neuvede. Vymyslet si ho by bylo horší.
+ *
+ * Totéž platí pro popis obchodu. Stálo tu „výhradně italský původ, dováženo
+ * z tradičních dílen v Toskánsku, Miláně a Římě" a „100% přírodní hedvábí" –
+ * text převzatý z vymyšlené stránky „O mně", který nikdo neověřil a o
+ * jednotlivých kusech nemusí platit. Zůstalo jen to, co plyne z dat.
  */
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +26,10 @@ export async function GET() {
   const nastaveni = await nacistNastaveni();
 
   const dopravaZdarma = popisDopravyZdarma(nastaveni);
-  const nazev = nastaveni.nazevFirmy ?? 'LINDA FASHION';
 
   /* Řádky bez hodnoty vypadnou, aby v souboru nezůstalo „E-mail: null". */
   const kontakty = [
-    ['Web', 'https://lindafashion.cz'],
+    ['Web', ZAKLADNI_URL],
     ['Prodávající', nastaveni.nazevFirmy],
     ['IČO', nastaveni.icoFirmy],
     ['DIČ', nastaveni.dicFirmy],
@@ -46,22 +51,20 @@ export async function GET() {
     .filter(Boolean)
     .join(' ');
 
-  const content = `# ${nazev} - Luxusní italská dámská móda
+  const content = `# LINDA FASHION - dámská móda v italském stylu
 
-> ${nazev} je specializovaný český butik s prémiovým dámským oblečením dováženým přímo z rodinných dílen v Itálii.
+> LINDA FASHION je český butik s dámským oblečením.
 
-## Hlavní charakteristika a filozofie
-- **Výhradně italský původ**: Oblečení dováženo z tradičních dílen v Toskánsku, Miláně a Římě.
-- **Přírodní prémiové materiály**: 100% přírodní hedvábí, toskánský len, kašmír a merino vlna.
-- **Nadčasová elegance**: Nepodléháme rychlé módě (fast fashion). Každý model má přesně evidované míry.
+## Nákup
+- **Složení a původ**: U každého kousku oblečení je uvedené materiálové složení v procentech, a pokud je známa, i země původu.
 - **Doprava a služby**: ${sluzby}
 
 ## Kategorie produktů
-- Hedvábné a letní šaty
-- Lněné a hedvábné halenky
-- Kašmírové svetry a kardigany
-- Vlněné flaušové kabáty a saka
-- Fyzické dárkové poukazy
+- Šaty
+- Halenky a košile
+- Svetry a kardigany
+- Saka a kabáty
+- Dárkové poukazy
 
 ## Kontaktní informace
 ${kontakty}

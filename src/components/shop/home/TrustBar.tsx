@@ -28,13 +28,23 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
  * se tu vrátil natvrdo zapsaný slib „doprava zdarma nad 2 500 Kč", který
  * pokladna nemusí dodržet.
  *
- * Sloupců je proto tři nebo čtyři podle toho, jestli je práh nastavený –
+ * Stejně tak dlaždice platby kartou, která se ukáže jen se zapojenou bránou.
+ *
+ * Sloupců je proto dva až čtyři podle toho, kolik položek zbude –
  * `lg:grid-cols-4` by u tří položek nechalo prázdné čtvrté pole.
+ * Třídy jsou vypsané celé, protože Tailwind skládané názvy nenajde.
  */
-export const TrustBar: React.FC<{ prahDopravaZdarma: number | null }> = ({
-  prahDopravaZdarma,
-}) => {
-  const polozky = vyhody(prahDopravaZdarma);
+const SLOUPCE: Record<number, string> = {
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+};
+
+export const TrustBar: React.FC<{
+  prahDopravaZdarma: number | null;
+  platbaKartouDostupna: boolean;
+}> = ({ prahDopravaZdarma, platbaKartouDostupna }) => {
+  const polozky = vyhody(prahDopravaZdarma, platbaKartouDostupna);
 
   return (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,7 +52,7 @@ export const TrustBar: React.FC<{ prahDopravaZdarma: number | null }> = ({
       {/* Na lg oddělují sloupce vlasové linky; `divide-x` nekreslí čáru před prvním prvkem. */}
       <ul
         className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:divide-x lg:divide-linda-sand ${
-          polozky.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+          SLOUPCE[polozky.length] ?? 'lg:grid-cols-4'
         }`}
       >
         {polozky.map((vyhoda) => {

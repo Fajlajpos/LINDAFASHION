@@ -72,7 +72,14 @@ Consequences worth remembering:
   was ever issued. The card now shows `zemePuvodu` through
   [zeme-puvodu.ts](src/lib/zeme-puvodu.ts) (no country → no badge), and the newsletter
   promise is gone. A discount for subscribers comes back only together with the code
-  that delivers it.
+  that delivers it. The same sweep removed the invented `/o-mne` story (an owner called
+  „Linda", workshops in Tuscany, a note in every parcel), its copy in `/llms.txt` and
+  „dovážené přímo z Itálie" from the meta description; the trust-bar tile „Bezpečná
+  platba – Ověřená brána" now renders only when GoPay `jeNastaveno()`, and the footer's
+  „GoPay · QR platba · Zásilkovna · PPL" strip is built in `(shop)/layout.tsx` from the
+  same conditions as the checkout (keys, `BANK_IBAN`, a shipping price). Brand copy may say
+  „italský styl"; claims about origin, materials or service must come from data or from
+  the owner.
 - **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
   (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
   meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every
@@ -81,7 +88,11 @@ Consequences worth remembering:
   declares `ARG`/`ENV` before the build and both compose services pass the same `args` — the
   same, because they share one image tag and a build with empty args would overwrite it.
   These two are public identifiers, not secrets; real secrets still arrive at runtime.
-  Filling them in requires `--build`, not a restart.
+  Filling them in requires `--build`, not a restart. **`APP_URL` travels the same way**:
+  `metadataBase` in the root layout and the static `robots.txt` are built at `next build`,
+  so without the build arg they pointed at the fallback `lindafashion.cz` whatever the
+  real domain was. Never hardcode the domain — read `ZAKLADNI_URL` from
+  [strukturovana-data.ts](src/lib/strukturovana-data.ts).
 - **`/oblibene` is not behind login.** The whole feature is `localStorage` first — the heart
   on a card works logged out and the header shows the count to everyone — so gating the page
   meant a visitor collected favourites, saw "Oblíbené (3)" and got bounced to a login form

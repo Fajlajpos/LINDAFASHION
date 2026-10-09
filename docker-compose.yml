@@ -36,6 +36,7 @@ services:
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
         NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
+        APP_URL: ${APP_URL:-}
     image: linda-fashion:latest
     container_name: linda_web
     restart: unless-stopped
@@ -84,6 +85,7 @@ services:
       args:
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
         NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
+        APP_URL: ${APP_URL:-}
     image: linda-fashion:latest
     container_name: linda_worker
     restart: unless-stopped
