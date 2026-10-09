@@ -7,6 +7,7 @@ import { ArrowRight, Heart, Sparkles, Gift } from 'lucide-react';
 import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
 import { popisNejnizsiCeny, procentoSlevyZReferencni } from '@/lib/penize';
 import { useFavorites } from '@/lib/favorites-context';
+import { stitekZemePuvodu } from '@/lib/zeme-puvodu';
 
 /**
  * Kategorie → ilustrace pro kartu bez fotografie.
@@ -50,6 +51,9 @@ export interface ProductCardProps {
   obrazekUrl?: string | null;
   doporuceny?: boolean;
   jeDarkovyPoukaz?: boolean;
+
+  /** `Product.zemePuvodu` – z ní se skládá štítek „Vyrobeno v …". */
+  zemePuvodu?: string | null;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -63,11 +67,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   obrazekUrl,
   doporuceny,
   jeDarkovyPoukaz,
+  zemePuvodu,
 }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const jeOblibeny = isFavorite(slug);
   const hasDiscount = Boolean(cenaPoSleve && cenaPoSleve < cena);
   const displayPrice = hasDiscount ? cenaPoSleve : cena;
+  const stitekPuvodu = stitekZemePuvodu(zemePuvodu);
 
   /*
    * § 12a zákona o ochraně spotřebitele.
@@ -121,10 +127,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <span className="sr-only">Sleva </span>-{discountPercent}%
           </span>
         )}
-        {/* „100% Italský materiál“ visí na každém kusu v nabídce, takže sama
-            o sobě nic neodlišuje – ve dvojici s „Nová kolekce“ nebo slevou jen
-            dělala ze štítků shluk. Zobrazí se proto jen tam, kde karta jiný
-            štítek nemá, a zůstane z ní tichá jistota místo hluku. */}
+        {/* Země původu je z dat produktu. Dřív tu natvrdo stálo „100% Italský
+            materiál“ u každého kusu bez ohledu na složení – viz `zeme-puvodu.ts`.
+            Ve dvojici s „Nová kolekce“ nebo slevou by ze štítků byl shluk,
+            proto jen tam, kde karta jiný štítek nemá. */}
         {jeDarkovyPoukaz ? (
           <span className="bg-linda-espresso text-linda-sand text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
             <Gift className="w-3 h-3 text-linda-sand" aria-hidden="true" />
@@ -132,9 +138,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </span>
         ) : (
           !doporuceny &&
-          !hasDiscount && (
+          !hasDiscount &&
+          stitekPuvodu && (
             <span className="bg-linda-sageLight text-linda-sage text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border border-linda-sage/25">
-              100% Italský materiál
+              {stitekPuvodu}
             </span>
           )
         )}
@@ -157,6 +164,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             kategorieNazev,
             obrazekUrl,
             jeDarkovyPoukaz,
+            zemePuvodu,
           });
         }}
         /* Srdíčko leží na fotce; u chybějícího snímku by na krému splynulo,

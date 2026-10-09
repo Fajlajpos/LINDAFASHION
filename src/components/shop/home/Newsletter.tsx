@@ -65,7 +65,7 @@ export const Newsletter: React.FC<{ captchaSiteKey?: string | null }> = ({
         {/* Formulářová část */}
         <div className="flex flex-col justify-center gap-5 p-8 sm:p-12 lg:col-span-8">
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-linda-espresso/70">
-            Získejte 10 % na první nákup
+            Novinky e-mailem
           </span>
 
           <h2 className="font-serif text-3xl leading-[1.15] text-linda-espresso sm:text-[2.6rem]">

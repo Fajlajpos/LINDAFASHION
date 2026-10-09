@@ -45,6 +45,7 @@ export interface ProduktVypis {
   obrazekAlt: string | null;
   doporuceny: boolean;
   jeDarkovyPoukaz: boolean;
+  zemePuvodu: string | null;
   sklademCelkem: number;
   velikosti: string[];
 }
@@ -78,6 +79,7 @@ function naVypis(p: {
   znacka: string | null;
   doporuceny: boolean;
   jeDarkovyPoukaz: boolean;
+  zemePuvodu: string | null;
   category: { nazev: string; slug: string };
   variants: { velikost: string; skladem: number }[];
   images: { urlMedium: string | null; altText: string | null }[];
@@ -98,6 +100,7 @@ function naVypis(p: {
     obrazekAlt: p.images[0]?.altText ?? null,
     doporuceny: p.doporuceny,
     jeDarkovyPoukaz: p.jeDarkovyPoukaz,
+    zemePuvodu: p.zemePuvodu,
     sklademCelkem: p.variants.reduce((s, v) => s + v.skladem, 0),
     velikosti: p.variants.map((v) => v.velikost),
   };
@@ -113,6 +116,7 @@ const VYBER_VYPIS = {
   znacka: true,
   doporuceny: true,
   jeDarkovyPoukaz: true,
+  zemePuvodu: true,
   category: { select: { nazev: true, slug: true } },
   variants: { select: { velikost: true, skladem: true } },
   images: {

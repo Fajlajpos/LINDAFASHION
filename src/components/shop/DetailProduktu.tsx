@@ -495,6 +495,7 @@ export function DetailProduktu({
                   kategorieNazev: produkt.kategorieNazev,
                   obrazekUrl: produkt.fotky[0]?.url ?? null,
                   jeDarkovyPoukaz: produkt.jeDarkovyPoukaz,
+                  zemePuvodu: produkt.zemePuvodu,
                 })
               }
               aria-pressed={jeOblibeny}

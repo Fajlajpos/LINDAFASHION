@@ -37,6 +37,7 @@ export interface FavoriteItem {
   kategorieNazev?: string | null;
   obrazekUrl?: string | null;
   jeDarkovyPoukaz?: boolean;
+  zemePuvodu?: string | null;
 }
 
 const STORAGE_KEY = 'linda_favorites';

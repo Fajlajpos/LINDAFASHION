@@ -67,6 +67,12 @@ Consequences worth remembering:
   without one, and `popisDopravyZdarma()` returns `null` when there is no threshold so the
   claim disappears instead of lying. Same rule for the card-payment tile: it renders only
   when `jeNastaveno()`, exactly like the checkout.
+  Same rule for claims about the goods: every product card said „100% Italský materiál"
+  whatever it was made of, and the newsletter promised „10 % na první nákup" while no code
+  was ever issued. The card now shows `zemePuvodu` through
+  [zeme-puvodu.ts](src/lib/zeme-puvodu.ts) (no country → no badge), and the newsletter
+  promise is gone. A discount for subscribers comes back only together with the code
+  that delivers it.
 - **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
   (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
   meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every

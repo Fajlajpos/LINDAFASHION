@@ -48,6 +48,7 @@ async function vratitOblibene(userId: string) {
     kategorieNazev: o.product.category.nazev,
     obrazekUrl: o.product.images[0]?.urlMedium ?? null,
     jeDarkovyPoukaz: o.product.jeDarkovyPoukaz,
+    zemePuvodu: o.product.zemePuvodu,
   }));
 }
 
