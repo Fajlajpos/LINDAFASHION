@@ -515,7 +515,15 @@ export function DetailProduktu({
 
           <ul className="grid grid-cols-3 gap-2 border-t border-linda-sand/40 pt-4 text-center text-[10px] text-linda-espresso/75">
             {[
-              { Ikona: Truck, text: `Odesíláme do ${dodaciLhutaDnu} prac. dnů` },
+              {
+                Ikona: Truck,
+                // Jeden pracovní den = „do 24 hodin", stejně jako na úvodní
+                // stránce (`kratkaLhutaOdeslani`). „do 1 prac. dnů" bylo i špatně česky.
+                text:
+                  dodaciLhutaDnu === 1
+                    ? 'Odesíláme do 24 hodin ve všední dny'
+                    : `Odesíláme do ${dodaciLhutaDnu} prac. dnů`,
+              },
               { Ikona: RotateCcw, text: '14 dní na vyzkoušení' },
               { Ikona: ShieldCheck, text: 'Bezpečná platba' },
             ].map(({ Ikona, text }) => (

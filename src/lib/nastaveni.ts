@@ -208,9 +208,41 @@ export function popisDodaciLhuty(nastaveni: NastaveniWebu): string {
       : 'Kvůli dovolené odesíláme objednávky až po návratu.';
   }
 
+  return `Zboží skladem odesíláme ${lhutaOdeslani(nastaveni)} od přijetí platby.`;
+}
+
+export interface KratkaLhuta {
+  /** „do 24 hodin", „do 3 pracovních dnů" */
+  lhuta: string;
+  /**
+   * Lhůta je v hodinách, a ty běží jen v pracovní dny – text to musí
+   * doplnit. Objednávka z pátku večer do soboty večer neodejde, takže holé
+   * „do 24 hodin" by o každém víkendu slibovalo něco, co obchod neplní.
+   */
+  jenPracovniDny: boolean;
+}
+
+/**
+ * Lhůta odeslání pro krátké texty (hero, nákupní jistoty), nebo `null`
+ * v režimu dovolené.
+ *
+ * Na úvodní stránce nahradila dopravu zdarma: lhůta platí pro každou
+ * objednávku, kdežto práh dopravy zdarma majitelka nastavit nemusí. Z téhož
+ * důvodu jako u `popisDodaciLhuty` mlčí během dovolené – slib, který obchod
+ * zrovna neplní, je horší než žádný, a dovolenou ohlašuje hlavička.
+ *
+ * Jeden pracovní den se tu píše jako „do 24 hodin" – tak to e-shopy říkají
+ * a tak to zákaznice hledá. Právní text (`popisDodaciLhuty`) zůstává přesný:
+ * „do 1 pracovního dne". Číslo je pořád jedno, z administrace.
+ */
+export function kratkaLhutaOdeslani(nastaveni: NastaveniWebu): KratkaLhuta | null {
+  if (nastaveni.rezimDovolene) return null;
+  if (nastaveni.dodaciLhutaDnu === 1) return { lhuta: 'do 24 hodin', jenPracovniDny: true };
+  return { lhuta: lhutaOdeslani(nastaveni), jenPracovniDny: false };
+}
+
+function lhutaOdeslani(nastaveni: NastaveniWebu): string {
   // Po „do" stojí genitiv: jednotné „1 pracovního dne", množné „5 pracovních dnů".
   const dnu = nastaveni.dodaciLhutaDnu;
-  const jednotka = dnu === 1 ? 'pracovního dne' : 'pracovních dnů';
-
-  return `Zboží skladem odesíláme do ${dnu} ${jednotka} od přijetí platby.`;
+  return `do ${dnu} ${dnu === 1 ? 'pracovního dne' : 'pracovních dnů'}`;
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Truck, Package, ShieldCheck, Headset, type LucideIcon } from 'lucide-react';
 import { vyhody, type HomeTrustItem } from '@/lib/home-data';
+import type { KratkaLhuta } from '@/lib/nastaveni';
 
 /** Mapa názvů ikon z `home-data` na komponenty lucide. */
 const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
@@ -24,9 +25,8 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
  * čtečky skrytá.
  */
 /**
- * `prahDopravaZdarma` přichází z `Settings` (předává ho homepage). Bez něj by
- * se tu vrátil natvrdo zapsaný slib „doprava zdarma nad 2 500 Kč", který
- * pokladna nemusí dodržet.
+ * `lhutaOdeslani` přichází z `Settings` přes `kratkaLhutaOdeslani` (předává ji
+ * homepage) a v režimu dovolené je `null` – dlaždice pak zmizí.
  *
  * Stejně tak dlaždice platby kartou, která se ukáže jen se zapojenou bránou.
  *
@@ -41,10 +41,10 @@ const SLOUPCE: Record<number, string> = {
 };
 
 export const TrustBar: React.FC<{
-  prahDopravaZdarma: number | null;
+  lhutaOdeslani: KratkaLhuta | null;
   platbaKartouDostupna: boolean;
-}> = ({ prahDopravaZdarma, platbaKartouDostupna }) => {
-  const polozky = vyhody(prahDopravaZdarma, platbaKartouDostupna);
+}> = ({ lhutaOdeslani, platbaKartouDostupna }) => {
+  const polozky = vyhody(lhutaOdeslani, platbaKartouDostupna);
 
   return (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

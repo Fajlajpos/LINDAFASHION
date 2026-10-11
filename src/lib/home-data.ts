@@ -11,6 +11,8 @@
  * rozcestníku dala přednačíst nanejvýš jedna.
  */
 
+import type { KratkaLhuta } from './nastaveni';
+
 /** Název plastické ilustrace z `CategoryGlyph`. */
 export type GlyphName = 'vse' | 'saty' | 'halenky' | 'svetry' | 'saka' | 'poukazy';
 
@@ -88,13 +90,12 @@ export const PROMO_BANNERY: HomePromo[] = [
  * Nákupní jistoty pod herem.
  *
  * Je to **funkce nastavení**, ne konstanta. „Doprava zdarma – při nákupu nad
- * 2 500 Kč" tu stálo natvrdo, zatímco skutečný práh drží
- * `Settings.prahDopravaZdarma` a ten klidně může být prázdný. Homepage tak
- * mohla slibovat dopravu zdarma, kterou pokladna nikdy nedala – a to není
- * nepřesnost, to je nekalá obchodní praktika.
- *
- * Číslo formátuje `toLocaleString('cs-CZ')`, které mezi řády vkládá
- * nezlomitelnou mezeru samo; „2 500 Kč“ se tedy neláme uprostřed čísla.
+ * 2 500 Kč" tu nejdřív stála natvrdo, pak se četla z `prahDopravaZdarma`,
+ * a nakonec ji majitel webu z úvodní stránky vyřadil úplně. Místo ní je
+ * lhůta odeslání (`kratkaLhutaOdeslani`): platí pro každou objednávku, ne jen
+ * pro tu nad prahem. Doprava zdarma, je-li nastavená, se dál ukazuje tam, kde
+ * se o ní rozhoduje – v košíku, v pokladně a na stránce Doprava a platba.
+ * V režimu dovolené lhůta neplatí, takže se dlaždice vynechá.
  *
  * Totéž platí pro „Bezpečná platba – Ověřená brána". Bez klíčů GoPay žádná
  * brána není a pokladna nabízí jen převod, takže dlaždice svítila u obchodu,
@@ -102,19 +103,21 @@ export const PROMO_BANNERY: HomePromo[] = [
  * stejně jako dlaždice na `/doprava-a-platba` a volba v pokladně.
  */
 export function vyhody(
-  prahDopravaZdarma: number | null,
+  lhutaOdeslani: KratkaLhuta | null,
   platbaKartouDostupna: boolean,
 ): HomeTrustItem[] {
   return [
-    // Bez nastaveného prahu se dlaždice vynechá celá – slib, který pokladna
-    // nedodrží, je horší než chybějící dlaždice.
-    ...(prahDopravaZdarma === null
+    ...(lhutaOdeslani === null
       ? []
       : [
           {
             icon: 'truck' as const,
-            title: 'Doprava zdarma',
-            description: `Při nákupu nad ${prahDopravaZdarma.toLocaleString('cs-CZ')} Kč`,
+            // Stejný tvar jako „Vrácení do 14 dnů" vedle. Žádné „rychlé" –
+            // lhůtu nastavuje majitelka a u čtrnácti dnů by to neplatilo.
+            title: `Odeslání ${lhutaOdeslani.lhuta}`,
+            // Jen tolik, kolik slib potřebuje: „do 24 hodin" platí ve všední
+            // dny, delší lhůta se týká zboží skladem.
+            description: lhutaOdeslani.jenPracovniDny ? 'Ve všední dny' : 'U zboží skladem',
           },
         ]),
     {

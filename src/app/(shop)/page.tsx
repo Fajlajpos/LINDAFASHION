@@ -8,7 +8,7 @@ import { TrustBar } from '@/components/shop/home/TrustBar';
 import { Newsletter } from '@/components/shop/home/Newsletter';
 import { Reveal } from '@/components/shop/home/Reveal';
 import { Sev } from '@/components/shop/home/Sev';
-import { nacistNastaveni } from '@/lib/nastaveni';
+import { kratkaLhutaOdeslani, nacistNastaveni } from '@/lib/nastaveni';
 import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 
 /**
@@ -21,15 +21,15 @@ import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
  * Obsah sekcí žije v `src/lib/home-data.ts`, komponenty samotné jsou bez dat.
  */
 export default async function HomePage() {
-  /* Práh dopravy zdarma se propisuje do heru i do pruhu s jistotami. Obojí
-     ho mělo natvrdo jako 2 500 Kč, zatímco skutečná hodnota žije v `Settings`
-     a klidně chybí – homepage pak slibovala poštovné zdarma, které pokladna
-     neúčtovala. */
+  /* Lhůta odeslání se propisuje do heru i do pruhu s jistotami – z `Settings`,
+     ne natvrdo, a v režimu dovolené vůbec. Dřív tu byla doprava zdarma
+     (`prahDopravaZdarma`); ta se dnes ukazuje jen v košíku a v pokladně. */
   const nastaveni = await nacistNastaveni();
+  const lhutaOdeslani = kratkaLhutaOdeslani(nastaveni);
 
   return (
     <div className="pb-20">
-      <HeroSplit prahDopravaZdarma={nastaveni.prahDopravaZdarma} />
+      <HeroSplit lhutaOdeslani={lhutaOdeslani} />
 
       {/* Karta se zespoda zanořuje do heru záporným marginem, odsazení si
           proto řeší sama. Bez `Reveal`: je nad ohybem, kde by naskakování
@@ -67,7 +67,7 @@ export default async function HomePage() {
         <div className="space-y-10 sm:space-y-14">
           <Reveal>
             <TrustBar
-              prahDopravaZdarma={nastaveni.prahDopravaZdarma}
+              lhutaOdeslani={lhutaOdeslani}
               platbaKartouDostupna={platbaKartouNastavena()}
             />
           </Reveal>
