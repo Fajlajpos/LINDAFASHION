@@ -474,6 +474,18 @@ started**, and the seller must be able to prove it (ČOI fine up to 5 000 000 K�
   worse than none.
 - The reference sentence belongs on **every** announcement of a discount — the catalog
   card as well as the detail page, which is why `ProduktVypis` carries it.
+- **The struck-through price is `nejnizsiCena30DniHaleru`, never `Product.cena`.** The card
+  and the detail used to strike `cena` while computing the percentage from the reference,
+  so a price raised a week before the sale was the one crossed out — the exact trick the
+  amendment bans. Whether a discount may be shown at all is decided in one place,
+  `slevaKZobrazeni` in [penize.ts](src/lib/penize.ts): no reference, or a current price
+  not below it → **no** strike, badge or saving anywhere, just the price. Every price
+  block goes through [CenaProduktu.tsx](src/components/shop/CenaProduktu.tsx) (card,
+  detail, cart); the cart therefore carries `nejnizsiCena30DniHaleru` in its items too —
+  it used to strike a price with no § 12a sentence at all. The look is deliberately
+  colourless: struck reference above, sale price bold and one step larger, „Ušetříte
+  X Kč", an espresso „−20 %" badge (real minus, NBSP before %). No countdowns or
+  „až −50 %" — false urgency is an unfair practice.
 - `popisNejnizsiCeny` / `procentoSlevyZReferencni` live in [penize.ts](src/lib/penize.ts),
   not in `cenova-historie.ts`: client components need them, and `cenova-historie.ts`
   imports Prisma. Same Edge/Node split reasoning as `session.ts` vs `auth.ts`.

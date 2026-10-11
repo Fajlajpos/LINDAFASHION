@@ -2,11 +2,53 @@ import { describe, expect, it } from 'vitest';
 import {
   czkNaHalere,
   formatovatCenu,
+  formatovatProcentoSlevy,
   mezisoucet,
   prodejniCena,
+  slevaKZobrazeni,
   slevaZProcent,
   spocitatObjednavku,
 } from './penize';
+
+/**
+ * Co se smí ukázat jako sleva – § 12a zák. č. 634/1992 Sb.
+ *
+ * Přeškrtnutá cena je vždy reference za 30 dnů, nikdy `Product.cena`, a bez
+ * reference nebo bez skutečného poklesu pod ni se sleva neoznamuje vůbec.
+ */
+describe('slevaKZobrazeni', () => {
+  it('přeškrtává referenci, spočítá úsporu i procento', () => {
+    expect(slevaKZobrazeni(279000, 349000)).toEqual({
+      puvodniHaleru: 349000,
+      aktualniHaleru: 279000,
+      usporaHaleru: 70000,
+      procento: 20,
+    });
+  });
+
+  // Cena zvednutá těsně před akcí: `cena` je 3 990, ale za 30 dnů se prodávalo
+  // za 3 490. Přeškrtnout se smí jen 3 490 – a úspora se počítá od ní.
+  it('přeškrtnutá je reference, i když byla základní cena vyšší', () => {
+    const sleva = slevaKZobrazeni(299000, 349000);
+    expect(sleva?.puvodniHaleru).toBe(349000);
+    expect(sleva?.usporaHaleru).toBe(50000);
+  });
+
+  it('bez reference slevu neoznamuje', () => {
+    expect(slevaKZobrazeni(279000, null)).toBeNull();
+  });
+
+  it('cena, která pod referenci nespadla, není sleva', () => {
+    expect(slevaKZobrazeni(349000, 349000)).toBeNull();
+    expect(slevaKZobrazeni(359000, 349000)).toBeNull();
+  });
+});
+
+describe('formatovatProcentoSlevy', () => {
+  it('píše skutečné minus a nezlomitelnou mezeru před %', () => {
+    expect(formatovatProcentoSlevy(20)).toBe('−20 %');
+  });
+});
 
 describe('czkNaHalere', () => {
   it('převádí koruny na celé haléře', () => {

@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { poslatJson } from '@/lib/api-klient';
-import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
+import { czkNaHalere, formatovatCenu, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
+import { CenaProduktu, slevaProduktu } from '@/components/shop/CenaProduktu';
 import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
 import { usePrilepenyPanel } from '@/lib/prilepeny-panel';
 
@@ -82,6 +83,23 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
       zustatekPoukazu: poukaz ? czkNaHalere(poukaz.zustatek) : 0,
     });
   }, [cart, sleva, poukaz]);
+
+  /**
+   * Kolik zákaznice ušetří na zlevněném zboží. Jen informace – do `kUhrade`
+   * nevstupuje, ceny po slevě už jsou v mezisoučtu. Počítá se z téže
+   * reference jako přeškrtnuté ceny u položek, takže se součet s nimi shoduje.
+   */
+  const usporaNaSlevach = useMemo(
+    () =>
+      cart.reduce(
+        (soucet, p) =>
+          soucet +
+          (slevaProduktu(p.cena, p.cenaPoSleve, p.nejnizsiCena30DniHaleru)?.usporaHaleru ?? 0) *
+            p.mnozstvi,
+        0
+      ),
+    [cart]
+  );
 
   const poSleveKc = halereNaCzk(rozpis.mezisoucet - rozpis.sleva);
   const doDopravyZdarma = prahDopravaZdarma === null ? 0 : Math.max(0, prahDopravaZdarma - poSleveKc);
@@ -200,8 +218,6 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
 
         <ul className="divide-y divide-linda-sand/40 rounded-2xl bg-linda-cream shadow-neu">
           {cart.map((polozka) => {
-            const cena = polozka.cenaPoSleve ?? polozka.cena;
-
             return (
               <li
                 key={polozka.variantId}
@@ -231,14 +247,15 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
                       Velikost: {polozka.velikost}
                       {polozka.barva && ` · ${polozka.barva}`}
                     </div>
-                    <div className="flex items-baseline gap-2 text-sm font-semibold text-linda-cognac">
-                      {cena.toLocaleString('cs-CZ')} Kč
-                      {polozka.cenaPoSleve != null && (
-                        <span className="text-xs font-normal text-linda-espresso/60 line-through">
-                          {polozka.cena.toLocaleString('cs-CZ')} Kč
-                        </span>
-                      )}
-                    </div>
+                    {/* Přeškrtnutá cena tu dřív stála bez věty o nejnižší ceně
+                        za 30 dnů – i košík slevu oznamuje (§ 12a). */}
+                    <CenaProduktu
+                      cena={polozka.cena}
+                      cenaPoSleve={polozka.cenaPoSleve}
+                      nejnizsiCena30DniHaleru={polozka.nejnizsiCena30DniHaleru}
+                      velikost="kosik"
+                      bezStitku
+                    />
                     {/* Stejná hranice jako na detailu produktu a ve workeru
                         (`skladem <= 2`) – tři různá čísla pro „dochází“ by
                         znamenala, že si košík a detail odporují. */}
@@ -377,6 +394,12 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
               </dd>
             </div>
           </dl>
+
+          {usporaNaSlevach > 0 && (
+            <p className="text-center text-sm font-semibold text-linda-espresso">
+              Na slevách ušetříte {formatovatCenu(usporaNaSlevach)}
+            </p>
+          )}
 
           <p className="text-[11px] text-linda-espresso/70">
             Konečnou částku uvidíte v pokladně, jakmile vyberete dopravu. {popisDph}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Heart, Sparkles, Gift } from 'lucide-react';
 import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
-import { popisNejnizsiCeny, procentoSlevyZReferencni } from '@/lib/penize';
+import { CenaProduktu, StitekSlevy, slevaProduktu } from '@/components/shop/CenaProduktu';
 import { useFavorites } from '@/lib/favorites-context';
 import { stitekZemePuvodu } from '@/lib/zeme-puvodu';
 
@@ -71,27 +71,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const jeOblibeny = isFavorite(slug);
-  const hasDiscount = Boolean(cenaPoSleve && cenaPoSleve < cena);
-  const displayPrice = hasDiscount ? cenaPoSleve : cena;
   const stitekPuvodu = stitekZemePuvodu(zemePuvodu);
 
   /*
-   * § 12a zákona o ochraně spotřebitele.
-   *
-   * Procento se počítá z **nejnižší ceny za 30 dnů**, ne ze základní ceny.
-   * Původní výpočet `(cena - cenaPoSleve) / cena` je přesně to, co novela
-   * zakazuje: kdyby se základní cena před akcí zvedla, inzerovala by karta
-   * slevu, která nikdy neexistovala.
-   *
-   * Když refereční cena chybí (produkt z doby před zavedenou evidencí),
-   * štítek se **nezobrazí vůbec**. Raději žádné procento než nedoložitelné.
+   * § 12a zákona o ochraně spotřebitele – rozhoduje `slevaKZobrazeni`
+   * (přes `slevaProduktu`): procento i přeškrtnutá cena jsou z nejnižší ceny
+   * za 30 dnů, a bez ní se sleva neoznamuje vůbec. Dřív karta přeškrtávala
+   * `cena`, jakmile byla vyplněná `cenaPoSleve`, a schovávala jen procento.
    */
-  const discountPercent = procentoSlevyZReferencni(
-    Math.round((displayPrice ?? cena) * 100),
-    nejnizsiCena30DniHaleru ?? null
-  );
-
-  const popisReferencniCeny = hasDiscount ? popisNejnizsiCeny(nejnizsiCena30DniHaleru ?? null) : null;
+  const sleva = slevaProduktu(cena, cenaPoSleve, nejnizsiCena30DniHaleru);
 
   return (
     /* Karta má stejnou barvu jako stránka – od podkladu ji dělí jen reliéf.
@@ -122,11 +110,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             Nová kolekce
           </span>
         )}
-        {discountPercent !== null && (
-          <span className="bg-linda-cognac text-white text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full shadow-sm">
-            <span className="sr-only">Sleva </span>-{discountPercent}%
-          </span>
-        )}
+        {sleva && <StitekSlevy procento={sleva.procento} className="shadow-sm" />}
         {/* Země původu je z dat produktu. Dřív tu natvrdo stálo „100% Italský
             materiál“ u každého kusu bez ohledu na složení – viz `zeme-puvodu.ts`.
             Ve dvojici s „Nová kolekce“ nebo slevou by ze štítků byl shluk,
@@ -138,7 +122,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </span>
         ) : (
           !doporuceny &&
-          !hasDiscount &&
+          !sleva &&
           stitekPuvodu && (
             <span className="bg-linda-sageLight text-linda-sage text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border border-linda-sage/25">
               {stitekPuvodu}
@@ -273,24 +257,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Pricing & CTA */}
         <div className="mt-4 pt-3 border-t border-linda-sand/40 flex items-center justify-between gap-3">
+          {/* Štítek „−20 %" je na fotce, u ceny by byl podruhé. Větu § 12a
+              nese `CenaProduktu` – karta je oznámení slevy stejně jako detail. */}
           <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-lg font-semibold text-linda-espresso">
-                {displayPrice?.toLocaleString('cs-CZ')} Kč
-              </span>
-              {hasDiscount && (
-                <span className="text-xs text-linda-espresso/75 line-through font-normal">
-                  <span className="sr-only">Původní cena </span>
-                  {cena.toLocaleString('cs-CZ')} Kč
-                </span>
-              )}
-            </div>
-
-            {/* Přeškrtnutá cena je oznámení o slevě, a to podle § 12a musí
-                refereční cenu nést i tady, ne jen na detailu produktu. */}
-            {popisReferencniCeny && (
-              <p className="mt-1 text-[10px] leading-tight text-linda-espresso/70">{popisReferencniCeny}</p>
-            )}
+            <CenaProduktu
+              cena={cena}
+              cenaPoSleve={cenaPoSleve}
+              nejnizsiCena30DniHaleru={nejnizsiCena30DniHaleru}
+              velikost="karta"
+              bezStitku
+            />
           </div>
 
           {/* Šipka se posune při najetí na celou kartu, ne až na odkaz:

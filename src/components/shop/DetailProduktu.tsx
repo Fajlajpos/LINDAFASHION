@@ -20,7 +20,7 @@ import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 import { HlidaniSkladu } from './HlidaniSkladu';
 import type { ProduktDetail } from '@/lib/katalog';
-import { popisNejnizsiCeny, procentoSlevyZReferencni } from '@/lib/penize';
+import { CenaProduktu } from './CenaProduktu';
 
 /** Popisky měr – klíče z Json pole na čitelný český text. */
 const POPISKY_MER: Record<string, string> = {
@@ -93,7 +93,6 @@ export function DetailProduktu({
 
   const varianta = produkt.varianty.find((v) => v.id === vybranaId) ?? vychoziVarianta;
   const jeOblibeny = isFavorite(produkt.slug);
-  const aktualniCena = produkt.cenaPoSleve ?? produkt.cena;
   const maFotky = produkt.fotky.length > 0;
 
   const pridatDoKosiku = () => {
@@ -108,6 +107,8 @@ export function DetailProduktu({
       barva: varianta.barva,
       cena: produkt.cena,
       cenaPoSleve: produkt.cenaPoSleve,
+      // Bez reference by košík slevu buď neoznámil, nebo oznámil bez § 12a.
+      nejnizsiCena30DniHaleru: produkt.nejnizsiCena30DniHaleru,
       mnozstvi: 1,
       obrazekUrl: produkt.fotky[0]?.url ?? null,
       skladem: varianta.skladem,
@@ -198,33 +199,18 @@ export function DetailProduktu({
               {produkt.nazev}
             </h1>
 
-            <div className="mt-4 flex flex-wrap items-baseline gap-3">
-              <span className="text-2xl font-semibold text-linda-espresso">
-                {aktualniCena.toLocaleString('cs-CZ')} Kč
-              </span>
+            {/* Cena, přeškrtnutá reference, štítek, úspora i věta § 12a –
+                jediný vzhled pro celý web, viz `CenaProduktu`. */}
+            <div className="mt-4">
+              <CenaProduktu
+                cena={produkt.cena}
+                cenaPoSleve={produkt.cenaPoSleve}
+                nejnizsiCena30DniHaleru={produkt.nejnizsiCena30DniHaleru}
+                velikost="detail"
+              />
+            </div>
 
-              {produkt.cenaPoSleve !== null && (
-                <span className="text-sm text-linda-espresso/60 line-through">
-                  <span className="sr-only">Původní cena </span>
-                  {produkt.cena.toLocaleString('cs-CZ')} Kč
-                </span>
-              )}
-
-              {procentoSlevyZReferencni(
-                Math.round((produkt.cenaPoSleve ?? produkt.cena) * 100),
-                produkt.nejnizsiCena30DniHaleru
-              ) !== null && (
-                <span className="rounded-full bg-linda-cognac px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                  <span className="sr-only">Sleva </span>
-                  -
-                  {procentoSlevyZReferencni(
-                    Math.round((produkt.cenaPoSleve ?? produkt.cena) * 100),
-                    produkt.nejnizsiCena30DniHaleru
-                  )}
-                  %
-                </span>
-              )}
-
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               {produkt.sklademCelkem > 0 ? (
                 <span className="rounded-full bg-linda-sageLight px-2.5 py-1 text-xs font-medium text-linda-sage">
                   Skladem &bull; ihned k odeslání
@@ -235,17 +221,6 @@ export function DetailProduktu({
                 </span>
               )}
             </div>
-
-            {/*
-              § 12a zákona o ochraně spotřebitele: u každého oznámení o slevě musí
-              být nejnižší cena za 30 dnů před jejím poskytnutím. Stojí hned
-              u ceny, ne v patře stránky – údaj má být tam, kde se sleva inzeruje.
-            */}
-            {popisNejnizsiCeny(produkt.nejnizsiCena30DniHaleru) && (
-              <p className="mt-1 text-[11px] font-medium text-linda-espresso/85">
-                {popisNejnizsiCeny(produkt.nejnizsiCena30DniHaleru)}
-              </p>
-            )}
 
             {/* Neplátce DPH ji uvádět nesmí, plátce musí – text řídí přepínač
                 v administraci, ne pevná věta v komponentě. */}

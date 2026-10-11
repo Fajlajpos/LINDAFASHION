@@ -7,6 +7,12 @@ export interface CartItemType {
   barva?: string | null;
   cena: number;
   cenaPoSleve?: number | null;
+  /**
+   * Nejnižší cena za 30 dnů (haléře) – košík slevu oznamuje stejně jako karta,
+   * takže potřebuje i referenci pro § 12a. Starší položky z `localStorage` ji
+   * nemají; pak se ukáže jen cena, bez oznámení slevy.
+   */
+  nejnizsiCena30DniHaleru?: number | null;
   mnozstvi: number;
   obrazekUrl?: string | null;
   skladem: number;

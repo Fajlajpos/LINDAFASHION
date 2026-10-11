@@ -21,6 +21,8 @@ export interface PolozkaKosikuServer {
   barva: string | null;
   cena: number;
   cenaPoSleve: number | null;
+  /** Reference § 12a – košík oznamuje slevu stejně jako karta produktu. */
+  nejnizsiCena30DniHaleru: number | null;
   mnozstvi: number;
   obrazekUrl: string | null;
   skladem: number;
@@ -112,6 +114,7 @@ export async function nacistKosik(userId: string): Promise<NactenyKosik> {
       barva: item.variant.barva,
       cena: Number(produkt.cena),
       cenaPoSleve: produkt.cenaPoSleve === null ? null : Number(produkt.cenaPoSleve),
+      nejnizsiCena30DniHaleru: produkt.nejnizsiCena30DniHaleru,
       mnozstvi,
       obrazekUrl: produkt.images[0]?.urlThumb ?? null,
       skladem: item.variant.skladem,
@@ -208,6 +211,7 @@ export async function overitDostupnost(polozky: VstupniPolozka[]): Promise<Nacte
       barva: varianta.barva,
       cena: Number(produkt.cena),
       cenaPoSleve: produkt.cenaPoSleve === null ? null : Number(produkt.cenaPoSleve),
+      nejnizsiCena30DniHaleru: produkt.nejnizsiCena30DniHaleru,
       mnozstvi,
       obrazekUrl: produkt.images[0]?.urlThumb ?? null,
       skladem: varianta.skladem,

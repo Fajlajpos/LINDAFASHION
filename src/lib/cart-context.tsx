@@ -53,6 +53,7 @@ interface OdpovedKosiku {
     barva: string | null;
     cena: number;
     cenaPoSleve: number | null;
+    nejnizsiCena30DniHaleru: number | null;
     mnozstvi: number;
     obrazekUrl: string | null;
     skladem: number;

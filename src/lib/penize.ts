@@ -107,6 +107,53 @@ export function procentoSlevyZReferencni(
   return Math.round(((nejnizsiCena30DniHaleru - aktualniHaleru) / nejnizsiCena30DniHaleru) * 100);
 }
 
+/** Sleva tak, jak ji smí web oznámit – všechno už spočítané. */
+export interface ZobrazenaSleva {
+  /**
+   * Přeškrtnutá cena. Je to **nejnižší cena za 30 dnů před slevou**, nikdy
+   * `Product.cena`: § 12a chce jako předchozí cenu v oznámení o slevě právě
+   * tuhle. Kdyby se přeškrtávala `cena`, stačilo by ji týden před akcí zvednout
+   * a přeškrtnout tu vyšší – přesně trik, který novela zakazuje.
+   */
+  puvodniHaleru: Halere;
+  aktualniHaleru: Halere;
+  usporaHaleru: Halere;
+  procento: number;
+}
+
+/**
+ * Jediné místo, které rozhoduje, jestli se sleva na webu ukáže.
+ *
+ * `null` znamená **žádné** oznámení slevy – ani přeškrtnutí, ani štítek, ani
+ * úsporu, jen cenu. Tak to je, když reference chybí (nedoložitelná sleva) nebo
+ * když aktuální cena pod ní neleží (pak to proti posledním 30 dnům sleva není,
+ * ať je v `cenaPoSleve` cokoli). Karta, detail i košík dřív přeškrtávaly
+ * `cena`, jakmile byla `cenaPoSleve` vyplněná, a schovávaly jen procento.
+ */
+export function slevaKZobrazeni(
+  aktualniHaleru: Halere,
+  nejnizsiCena30DniHaleru: number | null
+): ZobrazenaSleva | null {
+  const procento = procentoSlevyZReferencni(aktualniHaleru, nejnizsiCena30DniHaleru);
+  if (procento === null || nejnizsiCena30DniHaleru == null) return null;
+
+  return {
+    puvodniHaleru: nejnizsiCena30DniHaleru,
+    aktualniHaleru,
+    usporaHaleru: nejnizsiCena30DniHaleru - aktualniHaleru,
+    procento,
+  };
+}
+
+/**
+ * „−20 %" – skutečné minus (U+2212) a nezlomitelná mezera před znakem
+ * procenta, jak chce česká norma. Spojovník a „20%" bez mezery vypadaly jako
+ * překlep a štítek se dal zalomit mezi číslem a procentem.
+ */
+export function formatovatProcentoSlevy(procento: number): string {
+  return `−${procento} %`;
+}
+
 export interface PolozkaKosiku {
   cenaZaKus: Halere;
   mnozstvi: number;
