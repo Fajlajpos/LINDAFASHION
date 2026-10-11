@@ -67,15 +67,18 @@ export default function OMnePage() {
           O butiku LINDA FASHION
           <span aria-hidden="true" className="h-px w-8 bg-linda-cognac" />
         </p>
+        {/* Druhá půlka v koňakové – stejný tah jako „pro každý den" v heru
+            domovské stránky. */}
         <h1 className="font-serif text-4xl leading-tight text-linda-espresso sm:text-6xl">
-          Dámská móda s italským půvabem
+          Dámská móda <span className="text-linda-cognac">s italským půvabem</span>
         </h1>
-        <p className="font-serif text-base font-light italic text-linda-espresso/75">
-          Vítejte v mém butiku.
-        </p>
+        <p className="font-serif text-lg italic text-linda-espresso/75">Vítejte v mém butiku.</p>
       </div>
 
-      <div className="space-y-12 text-base font-light leading-relaxed text-linda-espresso/80">
+      {/* Běžný řez místo `font-light` a /85 místo /80: tenké světlé písmo na
+          krémové působilo vybledle, příběh má číst jako hlas, ne jako poznámka
+          pod čarou. */}
+      <div className="space-y-12 text-base leading-relaxed text-linda-espresso/85">
         <Reveal>
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-5 md:gap-12">
             {/* Rám je prohlubeň – fotka do stránky patří vsazená, ne nalepená.
@@ -145,6 +148,16 @@ export default function OMnePage() {
               Nechci mít v nabídce všechno. Chci mít kousky, za kterými si stojím a které bych
               s klidným svědomím doporučila kamarádce.
             </p>
+
+            {/* Podpis – text je v první osobě, tak ať je vidět čí. Jméno je
+                prodávající ze `Settings` (Martina Ludvíková), tady jen křestní,
+                jak se podepisuje dopis. */}
+            <div className="!mt-8 text-right">
+              <p className="font-serif text-3xl italic text-linda-espresso">Martina</p>
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-widest text-linda-cognac">
+                majitelka butiku
+              </p>
+            </div>
           </div>
         </Reveal>
 
