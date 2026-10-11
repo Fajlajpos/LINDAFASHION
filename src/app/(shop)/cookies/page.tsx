@@ -21,7 +21,7 @@ export default function CookiesInfoPage() {
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Nezbytné (Technické):</strong> Nutné pro nákupní košík, autentizaci a bezpečnost. Nejde je vypnout.</li>
             <li><strong>Analytické:</strong> Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</li>
-            <li><strong>Marketingové:</strong> Používají se pro cílění relevantních reklam z italské módy (Meta Pixel). Načtou se jen s vaším souhlasem.</li>
+            <li><strong>Marketingové:</strong> Používají se pro cílení relevantních reklam na naši nabídku (Meta Pixel). Načtou se jen s vaším souhlasem.</li>
           </ul>
         </section>
       </div>

@@ -79,7 +79,17 @@ Consequences worth remembering:
   „GoPay · QR platba · Zásilkovna · PPL" strip is built in `(shop)/layout.tsx` from the
   same conditions as the checkout (keys, `BANK_IBAN`, a shipping price). Brand copy may say
   „italský styl"; claims about origin, materials or service must come from data or from
-  the owner.
+  the owner. **The shop sells ordinary brands, not only Italian ones** (owner, 2026-10), so
+  „italská dámská móda" is gone from titles, the catalog, the feed, the cookie texts and
+  `og-image.png` — and the size guide no longer says „Italské velikosti odpovídají
+  evropskému číslování": Italian sizing differs from EU (IT 40 = EU 36), so for non-Italian
+  stock the sentence pointed customers one size off. „Moda Italiana" stays as the tagline.
+  **„Italská móda" lives where it is true:** [/produkty/italska-moda](<src/app/(shop)/produkty/italska-moda/page.tsx>)
+  lists only products whose `zemePuvodu` is Italy (`Z_ITALIE` / `pocetZItalie` in
+  [katalog.ts](src/lib/katalog.ts), combined through `AND`), and the catalog sidebar, the
+  footer, the sitemap and `/llms.txt` link to it only while `pocetZItalie() > 0` — with zero
+  the page is `noindex`. `produktLd` carries `countryOfOrigin`. That is the SEO/GEO signal
+  for Italian fashion; do not put it back into the site-wide title.
 - **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
   (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
   meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every

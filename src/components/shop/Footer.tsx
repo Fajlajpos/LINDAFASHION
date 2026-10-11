@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Facebook, Instagram } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { Captcha } from '@/components/ui/Captcha';
+import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
@@ -25,6 +26,8 @@ interface FooterProps {
   zapisVRejstriku?: string | null;
   /** Platby a dopravci, které obchod právě nabízí. Prázdné = lišta se nevykreslí. */
   sluzby?: string[];
+  /** Odkaz „Italská móda" jen tehdy, když je v nabídce aspoň jeden kousek z Itálie. */
+  italskaModa?: boolean;
   captchaSiteKey?: string | null;
 }
 
@@ -111,9 +114,13 @@ export const Footer: React.FC<FooterProps> = ({
   icoFirmy,
   zapisVRejstriku,
   sluzby = [],
+  italskaModa = false,
   captchaSiteKey = null,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
+  const kolekce = italskaModa
+    ? [KOLEKCE_ODKAZY[0], { href: CESTA_ITALSKA_MODA, label: 'Italská móda' }, ...KOLEKCE_ODKAZY.slice(1)]
+    : KOLEKCE_ODKAZY;
 
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');
@@ -176,7 +183,7 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Odkazy – vodorovně, ať nerostou do výšky */}
           <nav aria-label="Odkazy v patičce" className="space-y-3 lg:col-span-6">
-            <SkupinaOdkazu nadpis="Kolekce" odkazy={KOLEKCE_ODKAZY} />
+            <SkupinaOdkazu nadpis="Kolekce" odkazy={kolekce} />
             <SkupinaOdkazu nadpis="Servis" odkazy={SERVIS_ODKAZY}>
               <li>
                 <button

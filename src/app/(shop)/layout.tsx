@@ -8,6 +8,7 @@ import { nacistNastaveni, zpravaODovolene } from '@/lib/nastaveni';
 import { mistniProvozovnaLd, organizaceLd } from '@/lib/strukturovana-data';
 import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 import { dostupneDopravy } from '@/lib/shipping';
+import { pocetZItalie } from '@/lib/katalog';
 
 /**
  * Lišta služeb v patičce – jen to, co obchod právě opravdu nabízí.
@@ -35,7 +36,11 @@ function nabizeneSluzby(nastaveni: Awaited<ReturnType<typeof nacistNastaveni>>):
  * oprávnění záleží, se používá `overitUzivatele()`.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [session, nastaveni] = await Promise.all([getSession(), nacistNastaveni()]);
+  const [session, nastaveni, italskych] = await Promise.all([
+    getSession(),
+    nacistNastaveni(),
+    pocetZItalie(),
+  ]);
 
   const zprava = zpravaODovolene(nastaveni);
 
@@ -47,6 +52,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       icoFirmy={nastaveni.icoFirmy}
       zapisVRejstriku={nastaveni.zapisVRejstriku}
       sluzby={nabizeneSluzby(nastaveni)}
+      italskaModa={italskych > 0}
       captchaSiteKey={siteKey()}
       prihlasen={session !== null}
     >

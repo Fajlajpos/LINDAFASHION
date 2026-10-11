@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
+import { pocetZItalie } from '@/lib/katalog';
+import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 
 /**
  * Sitemap se generuje z databáze.
@@ -40,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   try {
-    const [kategorie, produkty] = await Promise.all([
+    const [kategorie, produkty, italskych] = await Promise.all([
       // Prázdnou kategorii do mapy neposíláme – vede na prázdný výpis.
       db.category.findMany({
         where: { products: { some: { aktivni: true } } },
@@ -53,7 +55,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         orderBy: { updatedAt: 'desc' },
         take: 5000,
       }),
+      pocetZItalie(),
     ]);
+
+    // Stejné pravidlo jako u kategorií: prázdnou „italskou módu" Googlu
+    // nenabízíme – stránka je pak `noindex` a tvrdila by, co obchod nemá.
+    if (italskych > 0) {
+      zaznamy.push({
+        url: `${ZAKLADNI_URL}${CESTA_ITALSKA_MODA}`,
+        lastModified: ted,
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      });
+    }
 
     for (const k of kategorie) {
       zaznamy.push({

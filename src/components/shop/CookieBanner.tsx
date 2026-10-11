@@ -100,7 +100,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
               <div className="space-y-1">
                 <h4 className="font-serif text-lg text-linda-sand">Ochrana vašeho soukromí &amp; Cookies</h4>
                 <p className="text-xs leading-relaxed text-linda-cream/80">
-                  Tento e-shop používá soubory cookies pro zajištění správného fungování košíku a přihlášení (nezbytné), pro analýzu návštěvnosti a pro přizpůsobení nabídek italské módy (marketingové). Detaily najdete v našich{' '}
+                  Tento e-shop používá soubory cookies pro zajištění správného fungování košíku a přihlášení (nezbytné), pro analýzu návštěvnosti a pro přizpůsobení reklam na naši nabídku (marketingové). Detaily najdete v našich{' '}
                   <Link href="/cookies" className="text-linda-sand underline underline-offset-2">
                     zásadách používání cookies
                   </Link>.
@@ -197,7 +197,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
               <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
                 <span>
                   <span className="block text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</span>
-                  <span className="mt-0.5 block text-linda-espresso/70">Slouží k zobrazování relevantních reklam z italské módy.</span>
+                  <span className="mt-0.5 block text-linda-espresso/70">Slouží k zobrazování relevantních reklam na naši nabídku.</span>
                 </span>
                 <input
                   type="checkbox"

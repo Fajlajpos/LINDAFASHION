@@ -4,7 +4,8 @@ import { ChevronDown, Filter, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { RazeniKatalogu } from '@/components/shop/RazeniKatalogu';
 import { Strankovani } from '@/components/ui/Strankovani';
-import { nacistKategorie, nacistProdukty, type Razeni } from '@/lib/katalog';
+import { nacistKategorie, nacistProdukty, pocetZItalie, type Razeni } from '@/lib/katalog';
+import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 
 interface Props {
   /** Slug kategorie – z cesty `/produkty/[kategorie]`, nebo z filtru. */
@@ -14,6 +15,8 @@ interface Props {
   stranka?: number;
   /** Základ odkazů na filtry a stránkování. */
   zakladniCesta?: string;
+  /** Jen kousky vyrobené v Itálii – `/produkty/italska-moda`. */
+  jenZItalie?: boolean;
 }
 
 const RAZENI_POVOLENE: Razeni[] = ['nejnovejsi', 'cena-vzestupne', 'cena-sestupne', 'nazev'];
@@ -40,10 +43,12 @@ export async function KatalogVypis({
   razeni = 'nejnovejsi',
   stranka = 1,
   zakladniCesta = '/produkty',
+  jenZItalie = false,
 }: Props) {
-  const [vysledek, kategorie2] = await Promise.all([
-    nacistProdukty({ kategorie, hledat, razeni, stranka }),
+  const [vysledek, kategorie2, italskych] = await Promise.all([
+    nacistProdukty({ kategorie, hledat, razeni, stranka, jenZItalie }),
     nacistKategorie(),
+    pocetZItalie(),
   ]);
 
   const { produkty, celkem, stranek, volnaShoda } = vysledek;
@@ -73,9 +78,9 @@ export async function KatalogVypis({
       <li>
         <Link
           href="/produkty"
-          aria-current={!kategorie ? 'page' : undefined}
+          aria-current={!kategorie && !jenZItalie ? 'page' : undefined}
           className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
-            !kategorie
+            !kategorie && !jenZItalie
               ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
               : 'text-linda-espresso hover:shadow-neuSm'
           }`}
@@ -83,6 +88,25 @@ export async function KatalogVypis({
           Všechny produkty ({celkemVsech})
         </Link>
       </li>
+
+      {/* Italská móda není kategorie, ale řez napříč nimi podle země původu.
+          Odkaz se ukáže, jen když je co ukázat – prázdná „italská móda" by
+          sama o sobě tvrdila, že ji obchod nabízí. */}
+      {italskych > 0 && (
+        <li>
+          <Link
+            href={CESTA_ITALSKA_MODA}
+            aria-current={jenZItalie ? 'page' : undefined}
+            className={`flex min-h-touch cursor-pointer items-center rounded-lg px-3 transition-all duration-200 ${
+              jenZItalie
+                ? 'bg-linda-cognac font-medium text-white shadow-neuOnDarkInset'
+                : 'text-linda-espresso hover:shadow-neuSm'
+            }`}
+          >
+            Italská móda ({italskych})
+          </Link>
+        </li>
+      )}
 
       {viditelne.map((k) => (
         <li key={k.slug} className={k.parentSlug ? 'ml-3' : undefined}>
@@ -103,9 +127,11 @@ export async function KatalogVypis({
   );
 
   /** Co je zrovna vyfiltrované – text do sbaleného pruhu na telefonu. */
-  const nazevFiltru = kategorie
-    ? (viditelne.find((k) => k.slug === kategorie)?.nazev ?? 'Kategorie')
-    : 'Všechny produkty';
+  const nazevFiltru = jenZItalie
+    ? 'Italská móda'
+    : kategorie
+      ? (viditelne.find((k) => k.slug === kategorie)?.nazev ?? 'Kategorie')
+      : 'Všechny produkty';
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -199,12 +225,18 @@ export async function KatalogVypis({
               <Filter className="h-7 w-7 text-linda-cognac" aria-hidden="true" />
             </span>
             <h2 className="font-serif text-2xl text-linda-espresso">
-              {hledat ? 'Nic jsme nenašli' : 'V této kategorii zatím nic není'}
+              {hledat
+                ? 'Nic jsme nenašli'
+                : jenZItalie
+                  ? 'Kousky z Itálie teď nemáme'
+                  : 'V této kategorii zatím nic není'}
             </h2>
             <p className="mx-auto max-w-sm text-xs text-linda-espresso/75">
               {hledat
                 ? 'Zkuste jiné slovo nebo se podívejte na celou kolekci.'
-                : 'Chystáme sem nové kousky. Mrkněte zatím na zbytek kolekce.'}
+                : jenZItalie
+                  ? 'Jakmile nějaký přibude, najdete ho tady. Mrkněte zatím na zbytek kolekce.'
+                  : 'Chystáme sem nové kousky. Mrkněte zatím na zbytek kolekce.'}
             </p>
             <Link
               href="/produkty"

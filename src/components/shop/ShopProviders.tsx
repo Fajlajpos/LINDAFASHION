@@ -18,6 +18,8 @@ interface Props {
   zapisVRejstriku?: string | null;
   /** Platby a dopravci, které obchod právě nabízí – viz `(shop)/layout.tsx`. */
   sluzby?: string[];
+  /** Je v nabídce aspoň jeden kousek z Itálie? Podle toho odkaz v patičce. */
+  italskaModa?: boolean;
   /** Veřejný klíč Turnstile pro newsletter v patičce. */
   captchaSiteKey?: string | null;
   /**
@@ -45,6 +47,7 @@ export function ShopProviders({
   icoFirmy,
   zapisVRejstriku,
   sluzby = [],
+  italskaModa = false,
   captchaSiteKey = null,
   prihlasen = false,
 }: Props) {
@@ -74,6 +77,7 @@ export function ShopProviders({
             icoFirmy={icoFirmy}
             zapisVRejstriku={zapisVRejstriku}
             sluzby={sluzby}
+            italskaModa={italskaModa}
             captchaSiteKey={captchaSiteKey}
           />
         </div>

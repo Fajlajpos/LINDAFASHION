@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Katalog kolekcí | LINDA FASHION',
   description:
-    'Kompletní nabídka italské dámské módy – šaty, halenky, svetry a kabáty z kvalitních přírodních materiálů.',
+    'Kompletní nabídka dámské módy v italském stylu – šaty, halenky, svetry, saka a kabáty.',
   alternates: { canonical: '/produkty' },
 };
 
@@ -33,7 +33,7 @@ export default function ProduktyPage({ searchParams }: Props) {
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
       <div className="space-y-3 border-b border-linda-sand pb-8">
         <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
-          Italská dámská móda
+          Dámská móda v italském stylu
         </span>
         <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Kompletní katalog kolekcí</h1>
         {hledat && (

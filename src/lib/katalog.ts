@@ -20,6 +20,8 @@ export interface FiltryKatalogu {
   hledat?: string | null;
   razeni?: Razeni;
   stranka?: number;
+  /** Jen kousky vyrobené v Itálii – stránka `/produkty/italska-moda`. */
+  jenZItalie?: boolean;
 }
 
 export interface ProduktVypis {
@@ -140,8 +142,42 @@ export interface VysledekKatalogu {
   volnaShoda: boolean;
 }
 
+/**
+ * Kousky vyrobené v Itálii – podle `Product.zemePuvodu`, nic jiného.
+ *
+ * „Italská móda" smí na webu stát jen tam, kde to plyne z dat: butik prodává
+ * běžné značky a italské jsou jen některé, takže tvrzení o celém sortimentu
+ * by bylo klamání o zeměpisném původu (§ 5 zák. č. 634/1992 Sb.).
+ *
+ * Pole je volný text, majitelka napíše „Itálie", „Italie" i „Italy". Dvě
+ * podmínky proto pokryjí tvar s čárkou i bez ní; `ILIKE` v Postgresu bere
+ * diakritiku doslova, takže „ital" na „Itálie" nesedne a „itál" na „Italy"
+ * taky ne. Stejné tvary zná štítek na kartě v `zeme-puvodu.ts`.
+ *
+ * Poukazy pryč – nemají zemi původu a „italský poukaz" by nedával smysl.
+ */
+const Z_ITALIE: Prisma.ProductWhereInput = {
+  jeDarkovyPoukaz: false,
+  OR: [
+    { zemePuvodu: { contains: 'itál', mode: 'insensitive' } },
+    { zemePuvodu: { contains: 'ital', mode: 'insensitive' } },
+  ],
+};
+
+/** Kolik zveřejněných kousků je z Itálie. Nula = odkazy na stránku se schovají. */
+export async function pocetZItalie(): Promise<number> {
+  return db.product.count({ where: { AND: [VEREJNE, Z_ITALIE] } });
+}
+
 /** Filtry mimo hledání – ty platí v přísném i v uvolněném průchodu stejně. */
 function podminkaFiltru(filtry: FiltryKatalogu): Prisma.ProductWhereInput {
+  const zaklad = podminkaFiltruBezPuvodu(filtry);
+  // Přes `AND`, ne rozprostřením: `Z_ITALIE` nese vlastní `OR` a ze stejného
+  // důvodu jako u hledání (viz `spojit`) by se klíče přepsaly.
+  return filtry.jenZItalie ? { AND: [zaklad, Z_ITALIE] } : zaklad;
+}
+
+function podminkaFiltruBezPuvodu(filtry: FiltryKatalogu): Prisma.ProductWhereInput {
   return {
     ...VEREJNE,
     ...(filtry.kategorie

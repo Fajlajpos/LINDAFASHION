@@ -142,7 +142,7 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
           </span>
           <h2 className="font-serif text-2xl text-linda-espresso">Váš košík je prázdný</h2>
           <p className="text-xs text-linda-espresso/70">
-            Prohlédněte si naši novou kolekci italského oblečení.
+            Prohlédněte si, co je právě skladem.
           </p>
           <Link
             href="/produkty"

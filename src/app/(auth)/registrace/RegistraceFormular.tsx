@@ -180,7 +180,7 @@ export function RegistraceFormular({ captchaSiteKey }: { captchaSiteKey: string 
                 className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
               />
               <span className="text-linda-espresso/75">
-                Chci odebírat inspirativní novinky z nových italských kolekcí (dobrovolný souhlas).
+                Chci odebírat novinky z butiku a tipy na styling (dobrovolný souhlas).
               </span>
             </label>
           </div>

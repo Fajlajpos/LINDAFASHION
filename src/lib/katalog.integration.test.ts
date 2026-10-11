@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/lib/db';
 import { vycistitDatabazi } from '@/test/data';
-import { nacistNaseptavac, nacistProdukty } from '@/lib/katalog';
+import { nacistNaseptavac, nacistProdukty, pocetZItalie } from '@/lib/katalog';
 import { hledaciNazevKategorie, hledaciTextProduktu } from '@/lib/vyhledavani';
 
 /**
@@ -153,6 +153,73 @@ describe('hledání v katalogu', () => {
 
     const vysledek = await nacistProdukty({ hledat: 'kasmirovy' });
     expect(vysledek.celkem).toBe(0);
+  });
+});
+
+/**
+ * Stránka „Italská móda" stojí na `zemePuvodu`, volném textu. Jestli na něj
+ * filtr sedí, rozhoduje `ILIKE` v Postgresu – a ten bere diakritiku doslova,
+ * takže „ital" na „Itálie" nesedne. Tohle bez skutečné databáze ověřit nejde.
+ */
+describe('italská móda (země původu)', () => {
+  beforeEach(async () => {
+    await vycistitDatabazi();
+    const { saty, svetry } = await pripravitKatalog();
+
+    const puvod = async (slug: string, zemePuvodu: string) =>
+      db.product.updateMany({ where: { slug }, data: { zemePuvodu } });
+
+    await puvod('hedvabne-saty-bellissima', 'Itálie');
+    await puvod('kasmirovy-svetr-roma', 'italy');
+    await puvod('bellissima-kardigan', 'Polsko');
+
+    // Poukaz s „Itálií" by do italské módy nepatřil, ani kdyby ji měl vyplněnou.
+    await db.product.create({
+      data: {
+        nazev: 'Dárkový poukaz',
+        slug: 'darkovy-poukaz',
+        popis: 'Poukaz.',
+        cena: 1000,
+        jeDarkovyPoukaz: true,
+        zemePuvodu: 'Itálie',
+        categoryId: saty.id,
+        hledaciText: hledaciTextProduktu({ nazev: 'Dárkový poukaz', popis: 'Poukaz.' }),
+      },
+    });
+
+    // Italský, ale stažený z prodeje.
+    await db.product.create({
+      data: {
+        nazev: 'Stažené šaty',
+        slug: 'stazene-saty',
+        popis: 'Už se neprodávají.',
+        cena: 1000,
+        aktivni: false,
+        zemePuvodu: 'Itálie',
+        categoryId: svetry.id,
+        hledaciText: hledaciTextProduktu({ nazev: 'Stažené šaty', popis: 'Už se neprodávají.' }),
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await db.$disconnect();
+  });
+
+  it('najde Itálii s diakritikou i bez ní, nic jiného', async () => {
+    const vysledek = await nacistProdukty({ jenZItalie: true });
+
+    expect(nazvy(vysledek.produkty)).toEqual(['Hedvábné šaty Bellissima', 'Kašmírový svetr Roma']);
+  });
+
+  it('počet odpovídá výpisu – bez poukazů a stažených kousků', async () => {
+    expect(await pocetZItalie()).toBe(2);
+  });
+
+  it('s kategorií se skládá přes AND, nepřepíše ji', async () => {
+    const vysledek = await nacistProdukty({ jenZItalie: true, kategorie: 'saty' });
+
+    expect(nazvy(vysledek.produkty)).toEqual(['Hedvábné šaty Bellissima']);
   });
 });
 

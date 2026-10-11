@@ -77,7 +77,7 @@ export async function GET() {
   <channel>
     <title>LINDA FASHION – produktový feed</title>
     <link>${ZAKLADNI_URL}</link>
-    <description>Katalog italské dámské módy pro Meta Commerce Manager a Google Merchant Center</description>
+    <description>Katalog dámské módy pro Meta Commerce Manager a Google Merchant Center</description>
 ${polozky}
   </channel>
 </rss>`;

@@ -256,7 +256,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           {/* Category & Brand */}
           <div className="flex items-center justify-between text-xs text-linda-cognac font-medium tracking-wide mb-1">
-            <span>{kategorieNazev || 'Italská móda'}</span>
+            <span>{kategorieNazev || 'Dámská móda'}</span>
             {znacka && <span className="text-linda-espresso/75 font-serif italic">{znacka}</span>}
           </div>
 

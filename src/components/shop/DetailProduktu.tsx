@@ -552,8 +552,12 @@ export function DetailProduktu({
               Průvodce velikostmi a jak se měřit
             </h2>
             <p className="text-xs leading-relaxed text-linda-espresso/85">
-              Italské velikosti odpovídají evropskému číslování. Vždy se měřte krejčovským metrem
-              přímo na těle, bez přitažení:
+              {/* Stálo tu „Italské velikosti odpovídají evropskému číslování". Zboží
+                  ale není jen italské a italské číslování se od evropského liší
+                  (IT 40 = EU 36) – věta by zákaznici navedla k vedlejší velikosti.
+                  Spolehlivé jsou jen míry, proto odkaz na ně. */}
+              Značky číslují velikosti různě. Má-li kousek uvedené míry, řiďte se jimi, ne číslem
+              velikosti. Měřte se krejčovským metrem přímo na těle, bez přitažení:
             </p>
             <ul className="list-disc space-y-1.5 pl-4 text-xs text-linda-espresso/80">
               <li>

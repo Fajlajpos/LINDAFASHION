@@ -26,17 +26,21 @@ const jakarta = Plus_Jakarta_Sans({
  * vyhledávače na cizí web. Statické stránky se skládají při `next build`,
  * proto `APP_URL` chodí do Docker buildu jako build arg (viz Dockerfile).
  *
- * Popis tvrdil „dovážené přímo z Itálie" – o původu jednotlivých kusů ale
- * mluví jen `Product.zemePuvodu`, takže tvrzení o celém sortimentu sem nepatří.
+ * Popis tvrdil „dovážené přímo z Itálie" a titulek „italská dámská móda" –
+ * butik ale prodává zboží různých značek, ne jen italských, a o původu
+ * jednotlivých kusů mluví jen `Product.zemePuvodu`. „V italském stylu" je
+ * styl, ne tvrzení o původu, proto smí zůstat.
  */
+const TITULEK = 'LINDA FASHION | Dámská móda v italském stylu';
+
 export const metadata: Metadata = {
   metadataBase: new URL(ZAKLADNI_URL),
-  title: 'LINDA FASHION | Luxusní italská dámská móda',
+  title: TITULEK,
   description: 'Butik s nadčasovou dámskou módou v italském stylu. Šaty, halenky, svetry, saka a kabáty.',
-  keywords: 'italská móda, dámské oblečení, hedvábné šaty, lněná halenky, kašmírový svetr, vlněný kabát, Linda Fashion',
+  keywords: 'dámská móda, dámské oblečení, šaty, halenky, svetry, saka, kabáty, butik, Linda Fashion',
   authors: [{ name: 'LINDA FASHION' }],
   openGraph: {
-    title: 'LINDA FASHION | Luxusní italská dámská móda',
+    title: TITULEK,
     description: 'Nadčasová elegance v italském stylu. Objevte kolekci.',
     url: ZAKLADNI_URL,
     siteName: 'LINDA FASHION',
@@ -49,13 +53,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'LINDA FASHION – italská dámská móda',
+        alt: 'LINDA FASHION – dámská móda v italském stylu',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LINDA FASHION | Luxusní italská dámská móda',
+    title: TITULEK,
     description: 'Nadčasová elegance v italském stylu.',
     images: ['/og-image.png'],
   },

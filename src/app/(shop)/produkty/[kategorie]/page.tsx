@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${nazev} | LINDA FASHION`,
     description:
       kategorie.popis ??
-      `${kategorie.nazev} z naší kolekce italské dámské módy. Kvalitní materiály a nadčasové střihy.`,
+      `${kategorie.nazev} z naší kolekce dámské módy v italském stylu. Nadčasové střihy pro každý den.`,
     alternates: { canonical: `/produkty/${kategorie.slug}` },
   };
 }

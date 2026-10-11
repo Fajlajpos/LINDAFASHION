@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { popisDopravyZdarma } from '@/lib/shipping';
 import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
+import { pocetZItalie } from '@/lib/katalog';
+import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 
 /**
  * `/llms.txt` – strojově čitelný souhrn obchodu pro jazykové modely.
@@ -23,7 +25,19 @@ import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const nastaveni = await nacistNastaveni();
+  const [nastaveni, italskych] = await Promise.all([nacistNastaveni(), pocetZItalie()]);
+
+  /* Italská móda pro AI asistenty – jen s čísly, která platí právě teď.
+     Odpověď na „kde koupit italskou dámskou módu" má dostat pravdivý odkaz,
+     ne slib, že italské je všechno. */
+  const italskaModa =
+    italskych > 0
+      ? `
+## Italská móda
+- Kousky vyrobené v Itálii (podle země původu u produktu), nyní ${italskych} v nabídce: ${ZAKLADNI_URL}${CESTA_ITALSKA_MODA}
+- Ostatní zboží je od dalších zavedených značek.
+`
+      : '';
 
   const dopravaZdarma = popisDopravyZdarma(nastaveni);
 
@@ -65,7 +79,7 @@ export async function GET() {
 - Svetry a kardigany
 - Saka a kabáty
 - Dárkové poukazy
-
+${italskaModa}
 ## Kontaktní informace
 ${kontakty}
 `;

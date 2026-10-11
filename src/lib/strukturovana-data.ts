@@ -24,7 +24,7 @@ export function organizaceLd(nastaveni: NastaveniWebu) {
     '@type': 'Organization',
     name: nastaveni.nazevFirmy || 'LINDA FASHION',
     url: ZAKLADNI_URL,
-    description: 'Butik s nadčasovou italskou dámskou módou.',
+    description: 'Butik s nadčasovou dámskou módou v italském stylu.',
     ...(site.length ? { sameAs: site } : {}),
     ...(nastaveni.emailFirmy || nastaveni.telefonFirmy
       ? {
@@ -86,6 +86,11 @@ export function produktLd(produkt: ProduktDetail) {
     sku: produkt.sku ?? undefined,
     ...(produkt.znacka ? { brand: { '@type': 'Brand', name: produkt.znacka } } : {}),
     ...(produkt.material ? { material: produkt.material } : {}),
+    // Země původu přímo do dat pro vyhledávače a AI asistenty – u kousku
+    // z Itálie je to nejsilnější a přitom doložitelný signál „italská móda".
+    ...(produkt.zemePuvodu
+      ? { countryOfOrigin: { '@type': 'Country', name: produkt.zemePuvodu } }
+      : {}),
     category: produkt.kategorieNazev,
     ...(produkt.fotky.length ? { image: produkt.fotky.map((f) => absolutni(f.url)) } : {}),
     offers: {

@@ -11,6 +11,12 @@
  */
 
 /**
+ * Stránka s kousky vyrobenými v Itálii. Tady, ne v `katalog.ts`, protože na
+ * ni odkazuje i klientská patička a `katalog.ts` importuje Prismu.
+ */
+export const CESTA_ITALSKA_MODA = '/produkty/italska-moda';
+
+/**
  * Země, u kterých víme, jak se skloňují. Klíč je bez diakritiky a malými
  * písmeny, protože pole je volný text a majitelka napíše „Italie" stejně
  * dobře jako „Itálie".
