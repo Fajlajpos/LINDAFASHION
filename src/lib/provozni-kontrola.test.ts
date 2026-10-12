@@ -162,10 +162,12 @@ describe('provozniVarovani – zálohy', () => {
     expect(klice(ZALOHA_OK)).toEqual([]);
   });
 
-  it('chybějící stav hlásí jen doporučení – ve vývoji zálohy neběží', () => {
+  /* Zálohy běží i ve vývoji a skript zálohuje hned po startu, takže chybějící
+     stav už nikde není „normální" – znamená, že služba neběží. */
+  it('chybějící stav je kritický', () => {
     const varovani = provozniVarovani(VYPLNENO, null);
     expect(varovani.map((v) => v.klic)).toEqual(['zalohy-chybi']);
-    expect(varovani[0].zavaznost).toBe('doporucene');
+    expect(varovani[0].zavaznost).toBe('kriticke');
   });
 
   it('selhaná záloha je kritická a nese důvod', () => {

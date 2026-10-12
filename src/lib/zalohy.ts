@@ -55,10 +55,10 @@ export function stariHodin(stav: StavZaloh, ted: Date = new Date()): number {
 /**
  * Načte stav poslední zálohy.
  *
- * `null` znamená „soubor tu není“ — ve vývoji je to normální (zálohovací
- * kontejner běží jen v produkčním compose), v produkci to znamená, že služba
- * `zalohy` nestartovala. Rozlišit to odsud nejde, proto se z toho dělá jen
- * doporučující varování, ne kritické.
+ * `null` znamená „soubor tu není“, tedy že služba `zalohy` neběží — v produkci
+ * i ve vývoji, kde ji `docker-compose.dev.yml` pouští taky. Skript zálohuje hned
+ * po startu kontejneru, takže ani čerstvé nasazení nemá na chybějící soubor
+ * omluvu delší než pár sekund.
  *
  * Poškozený nebo rozečtený JSON se chová stejně jako chybějící soubor. Skript
  * ho sice píše přes dočasný soubor a `mv`, takže by rozečtený být neměl, ale

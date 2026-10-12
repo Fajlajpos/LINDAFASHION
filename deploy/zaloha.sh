@@ -9,7 +9,7 @@
 # Shell, ne Node — v tomhle image žádný Node není.
 #
 # Dvě použití:
-#   sh /zaloha.sh --smycka   spustí se, počká na `ZALOHY_CAS` a pak jede každý den
+#   sh /zaloha.sh --smycka   denně po `ZALOHY_CAS`; zmeškaný den (i první start) dožene hned
 #   sh /zaloha.sh --jednou   jedna záloha a konec (ruční spuštění, testy)
 set -eu
 
@@ -188,25 +188,54 @@ zalohovat() {
 
 # --- Spuštění --------------------------------------------------------------
 
-# Kolik sekund zbývá do nejbližšího `ZALOHY_CAS` (UTC).
+# Smyčka se neřídí tím, „kolik zbývá do 04:10", ale otázkou „proběhl od posledního
+# 04:10 nějaký pokus?". Dřív tu bylo jedno dlouhé `sleep` až do `ZALOHY_CAS`
+# a to mělo dvě tiché díry:
 #
-# Počítá se přes sekundy od půlnoci, ne přes `date -d`, který busybox v Alpine
-# neumí ve stejném tvaru jako GNU date.
-sekund_do_startu() {
+#   • po startu kontejneru (první nasazení, restart serveru) se až do rána
+#     nezálohovalo vůbec a administrace celý den hlásila „Neběží zálohování";
+#   • `sleep` neběží, když stroj spí. Uspaný počítač (vývoj na Docker Desktopu,
+#     ale i pozastavená VPS) posunul běh o dobu spánku, slot se minul a po 36
+#     hodinách naskočilo „Zálohy přestaly přibývat".
+#
+# Teď se každých `KONTROLA_SEKUND` porovná čas posledního pokusu se slotem.
+# Chybějící `stav.json` znamená „nikdy" → záloha proběhne hned po startu.
+# Zmeškaný slot se dožene při nejbližší kontrole.
+#
+# Pořadí vůči retenci (03:20) zůstává: dohnaný běh je vždycky **po** dnešním
+# `ZALOHY_CAS`, takže i po retenci.
+#
+# Počítá se z `date -u +%s`, ne přes `date -d`, který busybox v Alpine neumí ve
+# stejném tvaru jako GNU date. Unixový čas nemá přestupné sekundy, takže zbytek
+# po dělení 86 400 je přesně počet sekund od půlnoci UTC.
+KONTROLA_SEKUND=600
+
+# Epoch posledního `ZALOHY_CAS`, který už nastal.
+posledni_slot() {
   cil_h="${ZALOHY_CAS%%:*}"
   cil_m="${ZALOHY_CAS##*:}"
   cil=$(( ${cil_h#0} * 3600 + ${cil_m#0} * 60 ))
 
-  ted_h="$(date -u '+%H')"
-  ted_m="$(date -u '+%M')"
-  ted_s="$(date -u '+%S')"
-  ted=$(( ${ted_h#0} * 3600 + ${ted_m#0} * 60 + ${ted_s#0} ))
-
-  rozdil=$(( cil - ted ))
-  if [ "$rozdil" -le 0 ]; then
-    rozdil=$(( rozdil + 86400 ))
+  ted="$(date -u '+%s')"
+  slot=$(( ted - ted % 86400 + cil ))
+  if [ "$slot" -gt "$ted" ]; then
+    slot=$(( slot - 86400 ))
   fi
-  echo "$rozdil"
+  echo "$slot"
+}
+
+# Kdy proběhl poslední pokus — `mtime` souboru `stav.json`, 0 když chybí.
+#
+# Pokus, ne úspěch: `stav.json` se zapisuje i při chybě. Neúspěšná záloha se tak
+# zopakuje v dalším slotu, ne každých deset minut — opakovat `pg_dump` nad plným
+# diskem by jen přidávalo do logu. Kdo opravil příčinu, pustí `--jednou`.
+posledni_pokus() {
+  stat -c '%Y' "$STAV" 2>/dev/null || echo 0
+}
+
+oznamit_dalsi() {
+  cekat=$(( $(posledni_slot) + 86400 - $(date -u '+%s') ))
+  log "další záloha za $(( cekat / 3600 )) h $(( (cekat % 3600) / 60 )) min"
 }
 
 case "${1:---smycka}" in
@@ -215,13 +244,17 @@ case "${1:---smycka}" in
     ;;
   --smycka)
     log "zálohy zapnuté – denně v $ZALOHY_CAS UTC, držím $ZALOHY_DNU dní, ukládám do $ZALOHY_DIR"
+    if [ "$(posledni_pokus)" -ge "$(posledni_slot)" ]; then
+      oznamit_dalsi
+    fi
     while true; do
-      cekat="$(sekund_do_startu)"
-      log "další záloha za $(( cekat / 3600 )) h $(( (cekat % 3600) / 60 )) min"
-      sleep "$cekat"
-      # `|| true`: neúspěšná záloha nesmí shodit kontejner. Stav je zapsaný,
-      # administrace to ukáže a zítra se to zkusí znovu.
-      zalohovat || true
+      if [ "$(posledni_pokus)" -lt "$(posledni_slot)" ]; then
+        # `|| true`: neúspěšná záloha nesmí shodit kontejner. Stav je zapsaný,
+        # administrace to ukáže a v dalším slotu se to zkusí znovu.
+        zalohovat || true
+        oznamit_dalsi
+      fi
+      sleep "$KONTROLA_SEKUND"
     done
     ;;
   *)

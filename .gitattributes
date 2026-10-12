@@ -1,0 +1,4 @@
+# Shellové skripty běží v Alpine kontejnerech, i když se bind-mountují z Windows.
+# S `core.autocrlf=true` by je checkout převedl na CRLF a `sh` by spadl na
+# `set: illegal option -` – zálohovací kontejner by pak tiše nezálohoval.
+*.sh text eol=lf

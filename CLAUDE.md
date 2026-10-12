@@ -41,6 +41,15 @@ Consequences worth remembering:
   `CEKA` forever and the admin looks like a broken upload — that happened twice
   before the launcher existed, and cost a deleted photo. `SpravaFotek` now says so
   out loud after a minute of waiting instead of spinning a reassuring spinner.
+- **Backups run in dev too.** `docker-compose.dev.yml` carries the same `zalohy` service
+  as production (same image, same [zaloha.sh](deploy/zaloha.sh), sources bind-mounted from
+  `./public/uploads` and `./storage`), so `npm run dev` starts it. The loop does **not**
+  sleep until 04:10: every ten minutes it asks whether any attempt (`stav.json` mtime)
+  happened since the last 04:10 UTC slot. A long `sleep` meant no backup for the whole first
+  day after a deploy and a skipped day after a suspended machine. Missing `stav.json` is
+  therefore **critical** on `/admin` — it used to be a mere recommendation only because dev
+  had no backups. `.gitattributes` keeps `*.sh` in LF: the script is mounted straight from
+  Windows, and a CRLF checkout (`core.autocrlf=true`) makes Alpine `sh` die on `set -eu`.
 - API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
   400: a broken request body is the caller's fault, and it used to surface as a 500 that

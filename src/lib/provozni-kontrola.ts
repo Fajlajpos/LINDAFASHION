@@ -142,7 +142,12 @@ export function provozniVarovani(
    *
    * Záloha, která tiše přestane běžet, vypadá zvenčí úplně stejně jako záloha,
    * která běží. Přijde se na to až ve chvíli, kdy je potřeba obnovit – tedy
-   * v tu nejhorší možnou chvíli. Proto je selhání i zastarání kritické.
+   * v tu nejhorší možnou chvíli. Proto jsou kritické všechny tři stavy.
+   *
+   * Chybějící `stav.json` býval jen doporučením, protože ve vývoji zálohy
+   * neběžely a hláška tam svítila pořád. Dnes běží i v `docker-compose.dev.yml`
+   * a skript zálohuje hned po startu kontejneru, takže chybějící záznam
+   * znamená v obou prostředích totéž: služba `zalohy` neběží.
    *
    * Odkaz je `null` u všech tří: zálohy se nespravují v administraci, ale na
    * serveru (`docker compose logs zalohy`). Ukázat sem odkaz do nastavení by
@@ -157,8 +162,8 @@ export function provozniVarovani(
           'Nenašel se žádný záznam o proběhlé záloze. Při ztrátě databáze by nebylo z čeho ' +
           'obnovit objednávky, faktury ani fotky produktů – originály fotek se po zpracování ' +
           'mažou, takže je nejde vyrobit znovu. Zkontrolujte službu `zalohy` ' +
-          '(`docker compose logs zalohy`). Ve vývoji je tahle hláška v pořádku.',
-        zavaznost: 'doporucene',
+          '(`docker compose logs zalohy`). Ve vývoji ji spouští `npm run dev`.',
+        zavaznost: 'kriticke',
         odkaz: null,
       });
     } else if (!zalohy.uspech) {

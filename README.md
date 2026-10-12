@@ -19,7 +19,7 @@ cp .env.example .env
 #    AUTH_SECRET vygeneruješ:
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
-# 3. Databáze v Dockeru (jen Postgres, na portu 5433)
+# 3. Databáze v Dockeru (Postgres na portu 5433, Mailpit a zálohy)
 #    Krok 5 si ji nahodí sám; ručně je potřeba jen pro migrace a seed níž.
 docker compose -f docker-compose.dev.yml up -d
 
@@ -90,7 +90,10 @@ spouštěcím příkazem.
 
 Se stackem se rozjede i kontejner `zalohy`: každou noc ve **04:10 UTC** udělá
 `pg_dump` celé databáze a archiv fotek a faktur do složky `./zalohy`, ověří, že
-jdou přečíst, a smaže zálohy starší než 30 dní. Nic se nenastavuje.
+jdou přečíst, a smaže zálohy starší než 30 dní. Hned po startu kontejneru a po
+zmeškané noci zálohuje okamžitě, nečeká do rána. Nic se nenastavuje.
+
+Stejná služba běží i ve vývoji (`docker-compose.dev.yml`, nahodí ji `npm run dev`).
 
 Je to samostatný kontejner na `postgres:16-alpine`, protože `pg_dump` musí být
 ve stejné verzi jako server — aplikační image klienta Postgresu nemá a přidat ho
@@ -121,6 +124,7 @@ Když zálohy přestanou běžet, řekne to `/admin` v sekci „Vyžaduje pozorn
 | `npm run admin:reset-heslo -- <email> <heslo>` | reset hesla administrátorky |
 | `npm test` | testy (peníze, slugy, validace uploadu, limity požadavků) |
 | `docker compose run --rm zalohy sh /zaloha.sh --jednou` | záloha databáze a souborů hned teď |
+| `docker compose -f docker-compose.dev.yml run --rm zalohy sh /zaloha.sh --jednou` | totéž ve vývoji |
 | `docker compose run --rm worker node dist/scripts/vyplnit-udaje-firmy.js` | identifikace prodávajícího do `Settings` (produkce) |
 | `docker compose run --rm worker node dist/scripts/vlozit-pravni-dokumenty.js` | vydání obchodních podmínek a reklamačního řádu (produkce) |
 

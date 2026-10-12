@@ -1,4 +1,4 @@
-# Lokální vývoj: v Dockeru běží databáze a lapač e-mailů.
+# Lokální vývoj: v Dockeru běží databáze, lapač e-mailů a zálohy.
 # `web` a `worker` si pouštíš nativně (`npm run dev` / `npm run worker`),
 # protože hot reload uvnitř kontejneru je na Windows pomalý.
 #
@@ -56,6 +56,37 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+
+  # Noční záloha – stejný skript a stejný image jako v produkci, jen zdroje
+  # jsou složky z pracovního adresáře místo pojmenovaných volumes.
+  #
+  # Dřív tu nebyla a `/admin` proto ve vývoji pořád hlásil „Neběží zálohování".
+  # Horší než ta hláška bylo, že se zálohování ani obnova nedaly lokálně
+  # vyzkoušet – první skutečný běh by se odehrál až na serveru.
+  #
+  # Počítač v noci obvykle nejede, ale to nevadí: skript zmeškaný den dožene
+  # hned po startu kontejneru (viz `posledni_slot` v `deploy/zaloha.sh`).
+  zalohy:
+    image: postgres:16-alpine
+    container_name: linda_zalohy_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-linda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lindapassword}
+      POSTGRES_DB: ${POSTGRES_DB:-linda_fashion}
+      ZALOHY_DNU: ${ZALOHY_DNU:-30}
+      ZALOHY_CAS: ${ZALOHY_CAS:-04:10}
+    volumes:
+      # Stejné rozložení jako v produkci (`/zdroj` = `/app`), aby se archiv
+      # z vývoje rozbaloval na stejná místa jako ten ze serveru.
+      - ./public/uploads:/zdroj/public/uploads:ro
+      - ./storage:/zdroj/storage:ro
+      - ./zalohy:/zalohy
+      - ./deploy/zaloha.sh:/zaloha.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ['sh', '/zaloha.sh', '--smycka']
 
 volumes:
   postgres_dev_data:

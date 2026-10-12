@@ -8,6 +8,20 @@ jede v UTC. Čas je schválně **až po retenční úloze ve 03:20**: záloha po
 před ní by ještě obsahovala údaje, které retence právě smazala, a držela by je
 dalších třicet dní.
 
+Skript nečeká na budík, ale každých deset minut se ptá: **proběhl od posledního
+04:10 UTC nějaký pokus?** Když ne, zálohuje hned. Proto:
+
+- **po startu kontejneru** (první nasazení, restart serveru) proběhne záloha
+  okamžitě — dřív se až do rána nezálohovalo vůbec;
+- **zmeškaný den se dožene** — vypnutý nebo uspaný stroj dřív posunul jedno dlouhé
+  `sleep` o dobu spánku a slot se minul;
+- **restart nezálohuje dvakrát** — pokus po posledním slotu už je zapsaný;
+- dohnaný běh je vždy po dnešním 04:10, takže **pořád až po retenci**;
+- **neúspěch se opakuje až v dalším slotu**, ne každých deset minut. Po opravě
+  příčiny pusť [ruční zálohu](#ruční-záloha).
+
+„Pokus" je `mtime` souboru `zalohy/stav.json`, který se zapisuje i při chybě.
+
 ## Co se zálohuje
 
 | Co | Kam | Proč |
@@ -48,7 +62,7 @@ Skript po každém běhu zapíše `zalohy/stav.json`. Administrace ho čte a na
 
 - **Poslední záloha selhala** (kritické) – i s důvodem
 - **Zálohy přestaly přibývat** (kritické) – poslední je starší než 36 hodin
-- **Neběží zálohování** (doporučené) – žádný `stav.json`; ve vývoji je to normální
+- **Neběží zálohování** (kritické) – žádný `stav.json`, tedy služba `zalohy` neběží
 
 Podrobnosti vždy v `docker compose logs zalohy`.
 
@@ -59,6 +73,25 @@ docker compose run --rm zalohy sh /zaloha.sh --jednou
 ```
 
 Skončí nenulovým kódem, když se něco nepovede.
+
+## Ve vývoji
+
+`docker-compose.dev.yml` má stejnou službu `zalohy` (kontejner `linda_zalohy_dev`),
+takže ji `npm run dev` nahodí spolu s databází. Zálohuje stejným skriptem do
+stejné složky `./zalohy`, jen zdrojem jsou `./public/uploads` a `./storage`
+z pracovního adresáře. Díky tomu jde zálohu i obnovu vyzkoušet lokálně dřív,
+než to poprvé poběží na serveru.
+
+```bash
+docker compose -f docker-compose.dev.yml logs zalohy
+docker compose -f docker-compose.dev.yml run --rm zalohy sh /zaloha.sh --jednou
+```
+
+Počítač v noci obvykle nejede — nevadí, zmeškaný den se dožene po spuštění.
+
+> Skript se do kontejneru připojuje přímo z Windows. `.gitattributes` proto drží
+> `*.sh` v LF: s `core.autocrlf=true` by ho checkout převedl na CRLF, Alpine `sh`
+> by spadl na `set: illegal option -` a kontejner by nezálohoval.
 
 ---
 
