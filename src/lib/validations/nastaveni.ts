@@ -72,6 +72,7 @@ export const nastaveniSchema = z
 
     adresaProVraceni: volitelnyText(300),
     adresaProvozovny: volitelnyText(300),
+    oteviraciDoba: volitelnyText(300),
     emailProGdpr: volitelnyText(180),
 
     /*

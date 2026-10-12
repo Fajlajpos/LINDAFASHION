@@ -68,6 +68,7 @@ export async function PUT(request: Request) {
       sazbaDph: vstup.sazbaDph,
       adresaProVraceni: vstup.adresaProVraceni,
       adresaProvozovny: vstup.adresaProvozovny,
+      oteviraciDoba: vstup.oteviraciDoba,
       dodaciLhutaDnu: vstup.dodaciLhutaDnu,
       emailProGdpr: vstup.emailProGdpr,
       verzePodminek: vstup.verzePodminek,

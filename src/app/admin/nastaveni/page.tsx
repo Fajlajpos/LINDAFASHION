@@ -46,6 +46,7 @@ interface Nastaveni {
   sazbaDph: number;
   adresaProVraceni: string | null;
   adresaProvozovny: string | null;
+  oteviraciDoba: string | null;
   dodaciLhutaDnu: number;
   emailProGdpr: string | null;
   verzePodminek: string;
@@ -74,6 +75,7 @@ const PRAZDNE: Nastaveni = {
   sazbaDph: 21,
   adresaProVraceni: null,
   adresaProvozovny: null,
+  oteviraciDoba: null,
   dodaciLhutaDnu: 3,
   emailProGdpr: null,
   verzePodminek: '1',
@@ -307,6 +309,29 @@ export default function AdminNastaveniPage() {
                 {chybaPole(klic)}
               </div>
             ))}
+          </div>
+
+          {/* Víceřádková – den na řádek. Ukazuje se na kontaktu, v „O mně"
+              a v datech pro Google; prázdné pole řádek všude schová. */}
+          <div>
+            <label htmlFor="oteviraciDoba" className="mb-1 block text-xs font-semibold text-linda-espresso">
+              Otevírací doba prodejny
+            </label>
+            <textarea
+              id="oteviraciDoba"
+              rows={3}
+              disabled={ukladam}
+              value={n.oteviraciDoba ?? ''}
+              onChange={(e) => setN({ ...n, oteviraciDoba: e.target.value || null })}
+              placeholder={'Po–Čt: 10:00–12:00, 12:30–17:00\nPá: 10:00–12:00, 12:30–16:00\nSo–Ne: zavřeno'}
+              aria-describedby="oteviraciDoba-napoveda"
+              className={`${POLE} resize-y leading-relaxed`}
+            />
+            <p id="oteviraciDoba-napoveda" className="mt-1 text-[11px] text-linda-espresso/70">
+              Každý den nebo rozsah dnů na samostatný řádek, ve tvaru jako v ukázce. Zobrazí se na
+              webu přesně tak, jak ji napíšete. Prázdné pole = otevírací doba se neukáže.
+            </p>
+            {chybaPole('oteviraciDoba')}
           </div>
 
           <label className="flex cursor-pointer items-start gap-2.5 text-xs">

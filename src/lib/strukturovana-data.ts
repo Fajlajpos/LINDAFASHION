@@ -9,6 +9,7 @@
  */
 import type { ProduktDetail } from './katalog';
 import type { NastaveniWebu } from './nastaveni';
+import { odkazNaMapu, oteviraciDobaProSchema, rozlozitAdresu } from './prodejna';
 
 export const ZAKLADNI_URL = process.env.APP_URL || 'https://lindafashion.cz';
 
@@ -56,16 +57,34 @@ export function mistniProvozovnaLd(nastaveni: NastaveniWebu) {
   const adresa = nastaveni.adresaProvozovny ?? nastaveni.adresaFirmy;
   if (!adresa) return null;
 
+  /*
+   * Adresa rozložená na ulici, PSČ a město. Celý řádek v `streetAddress`
+   * (i s názvem obchodu a PSČ) Google pro místní výsledky čte hůř – „Sokolov"
+   * má být `addressLocality`, ne konec názvu ulice.
+   *
+   * `openingHours` jen tehdy, když otevírací dobu z administrace přečteme celou.
+   * Zkomolená doba v mapách je horší než žádná.
+   */
+  const rozlozena = rozlozitAdresu(adresa);
+  const oteviraciDoba = oteviraciDobaProSchema(nastaveni.oteviraciDoba);
+  const mapa = odkazNaMapu(adresa);
+
   return {
     '@context': 'https://schema.org',
     '@type': 'ClothingStore',
     name: nastaveni.nazevFirmy || 'LINDA FASHION',
     url: ZAKLADNI_URL,
+    description:
+      'Kamenná prodejna butiku LINDA FASHION s dámskou módou. Výběr se liší od e-shopu – najdete tu i kousky, které online nejsou.',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: adresa,
+      streetAddress: rozlozena?.ulice ?? adresa,
+      ...(rozlozena?.psc ? { postalCode: rozlozena.psc } : {}),
+      ...(rozlozena?.mesto ? { addressLocality: rozlozena.mesto } : {}),
       addressCountry: 'CZ',
     },
+    ...(oteviraciDoba ? { openingHours: oteviraciDoba } : {}),
+    ...(mapa ? { hasMap: mapa } : {}),
     ...(nastaveni.telefonFirmy ? { telephone: nastaveni.telefonFirmy } : {}),
     ...(nastaveni.emailFirmy ? { email: nastaveni.emailFirmy } : {}),
   };

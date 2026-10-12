@@ -592,6 +592,15 @@ model Settings {
   /// použije sídlo.
   adresaProvozovny String?
 
+  /// Otevírací doba kamenné prodejny – volný text po řádcích, zobrazuje se,
+  /// jak ji majitelka napíše („Po–Čt: 10:00–12:00, 12:30–17:00").
+  ///
+  /// Do téhle chvíle stála na `/kontakt` natvrdo a neplatila: zákaznice, která
+  /// podle webu přišla v sobotu, by stála před zavřeným obchodem. Prázdné =
+  /// řádek s otevírací dobou se nikde neukáže. Do strukturovaných dat jde jen
+  /// tehdy, když ji `oteviraciDobaProSchema` dokáže přečíst.
+  oteviraciDoba String?
+
   /// Obvyklá doba dodání v pracovních dnech.
   ///
   /// § 1820 odst. 1 písm. h) o. z. ukládá sdělit dobu dodání **před**

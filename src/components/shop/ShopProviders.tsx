@@ -20,6 +20,8 @@ interface Props {
   sluzby?: string[];
   /** Je v nabídce aspoň jeden kousek z Itálie? Podle toho odkaz v patičce. */
   italskaModa?: boolean;
+  /** Krátká adresa kamenné prodejny do patičky. */
+  adresaProdejny?: string | null;
   /** Veřejný klíč Turnstile pro newsletter v patičce. */
   captchaSiteKey?: string | null;
   /**
@@ -48,6 +50,7 @@ export function ShopProviders({
   zapisVRejstriku,
   sluzby = [],
   italskaModa = false,
+  adresaProdejny = null,
   captchaSiteKey = null,
   prihlasen = false,
 }: Props) {
@@ -78,6 +81,7 @@ export function ShopProviders({
             zapisVRejstriku={zapisVRejstriku}
             sluzby={sluzby}
             italskaModa={italskaModa}
+            adresaProdejny={adresaProdejny}
             captchaSiteKey={captchaSiteKey}
           />
         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { nacistNastaveni } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDodaciLhuty } from '@/lib/nastaveni';
+import { odkazNaMapu, rozlozitAdresu } from '@/lib/prodejna';
 import { popisDopravyZdarma } from '@/lib/shipping';
 import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
 import { pocetZItalie } from '@/lib/katalog';
@@ -39,6 +40,23 @@ export async function GET() {
 `
       : '';
 
+  /* Kamenná prodejna – pro AI asistenty hlavně to, čím se liší od e-shopu.
+     Na dotaz „kde v Sokolově koupit dámskou módu" má odpověď obsahovat
+     adresu, otevírací dobu a důvod přijít. Bez adresy provozovny nic. */
+  const adresaProdejny = rozlozitAdresu(nastaveni.adresaProvozovny);
+  const mapa = odkazNaMapu(nastaveni.adresaProvozovny);
+  const prodejna = adresaProdejny
+    ? `
+## Kamenná prodejna
+- Adresa: ${[adresaProdejny.ulice, [adresaProdejny.psc, adresaProdejny.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+- Výběr na prodejně se liší od e-shopu – najdete tam i kousky, které online nejsou.${
+        nastaveni.oteviraciDoba
+          ? `\n- Otevírací doba: ${nastaveni.oteviraciDoba.split('\n').map((r) => r.trim()).filter(Boolean).join('; ')}`
+          : ''
+      }${mapa ? `\n- Mapa: ${mapa}` : ''}
+`
+    : '';
+
   const dopravaZdarma = popisDopravyZdarma(nastaveni);
 
   /* Řádky bez hodnoty vypadnou, aby v souboru nezůstalo „E-mail: null". */
@@ -58,7 +76,8 @@ export async function GET() {
     .join('\n');
 
   const sluzby = [
-    `Obvyklá doba dodání ${nastaveni.dodaciLhutaDnu} pracovních dnů.`,
+    // Dřív „Obvyklá doba dodání 1 pracovních dnů" – skloňuje jedna funkce pro celý web.
+    popisDodaciLhuty(nastaveni),
     dopravaZdarma,
     'Odstoupení od smlouvy do 14 dnů od převzetí zboží (§ 1829 občanského zákoníku).',
   ]
@@ -67,7 +86,7 @@ export async function GET() {
 
   const content = `# LINDA FASHION - dámská móda v italském stylu
 
-> LINDA FASHION je český butik s dámským oblečením.
+> LINDA FASHION je český butik s dámským oblečením – e-shop${adresaProdejny ? ' a kamenná prodejna' : ''}.
 
 ## Nákup
 - **Složení a původ**: U každého kousku oblečení je uvedené materiálové složení v procentech, a pokud je známa, i země původu.
@@ -79,7 +98,7 @@ export async function GET() {
 - Svetry a kardigany
 - Saka a kabáty
 - Dárkové poukazy
-${italskaModa}
+${italskaModa}${prodejna}
 ## Kontaktní informace
 ${kontakty}
 `;

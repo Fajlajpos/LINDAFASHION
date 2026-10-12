@@ -39,7 +39,7 @@ export interface HomePromo {
 
 export interface HomeTrustItem {
   /** Název ikony z lucide-react, mapuje se v komponentě. */
-  icon: 'truck' | 'package' | 'shield' | 'headset';
+  icon: 'truck' | 'package' | 'shield' | 'headset' | 'store';
   title: string;
   description: string;
 }
@@ -105,6 +105,12 @@ export const PROMO_BANNERY: HomePromo[] = [
 export function vyhody(
   lhutaOdeslani: KratkaLhuta | null,
   platbaKartouDostupna: boolean,
+  /**
+   * Město kamenné prodejny z `Settings.adresaProvozovny`, `null` = dlaždice
+   * se nevykreslí. Text stojí na tom, že prodejna má **jiný výběr** než
+   * e-shop – to je důvod přijít, ne zkoušení zboží z e-shopu.
+   */
+  mestoProdejny: string | null = null,
 ): HomeTrustItem[] {
   return [
     ...(lhutaOdeslani === null
@@ -125,6 +131,18 @@ export function vyhody(
       title: 'Vrácení do 14 dnů',
       description: 'Bez udání důvodu',
     },
+    ...(mestoProdejny
+      ? [
+          {
+            icon: 'store' as const,
+            // Krátce, na jeden řádek: s městem v nadpisu a delším popisem se
+            // dlaždice lámala na čtyři řádky a natahovala celý pruh. Adresu
+            // nese sekce prodejny dole na stránce.
+            title: 'Kamenná prodejna',
+            description: 'Jiný výběr než online',
+          },
+        ]
+      : []),
     ...(platbaKartouDostupna
       ? [
           {

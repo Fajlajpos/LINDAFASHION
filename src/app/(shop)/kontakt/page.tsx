@@ -1,18 +1,25 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Mail, Phone, MapPin, Building2, Clock, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Clock, MessageCircle, Navigation } from 'lucide-react';
 import { KontaktFormular } from '@/components/shop/KontaktFormular';
 import { siteKey } from '@/lib/captcha';
 import { nacistNastaveni } from '@/lib/nastaveni';
+import { odkazNaMapu, rozlozitAdresu } from '@/lib/prodejna';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Kontakt | LINDA FASHION',
-  description:
-    'Kontaktní údaje, otevírací doba showroomu a formulář pro dotazy k velikostem, střihům i doručení.',
-  alternates: { canonical: '/kontakt' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const nastaveni = await nacistNastaveni();
+  const mesto = rozlozitAdresu(nastaveni.adresaProvozovny)?.mesto;
+
+  return {
+    title: 'Kontakt a prodejna | LINDA FASHION',
+    description: mesto
+      ? `Kontakt, adresa a otevírací doba kamenné prodejny (${mesto}) a formulář pro dotazy k velikostem, střihům i doručení.`
+      : 'Kontaktní údaje a formulář pro dotazy k velikostem, střihům i doručení.',
+    alternates: { canonical: '/kontakt' },
+  };
+}
 
 /**
  * Kontakt.
@@ -30,6 +37,7 @@ export default async function KontaktPage() {
   const adresaProdejny = nastaveni.adresaProvozovny ?? nastaveni.adresaFirmy;
   const sidloZvlast =
     nastaveni.adresaProvozovny && nastaveni.adresaFirmy ? nastaveni.adresaFirmy : null;
+  const mapa = odkazNaMapu(adresaProdejny);
 
   const polozky = [
     {
@@ -42,10 +50,24 @@ export default async function KontaktPage() {
        */
       nadpis: 'Adresa prodejny',
       obsah: adresaProdejny ? (
-        <span className="whitespace-pre-line text-linda-espresso/75">
-          {nastaveni.nazevFirmy && `${nastaveni.nazevFirmy}\n`}
-          {adresaProdejny}
-        </span>
+        <>
+          <span className="block whitespace-pre-line text-linda-espresso/75">
+            {nastaveni.nazevFirmy && `${nastaveni.nazevFirmy}\n`}
+            {adresaProdejny}
+          </span>
+          {mapa && (
+            <a
+              href={mapa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex min-h-touch items-center gap-1.5 font-medium text-linda-cognac transition-colors hover:text-linda-cognacHover hover:underline"
+            >
+              <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+              Navigovat do prodejny
+              <span className="sr-only"> (otevře mapu v novém okně)</span>
+            </a>
+          )}
+        </>
       ) : null,
     },
     {
@@ -86,15 +108,13 @@ IČO ${nastaveni.icoFirmy}`}
       ) : null,
     },
     {
+      /* Z administrace. Stála tu natvrdo („Po–Pá 10–18, So 10–14") a neplatila
+         – zákaznice by podle webu přišla k zavřenému obchodu. */
       Ikona: Clock,
-      nadpis: 'Otevírací doba showroomu',
-      obsah: (
-        <span className="text-linda-espresso/75">
-          Po – Pá: 10:00 – 18:00
-          <br />
-          So: 10:00 – 14:00
-        </span>
-      ),
+      nadpis: 'Otevírací doba prodejny',
+      obsah: nastaveni.oteviraciDoba ? (
+        <span className="whitespace-pre-line text-linda-espresso/75">{nastaveni.oteviraciDoba}</span>
+      ) : null,
     },
   ].filter((p) => p.obsah !== null);
 
@@ -104,10 +124,18 @@ IČO ${nastaveni.icoFirmy}`}
         <span className="block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
           Rádi vám poradíme
         </span>
-        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Kontakt &amp; showroom</h1>
+        <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Kontakt a prodejna</h1>
         <p className="text-sm font-light text-linda-espresso/75">
           Máte dotaz k velikostem, střihu nebo doručení? Napište nám nebo zavolejte, jsme tu pro vás.
         </p>
+        {/* Důvod přijít osobně: jiný výběr než online. Ne „vyzkoušejte si
+            zboží z e-shopu" – na prodejně ho nemusí být. */}
+        {nastaveni.adresaProvozovny && (
+          <p className="text-sm text-linda-espresso/85">
+            Na kamenné prodejně najdete{' '}
+            <strong className="font-semibold">i kousky, které na e-shopu nejsou</strong>.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">

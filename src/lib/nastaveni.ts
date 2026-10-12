@@ -47,6 +47,9 @@ export interface NastaveniWebu {
   /** Adresa kamenné provozovny. Prázdné = provozovnou je samo sídlo. */
   adresaProvozovny: string | null;
 
+  /** Otevírací doba prodejny, volný text po řádcích. Prázdné = nezobrazovat. */
+  oteviraciDoba: string | null;
+
   /** Obvyklá doba dodání v pracovních dnech (§ 1820 odst. 1 písm. h o. z.). */
   dodaciLhutaDnu: number;
 
@@ -84,6 +87,7 @@ export const VYCHOZI_NASTAVENI: NastaveniWebu = {
   sazbaDph: 21,
   adresaProVraceni: null,
   adresaProvozovny: null,
+  oteviraciDoba: null,
   dodaciLhutaDnu: 3,
   emailProGdpr: null,
   verzePodminek: '1',
@@ -124,6 +128,7 @@ export const nacistNastaveni = cache(async (): Promise<NastaveniWebu> => {
       sazbaDph: zaznam.sazbaDph,
       adresaProVraceni: zaznam.adresaProVraceni,
       adresaProvozovny: zaznam.adresaProvozovny,
+      oteviraciDoba: zaznam.oteviraciDoba,
       dodaciLhutaDnu: zaznam.dodaciLhutaDnu,
       emailProGdpr: zaznam.emailProGdpr,
       verzePodminek: zaznam.verzePodminek,

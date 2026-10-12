@@ -9,6 +9,7 @@ import { mistniProvozovnaLd, organizaceLd } from '@/lib/strukturovana-data';
 import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 import { dostupneDopravy } from '@/lib/shipping';
 import { pocetZItalie } from '@/lib/katalog';
+import { kratkaAdresa } from '@/lib/prodejna';
 
 /**
  * Lišta služeb v patičce – jen to, co obchod právě opravdu nabízí.
@@ -53,6 +54,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       zapisVRejstriku={nastaveni.zapisVRejstriku}
       sluzby={nabizeneSluzby(nastaveni)}
       italskaModa={italskych > 0}
+      adresaProdejny={kratkaAdresa(nastaveni.adresaProvozovny)}
       captchaSiteKey={siteKey()}
       prihlasen={session !== null}
     >

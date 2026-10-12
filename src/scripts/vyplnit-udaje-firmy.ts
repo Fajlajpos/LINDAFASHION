@@ -46,6 +46,9 @@ const UDAJE = {
 
   adresaFirmy: 'Jednoty 1441, 356 01 Sokolov',
   adresaProvozovny: 'Linda Fashion, Rokycanova 1929, 356 01 Sokolov',
+  // Od majitele webu, 2026-10-12. Předtím stálo na /kontakt natvrdo
+  // „Po–Pá 10–18, So 10–14" a neplatilo.
+  oteviraciDoba: 'Po–Čt: 10:00–12:00, 12:30–17:00\nPá: 10:00–12:00, 12:30–16:00\nSo–Ne: zavřeno',
   adresaProVraceni: 'Linda Fashion, Rokycanova 1929, 356 01 Sokolov',
 
   telefonFirmy: '+420 607 030 764',

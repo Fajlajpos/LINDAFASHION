@@ -90,6 +90,24 @@ Consequences worth remembering:
   footer, the sitemap and `/llms.txt` link to it only while `pocetZItalie() > 0` — with zero
   the page is `noindex`. `produktLd` carries `countryOfOrigin`. That is the SEO/GEO signal
   for Italian fashion; do not put it back into the site-wide title.
+  **The brick-and-mortar shop has a different selection than the e-shop** (owner, 2026-10).
+  Copy may invite people there for „i kousky, které na e-shopu nejsou" — never present it
+  as a place to try on e-shop goods. Opening hours live only in `Settings.oteviraciDoba`
+  (free text; it was hardcoded on `/kontakt` and wrong). Address helpers, the map link and
+  the hours → `openingHours` parser are in [prodejna.ts](src/lib/prodejna.ts); unparsable
+  hours stay off the JSON-LD rather than reach Google Maps garbled. City names come from
+  the address, so copy avoids the locative („Kamenná prodejna · Sokolov", not „v Sokolově").
+  The shop shows up on `/o-mne`, `/kontakt`, the homepage trust bar, the last homepage
+  section above the footer ([ProdejnaSekce.tsx](src/components/shop/home/ProdejnaSekce.tsx)),
+  the footer, `/llms.txt` and `mistniProvozovnaLd` — each only while `adresaProvozovny` is
+  filled in.
+- **Owner-supplied photos** (`public/fotky/prodejna.*`, `public/fotky/majitelka.*`) are found
+  by [fotky.ts](src/lib/fotky.ts) and must sit in the relief: a frame with a `p-3` rim the
+  photo never covers, in the opposite relief to the surface around it — a recessed
+  `sandLight` frame inside a raised card, a raised `cream` mat (`shadow-neu`) inside a
+  recessed section (the homepage shop section is recessed, so its photo sits on a mat).
+  A photo filling the frame edge to edge hides the shadow and reads as pasted on — the one
+  flat object on a modelled page.
 - **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
   (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
   meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Facebook, Instagram } from 'lucide-react';
+import { ArrowRight, Facebook, Instagram, MapPin } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { Captcha } from '@/components/ui/Captcha';
 import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
@@ -28,6 +28,8 @@ interface FooterProps {
   sluzby?: string[];
   /** Odkaz „Italská móda" jen tehdy, když je v nabídce aspoň jeden kousek z Itálie. */
   italskaModa?: boolean;
+  /** „Rokycanova 1929, Sokolov" – kamenná prodejna, `null` = řádek se neukáže. */
+  adresaProdejny?: string | null;
   captchaSiteKey?: string | null;
 }
 
@@ -115,6 +117,7 @@ export const Footer: React.FC<FooterProps> = ({
   zapisVRejstriku,
   sluzby = [],
   italskaModa = false,
+  adresaProdejny = null,
   captchaSiteKey = null,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
@@ -179,6 +182,20 @@ export const Footer: React.FC<FooterProps> = ({
             <p className="mt-2 max-w-xs text-xs leading-relaxed text-linda-cream/75">
               Dámská móda v italském stylu.
             </p>
+
+            {/* Kamenná prodejna – z administrace. Odkaz vede na kontakt, kde je
+                otevírací doba a navigace; adresa sama by na patičce byla slepá. */}
+            {adresaProdejny && (
+              <Link
+                href="/kontakt"
+                className="mt-1 inline-flex min-h-touch items-center gap-2 text-xs text-linda-cream/75 transition-colors hover:text-linda-sand"
+              >
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-linda-sand" aria-hidden="true" />
+                <span>
+                  Prodejna: {adresaProdejny}
+                </span>
+              </Link>
+            )}
           </div>
 
           {/* Odkazy – vodorovně, ať nerostou do výšky */}

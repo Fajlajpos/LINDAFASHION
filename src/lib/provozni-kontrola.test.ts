@@ -42,6 +42,7 @@ const VYPLNENO: NastaveniWebu = {
   sazbaDph: 21,
   adresaProVraceni: 'Rokycanova 1929, 356 01 Sokolov',
   adresaProvozovny: 'Rokycanova 1929, 356 01 Sokolov',
+  oteviraciDoba: null,
   dodaciLhutaDnu: 3,
   emailProGdpr: 'gdpr@example.cz',
   verzePodminek: '1',

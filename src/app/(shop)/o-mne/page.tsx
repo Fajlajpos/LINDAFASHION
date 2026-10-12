@@ -1,29 +1,18 @@
 import React from 'react';
-import fs from 'node:fs';
-import path from 'node:path';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Sparkles, ArrowRight, UserRound } from 'lucide-react';
+import { Heart, Sparkles, ArrowRight, UserRound, MapPin, Clock, Navigation } from 'lucide-react';
 import { Reveal } from '@/components/shop/home/Reveal';
 import { Sev } from '@/components/shop/home/Sev';
+import { nacistNastaveni } from '@/lib/nastaveni';
+import { odkazNaMapu, rozlozitAdresu } from '@/lib/prodejna';
+import { najitFotku } from '@/lib/fotky';
 
-/**
- * Fotka majitelky. Stačí ji uložit do `public/fotky/` pod jedním z těchhle
- * názvů – kód se nemění. Tvář člověka, který za obchodem stojí, je pro
- * zákaznici nejsilnější důkaz, že na druhé straně je skutečný butik.
- *
- * Hledá se na disku, ne v konstantě: majitelka (nebo kdokoli, kdo jí fotku
- * nahraje) nemusí sahat do kódu. Stránka je statická, takže se to vyhodnotí
- * při buildu – v Dockeru je potřeba image přestavět, ve vývoji stačí reload.
- */
-const FOTKA_KANDIDATI = ['majitelka.webp', 'majitelka.jpg', 'majitelka.jpeg', 'majitelka.png'];
+/* Čte `Settings` (prodejna, otevírací doba) – na každý požadavek, ať se
+   změna v administraci projeví hned. Načítání pokrývá `(shop)/loading.tsx`. */
+export const dynamic = 'force-dynamic';
 
-function najitFotkuMajitelky(): string | null {
-  const nalez = FOTKA_KANDIDATI.find((soubor) =>
-    fs.existsSync(path.join(process.cwd(), 'public', 'fotky', soubor))
-  );
-  return nalez ? `/fotky/${nalez}` : null;
-}
 
 /*
  * Koňaková ve stejných rolích jako v katalogu a na detailu produktu: štítek
@@ -56,8 +45,31 @@ const NADPIS =
  * materiálu je u oblečení povinné (`produktSchema`) a kontaktní formulář
  * existuje. Když majitelka text přepíše svými slovy, ať drží stejné pravidlo.
  */
-export default function OMnePage() {
-  const fotka = najitFotkuMajitelky();
+export async function generateMetadata(): Promise<Metadata> {
+  const nastaveni = await nacistNastaveni();
+  const mesto = rozlozitAdresu(nastaveni.adresaProvozovny)?.mesto;
+
+  return {
+    title: 'O mně | LINDA FASHION',
+    description: mesto
+      ? `Butik s dámskou módou v italském stylu – e-shop i kamenná prodejna, ${mesto}. Na prodejně najdete i kousky, které online nejsou.`
+      : 'Butik s dámskou módou v italském stylu. Proč vybírám právě tyhle kousky.',
+    alternates: { canonical: '/o-mne' },
+  };
+}
+
+export default async function OMnePage() {
+  /* Fotka majitelky – `public/fotky/majitelka.jpg` (nebo .webp/.png). Tvář
+     člověka, který za obchodem stojí, je nejsilnější důkaz skutečného butiku. */
+  const fotka = najitFotku('majitelka');
+
+  /* Prodejna je z administrace – bez adresy provozovny se blok nevykreslí.
+     Sídlo se sem jako záloha nebere: je to fakturační adresa (u OSVČ bydliště),
+     ne místo, kam zvát zákaznice. */
+  const nastaveni = await nacistNastaveni();
+  const adresaProdejny = nastaveni.adresaProvozovny;
+  const adresa = rozlozitAdresu(adresaProdejny);
+  const mapa = odkazNaMapu(adresaProdejny);
 
   return (
     <div className="mx-auto max-w-5xl space-y-16 px-4 py-16 sm:px-6 lg:px-8">
@@ -160,6 +172,84 @@ export default function OMnePage() {
             </div>
           </div>
         </Reveal>
+
+        {/* Kamenná prodejna. Vystouplá karta, adresa a otevírací doba v ní
+            zapuštěné – zem → karta → žlábek, jak chtějí pravidla reliéfu.
+            Celé sdělení stojí na tom, že na prodejně je **jiný výběr** než
+            online; nikde ji nepodávat jako zkušebnu zboží z e-shopu. */}
+        {adresaProdejny && (
+          <Reveal>
+            <section
+              aria-labelledby="prodejna-nadpis"
+              className="grid grid-cols-1 gap-8 rounded-3xl bg-linda-cream p-6 shadow-neu sm:p-10 md:grid-cols-5 md:items-center"
+            >
+              <div className="space-y-4 md:col-span-3">
+                <div>
+                  <span className={STITEK}>Kamenná prodejna</span>
+                  <h2 id="prodejna-nadpis" className="font-serif text-3xl text-linda-espresso">
+                    Přijďte se podívat osobně
+                  </h2>
+                </div>
+                <p>
+                  Kromě e-shopu mám i kamennou prodejnu. Najdete v ní{' '}
+                  <strong className="font-semibold text-linda-espresso">
+                    i kousky, které na e-shopu nejsou
+                  </strong>{' '}
+                  – vyplatí se zastavit, vyzkoušet si je a nechat si poradit.
+                </p>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
+                  {mapa && (
+                    <a
+                      href={mapa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 py-3 text-sm font-semibold text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+                    >
+                      <Navigation className="h-4 w-4" aria-hidden="true" />
+                      Navigovat do prodejny
+                      <span className="sr-only"> (otevře mapu v novém okně)</span>
+                    </a>
+                  )}
+                  <Link
+                    href="/kontakt"
+                    className="inline-flex min-h-touch items-center text-sm font-medium text-linda-espresso underline underline-offset-4 transition-colors duration-200 hover:text-linda-cognac"
+                  >
+                    Kontakt a telefon
+                  </Link>
+                </div>
+              </div>
+
+              <dl className="space-y-4 rounded-2xl bg-linda-sandLight p-5 text-sm shadow-neuInset md:col-span-2">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+                  <div>
+                    <dt className="font-semibold text-linda-espresso">Adresa</dt>
+                    <dd className="text-linda-espresso/80">
+                      {adresa?.ulice && (
+                        <>
+                          {adresa.ulice}
+                          <br />
+                        </>
+                      )}
+                      {[adresa?.psc, adresa?.mesto].filter(Boolean).join(' ')}
+                    </dd>
+                  </div>
+                </div>
+                {nastaveni.oteviraciDoba && (
+                  <div className="flex items-start gap-3">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-linda-cognac" aria-hidden="true" />
+                    <div>
+                      <dt className="font-semibold text-linda-espresso">Otevírací doba</dt>
+                      <dd className="whitespace-pre-line text-linda-espresso/80">
+                        {nastaveni.oteviraciDoba}
+                      </dd>
+                    </div>
+                  </div>
+                )}
+              </dl>
+            </section>
+          </Reveal>
+        )}
 
         <Reveal>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">

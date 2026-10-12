@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, Package, ShieldCheck, Headset, type LucideIcon } from 'lucide-react';
+import { Truck, Package, ShieldCheck, Headset, Store, type LucideIcon } from 'lucide-react';
 import { vyhody, type HomeTrustItem } from '@/lib/home-data';
 import type { KratkaLhuta } from '@/lib/nastaveni';
 
@@ -9,6 +9,7 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
   package: Package,
   shield: ShieldCheck,
   headset: Headset,
+  store: Store,
 };
 
 /**
@@ -30,30 +31,46 @@ const IKONY: Record<HomeTrustItem['icon'], LucideIcon> = {
  *
  * Stejně tak dlaždice platby kartou, která se ukáže jen se zapojenou bránou.
  *
- * Sloupců je proto dva až čtyři podle toho, kolik položek zbude –
+ * A dlaždice kamenné prodejny, jen když je v administraci adresa provozovny.
+ *
+ * Sloupců je proto dva až pět podle toho, kolik položek zbude –
  * `lg:grid-cols-4` by u tří položek nechalo prázdné čtvrté pole.
  * Třídy jsou vypsané celé, protože Tailwind skládané názvy nenajde.
  */
 const SLOUPCE: Record<number, string> = {
   2: 'lg:grid-cols-2',
   3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
+  4: 'xl:grid-cols-4',
+  5: 'xl:grid-cols-5',
 };
+
+/*
+ * Čtyři a víc dlaždic jdou do jedné řady až od `xl` (1280 px). Na 1024 px by
+ * se každý popisek lámal na tři řádky a pruh by ztloustl – pod `xl` proto
+ * zůstanou dva sloupce. Vlasové linky mezi sloupci kreslí `divide-x` jen
+ * v jedné řadě; ve dvou sloupcích by druhý řádek začínal linkou na kraji.
+ */
+const ODDELOVACE_RADA = 'lg:divide-x lg:divide-linda-sand';
+const ODDELOVACE_SIROKA = 'xl:divide-x xl:divide-linda-sand';
+const POLOZKA_RADA = 'lg:px-6 lg:first:pl-0 lg:last:pr-0';
+const POLOZKA_SIROKA = 'xl:px-6 xl:first:pl-0 xl:last:pr-0';
 
 export const TrustBar: React.FC<{
   lhutaOdeslani: KratkaLhuta | null;
   platbaKartouDostupna: boolean;
-}> = ({ lhutaOdeslani, platbaKartouDostupna }) => {
-  const polozky = vyhody(lhutaOdeslani, platbaKartouDostupna);
+  mestoProdejny?: string | null;
+}> = ({ lhutaOdeslani, platbaKartouDostupna, mestoProdejny = null }) => {
+  const polozky = vyhody(lhutaOdeslani, platbaKartouDostupna, mestoProdejny);
+  const siroka = polozky.length >= 4;
 
   return (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="rounded-2xl bg-linda-sandLight px-6 py-8 shadow-neuInset sm:px-10">
       {/* Na lg oddělují sloupce vlasové linky; `divide-x` nekreslí čáru před prvním prvkem. */}
       <ul
-        className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:divide-x lg:divide-linda-sand ${
-          SLOUPCE[polozky.length] ?? 'lg:grid-cols-4'
-        }`}
+        className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
+          siroka ? ODDELOVACE_SIROKA : ODDELOVACE_RADA
+        } ${SLOUPCE[polozky.length] ?? 'xl:grid-cols-4'}`}
       >
         {polozky.map((vyhoda) => {
           const Ikona = IKONY[vyhoda.icon];
@@ -61,7 +78,7 @@ export const TrustBar: React.FC<{
           return (
             <li
               key={vyhoda.title}
-              className="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0"
+              className={`flex items-start gap-3 ${siroka ? POLOZKA_SIROKA : POLOZKA_RADA}`}
             >
               {/* Terč je vystouplý, protože panel kolem něj je teď prohlubeň –
                   dvě úrovně proti sobě, ne dvě stejné pod sebou. Barva je
