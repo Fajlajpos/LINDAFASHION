@@ -62,6 +62,37 @@ export function odkazNaMapu(adresa: string | null | undefined): string | null {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dotaz)}`;
 }
 
+export interface RadekOteviraciDoby {
+  /** „Po–Čt" – nebo celý řádek, když se nedá rozdělit. */
+  dny: string;
+  /** „10:00–12:00, 12:30–17:00"; prázdné, když se řádek nedal rozdělit. */
+  cas: string;
+  zavreno: boolean;
+}
+
+/**
+ * Otevírací doba z administrace rozdělená na řádky „dny | čas" – pro tabulku,
+ * ve které jsou časy pod sebou zarovnané.
+ *
+ * Dny jsou všechno před první dvojtečkou, ve které ještě není číslice (časy
+ * mají dvojtečky taky), nebo před prvním číslem, když dvojtečka chybí.
+ * Řádek, který takhle rozdělit nejde, zůstane celý v `dny` – zobrazí se, jak
+ * ho majitelka napsala, nic se neztratí.
+ */
+export function radkyOteviraciDoby(text: string | null | undefined): RadekOteviraciDoby[] {
+  return (text ?? '')
+    .split('\n')
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .map((radek) => {
+      const shoda = radek.match(/^([^\d:]+?)\s*:\s*(.+)$/) ?? radek.match(/^([^\d]+?)\s+(\d.*)$/);
+      if (!shoda) return { dny: radek, cas: '', zavreno: false };
+
+      const cas = shoda[2].trim();
+      return { dny: shoda[1].trim(), cas, zavreno: /^zav[řr]eno\.?$/i.test(cas) };
+    });
+}
+
 /** První dvě písmena dne bez diakritiky → kód schema.org. Zvládne „Po" i „pondělí". */
 const DNY: Record<string, string> = {
   po: 'Mo',

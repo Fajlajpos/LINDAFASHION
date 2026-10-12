@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { kratkaAdresa, odkazNaMapu, oteviraciDobaProSchema, rozlozitAdresu } from './prodejna';
+import {
+  kratkaAdresa,
+  odkazNaMapu,
+  oteviraciDobaProSchema,
+  radkyOteviraciDoby,
+  rozlozitAdresu,
+} from './prodejna';
 
 const ADRESA = 'Linda Fashion, Rokycanova 1929, 356 01 Sokolov';
 const DOBA = 'Po–Čt: 10:00–12:00, 12:30–17:00\nPá: 10:00–12:00, 12:30–16:00\nSo–Ne: zavřeno';
@@ -33,6 +39,23 @@ describe('kratkaAdresa a odkazNaMapu', () => {
       'https://www.google.com/maps/search/?api=1&query=' +
         encodeURIComponent('Rokycanova 1929, 356 01 Sokolov')
     );
+  });
+});
+
+describe('radkyOteviraciDoby', () => {
+  it('rozdělí dny a časy, zavřeno pozná', () => {
+    expect(radkyOteviraciDoby(DOBA)).toEqual([
+      { dny: 'Po–Čt', cas: '10:00–12:00, 12:30–17:00', zavreno: false },
+      { dny: 'Pá', cas: '10:00–12:00, 12:30–16:00', zavreno: false },
+      { dny: 'So–Ne', cas: 'zavřeno', zavreno: true },
+    ]);
+  });
+
+  it('zvládne řádek bez dvojtečky a nerozdělitelný nechá celý', () => {
+    expect(radkyOteviraciDoby('sobota 9–12\nV létě dle domluvy')).toEqual([
+      { dny: 'sobota', cas: '9–12', zavreno: false },
+      { dny: 'V létě dle domluvy', cas: '', zavreno: false },
+    ]);
   });
 });
 
