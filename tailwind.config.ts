@@ -140,6 +140,13 @@ const config: Config = {
         neuInsetSm:
           'inset 3px 3px 7px rgba(43, 32, 25, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9)',
 
+        /* Vlastní vnitřní stín pro fotku (`neuInsetFoto`) tu krátce byl a je
+           pryč: fotka obchodu zapuštěná tmavým stínem na svých hranách
+           vypadala jako výřez nalepený do karty, stejně jako v krémové
+           paspartě. Fotka se teď vpíjí do karty přechodem a prohlubeň přes ni
+           kreslí obyčejný `neuInset` karty ve vrstvě nad ní – viz
+           `ProdejnaSekce`. */
+
         /* Tmavé plochy (espresso tlačítka) reliéf nedrží stejně – vlastní stín
            je na nich neviditelný. Místo přísvitu proto vnitřní horní linka. */
         neuDark:

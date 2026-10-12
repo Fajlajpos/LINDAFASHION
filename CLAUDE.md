@@ -102,12 +102,18 @@ Consequences worth remembering:
   the footer, `/llms.txt` and `mistniProvozovnaLd` — each only while `adresaProvozovny` is
   filled in.
 - **Owner-supplied photos** (`public/fotky/prodejna.*`, `public/fotky/majitelka.*`) are found
-  by [fotky.ts](src/lib/fotky.ts) and must sit in the relief: a frame with a `p-3` rim the
-  photo never covers, in the opposite relief to the surface around it — a recessed
-  `sandLight` frame inside a raised card, a raised `cream` mat (`shadow-neu`) inside a
-  recessed section (the homepage shop section is recessed, so its photo sits on a mat).
-  A photo filling the frame edge to edge hides the shadow and reads as pasted on — the one
-  flat object on a modelled page.
+  by [fotky.ts](src/lib/fotky.ts). The shop photo in
+  [ProdejnaSekce.tsx](src/components/shop/home/ProdejnaSekce.tsx) is a rounded 3:2 block
+  in the left column of the recessed card, **raised** with plain `shadow-neu` like every
+  other raised surface. Rejected by the owner along the way: a cream mat around it, a dark
+  inset shadow on its edges, and a half-card photo faded into the sand with a gradient.
+  The file itself is **colour-graded to the palette** (warmer, less saturated, softer
+  contrast) — cold grey granite and hard white frames clashed with the cream; grade any
+  new photo the same way. A **new** `boxShadow` token only renders after the dev server
+  restarts — check `getComputedStyle(...).boxShadow` before judging a shadow. Replacing a
+  photo under the same file name needs `.next/cache/images` cleared in dev, or the old
+  optimized copy is served. The project has no Prettier config — do not run Prettier, it
+  rewrites the single quotes the codebase uses.
 - **`NEXT_PUBLIC_*` is baked in at `next build`, so it needs a Docker build arg.** `.env` is
   (correctly) excluded from the build context, and Compose passes `env_file` at runtime —
   meaning `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` were `undefined` in every

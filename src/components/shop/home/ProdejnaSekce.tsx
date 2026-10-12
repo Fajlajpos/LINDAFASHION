@@ -9,7 +9,7 @@ interface Props {
   adresa: RozlozenaAdresa;
   oteviraciDoba: string | null;
   mapa: string | null;
-  /** `/fotky/prodejna.jpg` – viz `najitFotku`. `null` = rám s ikonou. */
+  /** `/fotky/prodejna.jpg` – viz `najitFotku`. `null` = plocha s ikonou. */
   fotka: string | null;
   /**
    * Text pod nadpisem. Úvodní stránka mluví za obchod, „O mně" v první osobě
@@ -41,17 +41,24 @@ const VYCHOZI_TEXT = (
  *
  * Sekce je **zapuštěná** (`sandLight` + `shadow-neuInset`) – stejně jako pruh
  * s výhodami a newsletter; servisní a informativní plochy jsou prohlubně,
- * vystouplé je zboží. Vystouplá karta tu byla první verze a majitel webu ji
- * chtěl zapuštěnou.
+ * vystouplé je zboží. Terče ikon mají barvu podkladu (`sandLight` +
+ * `shadow-neuSm`) – vystouplá plocha musí mít barvu toho, z čeho vystupuje.
  *
- * Do prohlubně se nesmí dát další prohlubeň (CLAUDE.md), takže rám na fotku
- * je naopak **vystouplá krémová pasparta** (`cream` + `shadow-neu`, okraj
- * `p-3`) a fotka v ní leží jako obraz v rámu. Fotka rám nevyplňuje od kraje
- * ke kraji – lem pasparty musí zůstat vidět, jinak fotka zakryje reliéf
- * a vypadá nalepeně, jediný plochý prvek na vymodelované stránce.
+ * ## Fotka
  *
- * Terče ikon mají barvu podkladu (`sandLight` + `shadow-neuSm`) jako v pruhu
- * s výhodami – vystouplá plocha musí mít barvu toho, z čeho vystupuje.
+ * Samostatný zaoblený blok vlevo, který z prohlubně výrazně **vystupuje**
+ * stínem `shadow-neuLg` – stín vpravo dole i světlý přísvit vlevo nahoře.
+ * S obyčejným `shadow-neu` tmavá fotka v zapuštěné kartě opticky padala
+ * dovnitř a působila zapuštěně; `neuFloat` bez přísvitu vystupoval míň.
+ *
+ * Co se zkoušelo a majitel webu zamítl: krémová pasparta kolem fotky („bílý
+ * rámeček"), tmavý vnitřní stín na jejích hranách a fotka přes půl karty
+ * vpitá přechodem do písku. Rozložení s fotkou jako blokem vlevo se mu líbilo,
+ * chtěl jen fotku lépe zakomponovanou.
+ *
+ * Soubor `public/fotky/prodejna.jpg` je barevně sladěný s paletou (teplejší,
+ * méně sytý, měkčí kontrast) – studená šedá žula a ostře bílé rámy původního
+ * snímku šly proti krémové. Novou fotku upravit stejně, jinak bude trčet.
  *
  * ## Text
  *
@@ -74,32 +81,31 @@ export function ProdejnaSekce({
       aria-labelledby={idNadpisu}
       className={bezKontejneru ? undefined : 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'}
     >
-      {/* Kompaktní: menší okraje a mezery než ostatní sekce. Pravý sloupec
-          byl s nadpisem 4xl, velkými terči a časy pod sebou mnohem vyšší než
+      {/* Kompaktní okraje a mezery – pravý sloupec byl dřív mnohem vyšší než
           fotka a táhl celou kartu dolů. */}
       <div className="grid grid-cols-1 items-center gap-6 rounded-3xl bg-linda-sandLight p-5 shadow-neuInset sm:p-7 lg:grid-cols-2 lg:gap-10 lg:p-8">
-        {/* Pasparta na fotku obchodu – vystouplá z prohlubně sekce */}
-        <div className="rounded-2xl bg-linda-cream p-3 shadow-neu">
-          {fotka ? (
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl">
-              <Image
-                src={fotka}
-                alt={`Kamenná prodejna LINDA FASHION${adresa.mesto ? `, ${adresa.mesto}` : ''}`}
-                fill
-                sizes="(min-width: 1280px) 560px, (min-width: 1024px) 45vw, 100vw"
-                className="object-cover"
-              />
-            </div>
-          ) : (
-            /* Bez fotky tichá ikona na vystouplém terči – žádné „sem přijde
-               fotka" pro zákaznici. */
-            <div className="flex aspect-[4/3] items-center justify-center">
-              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-linda-cream shadow-neuSm">
-                <Store className="h-11 w-11 stroke-[1.25] text-linda-espresso/40" aria-hidden="true" />
-              </span>
-            </div>
-          )}
-        </div>
+        {/* Poměr 3:2 jako dodaný snímek výlohy – 4:3 by ořízl kraje i s cedulí. */}
+        {fotka ? (
+          <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-neuLg">
+            <Image
+              src={fotka}
+              alt={`Výloha a vchod kamenné prodejny${adresa.ulice ? `, ${adresa.ulice}` : ''}${
+                adresa.mesto ? `, ${adresa.mesto}` : ''
+              }`}
+              fill
+              sizes="(min-width: 1280px) 560px, (min-width: 1024px) 45vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          /* Bez fotky tichá ikona na vystouplém terči – žádné „sem přijde
+             fotka" pro zákaznici. */
+          <div className="flex aspect-[3/2] items-center justify-center">
+            <span className="flex h-24 w-24 items-center justify-center rounded-full bg-linda-sandLight shadow-neuSm">
+              <Store className="h-11 w-11 stroke-[1.25] text-linda-espresso/40" aria-hidden="true" />
+            </span>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
