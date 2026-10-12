@@ -76,7 +76,11 @@ const STYL: Record<
   },
 };
 
-/** Štítek „−20 %". Espresso, ne koňak – sleva nemá křičet barvou. */
+/**
+ * Štítek „−20 %" – červený (`linda-sleva`), ať se sleva pozná na první pohled.
+ * Byl espresso; majitel webu chtěl červenou. Zbytek cenového bloku zůstává
+ * bez barvy – tučná cena a „Ušetříte" stačí.
+ */
 export function StitekSlevy({
   procento,
   className = '',
@@ -86,7 +90,7 @@ export function StitekSlevy({
 }) {
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full bg-linda-espresso px-2.5 py-1 text-xs font-bold tracking-wide text-linda-cream ${className}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full bg-linda-sleva px-2.5 py-1 text-xs font-bold tracking-wide text-white ${className}`}
     >
       <span className="sr-only">Sleva </span>
       {formatovatProcentoSlevy(procento)}

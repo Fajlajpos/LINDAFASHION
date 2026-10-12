@@ -184,7 +184,7 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
 
 - **Colors:** `linda.*` in [tailwind.config.ts](tailwind.config.ts) — `cream`, `paper`,
   `sand`, `sandLight`, `espresso`, `espressoLight`, `cognac`, `cognacHover`, `sage`,
-  `sageLight`, `sageHover`, `chocolate`. Use `bg-linda-cognac`, `text-linda-espresso`, … —
+  `sageLight`, `sageHover`, `chocolate`, and `sleva` (red, discount badge only). Use `bg-linda-cognac`, `text-linda-espresso`, … —
   **never raw hex in components.**
 - **The ground:** `paper` (`#F6F3EC`) is the page background, set once on `html`/`body` in
   [globals.css](src/styles/globals.css). Layouts must **not** paint over it — that is why
@@ -506,10 +506,11 @@ started**, and the seller must be able to prove it (ČOI fine up to 5 000 000 K�
   not below it → **no** strike, badge or saving anywhere, just the price. Every price
   block goes through [CenaProduktu.tsx](src/components/shop/CenaProduktu.tsx) (card,
   detail, cart); the cart therefore carries `nejnizsiCena30DniHaleru` in its items too —
-  it used to strike a price with no § 12a sentence at all. The look is deliberately
-  colourless: struck reference above, sale price bold and one step larger, „Ušetříte
-  X Kč", an espresso „−20 %" badge (real minus, NBSP before %). No countdowns or
-  „až −50 %" — false urgency is an unfair practice.
+  it used to strike a price with no § 12a sentence at all. The price block is colourless:
+  struck reference above, sale price bold and one step larger, „Ušetříte X Kč". Only the
+  „−20 %" badge is red (`linda-sleva`, the palette's single red — the owner wanted a
+  discount visible at a glance; real minus, NBSP before %). No countdowns or „až −50 %" —
+  false urgency is an unfair practice.
 - `popisNejnizsiCeny` / `procentoSlevyZReferencni` live in [penize.ts](src/lib/penize.ts),
   not in `cenova-historie.ts`: client components need them, and `cenova-historie.ts`
   imports Prisma. Same Edge/Node split reasoning as `session.ts` vs `auth.ts`.

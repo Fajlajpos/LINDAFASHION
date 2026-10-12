@@ -40,6 +40,11 @@ const config: Config = {
           sageLight: '#F1F4EB',
           sageHover: '#32401C',
           chocolate: '#3E2E25', // Hřejivá čokoládově hnědá – patička
+          /* Štítek slevy („−20 %"). Jediná červená v paletě a jen na tohle –
+             majitel webu chtěl slevu na první pohled poznat. Teplá cihlová,
+             ne signální, ať se s koňakovou a espressem nebije. Bílé písmo na ní
+             6,0 : 1, na krému 5,7 : 1. */
+          sleva: '#B5332B',
           /* Neutrální šedá pro prvky chromu prohlížeče (táhlo scrollbaru).
              Záměrně bez hnědého i zeleného nádechu, aby nesoutěžila s brandem;
              kontrast na `cream` je 3.4:1, tedy nad hranicí pro UI prvky. */
