@@ -152,6 +152,169 @@ function odstavec(text: string): string {
   return `<p style="margin:0 0 14px 0;">${text}</p>`;
 }
 
+/* --- Obsah smlouvy pro potvrzení objednávky ------------------------------
+ *
+ * § 1822 o. z. (čl. 8 odst. 7 směrnice 2011/83/EU) chce potvrzení **uzavřené
+ * smlouvy** na trvalém nosiči, s údaji podle § 1820: co se kupuje, za kolik
+ * včetně dopravy, kdo prodává, jak a kdy se dodává a platí. Dřív tu bylo jen
+ * „Celkem: 1 999 Kč" – zákaznice z e-mailu nepoznala, co si koupila, od koho,
+ * ani kam má poslat peníze.
+ *
+ * Všechno je volitelné a čte se obranně: data přicházejí z fronty jako
+ * `unknown` a úlohy založené před touhle změnou nová pole nemají. Co chybí, se
+ * nevypíše – vymyslet si to by bylo horší.
+ */
+
+function kc(castka: number): string {
+  return `${castka.toLocaleString('cs-CZ')} Kč`;
+}
+
+function cisloZ(hodnota: unknown): number | null {
+  return typeof hodnota === 'number' && Number.isFinite(hodnota) ? hodnota : null;
+}
+
+function textNeboNull(hodnota: unknown): string | null {
+  return typeof hodnota === 'string' && hodnota.trim() !== '' ? hodnota : null;
+}
+
+function objekt(hodnota: unknown): Record<string, unknown> | null {
+  return hodnota !== null && typeof hodnota === 'object' && !Array.isArray(hodnota)
+    ? (hodnota as Record<string, unknown>)
+    : null;
+}
+
+interface PolozkaEmailu {
+  nazev: string;
+  velikost: string | null;
+  mnozstvi: number;
+  celkemKc: number;
+}
+
+function polozkyZDat(data: Data): PolozkaEmailu[] {
+  if (!Array.isArray(data.polozky)) return [];
+  return data.polozky.flatMap((p) => {
+    const o = objekt(p);
+    const nazev = o && textNeboNull(o.nazev);
+    const mnozstvi = o && cisloZ(o.mnozstvi);
+    const celkemKc = o && cisloZ(o.celkemKc);
+    if (!o || !nazev || mnozstvi === null || celkemKc === null) return [];
+    return [{ nazev, velikost: textNeboNull(o.velikost), mnozstvi, celkemKc }];
+  });
+}
+
+/** Řádky rozpisu ceny: mezisoučet, sleva, doprava, poukaz. Bez součtu. */
+function rozpisZDat(data: Data): Array<[string, string]> {
+  const radky: Array<[string, string]> = [];
+  const mezisoucet = cisloZ(data.mezisoucetKc);
+  const sleva = cisloZ(data.slevaKc);
+  const doprava = cisloZ(data.dopravaKc);
+  const zPoukazu = cisloZ(data.zPoukazuKc);
+  const nazevDopravy = textNeboNull(data.zpusobDopravy);
+
+  if (mezisoucet !== null) radky.push(['Zboží celkem', kc(mezisoucet)]);
+  if (sleva) radky.push(['Sleva', `−${kc(sleva)}`]);
+  if (doprava !== null) {
+    radky.push([nazevDopravy ? `Doprava (${nazevDopravy})` : 'Doprava', doprava === 0 ? 'zdarma' : kc(doprava)]);
+  }
+  if (zPoukazu) radky.push(['Uhrazeno dárkovým poukazem', `−${kc(zPoukazu)}`]);
+  return radky;
+}
+
+/**
+ * Věta o DPH ze **snímku objednávky**, ne z dnešního nastavení – stejné
+ * pravidlo jako u faktury. Bez snímku se nevypíše nic.
+ */
+function vetaDph(data: Data): string | null {
+  const dph = objekt(data.dph);
+  if (!dph || typeof dph.jePlatce !== 'boolean') return null;
+  if (!dph.jePlatce) return 'Nejsme plátci DPH.';
+  const sazba = cisloZ(dph.sazba);
+  const castka = cisloZ(dph.dphKc);
+  return sazba !== null && castka !== null
+    ? `Cena obsahuje DPH ${sazba} % ve výši ${kc(castka)}.`
+    : 'Ceny jsou včetně DPH.';
+}
+
+function radkyDoruceni(data: Data): Array<[string, string]> {
+  const d = objekt(data.dodani);
+  const radky: Array<[string, string]> = [];
+  if (d) {
+    const jmeno = textNeboNull(d.jmeno);
+    const misto = textNeboNull(d.vydejniMisto);
+    const adresa = textNeboNull(d.adresa);
+    if (jmeno) radky.push(['Příjemce', jmeno]);
+    if (misto) radky.push(['Výdejní místo', misto]);
+    else if (adresa) radky.push(['Adresa', adresa]);
+  }
+  const lhuta = textNeboNull(data.dodaciLhuta);
+  if (lhuta) radky.push(['Dodací lhůta', lhuta]);
+  return radky;
+}
+
+/**
+ * Platební údaje k převodu. Jen když je volající pošle – tedy u převodu,
+ * kde ještě něco zbývá zaplatit. Dřív e-mail odkazoval „na stránku
+ * objednávky": web není trvalý nosič, a kdo zavřel záložku, neměl podle čeho
+ * zaplatit.
+ */
+function radkyPlatby(data: Data): Array<[string, string]> {
+  const p = objekt(data.platebniUdaje);
+  if (!p) return [];
+  const radky: Array<[string, string]> = [];
+  const ucet = textNeboNull(p.cisloUctu);
+  const iban = textNeboNull(p.iban);
+  const vs = textNeboNull(p.vs);
+  const castka = cisloZ(p.castkaKc);
+  if (ucet) radky.push(['Číslo účtu', ucet]);
+  if (iban) radky.push(['IBAN', iban]);
+  if (vs) radky.push(['Variabilní symbol', vs]);
+  if (castka !== null) radky.push(['Částka', kc(castka)]);
+  return ucet || iban ? radky : [];
+}
+
+/** Identifikace prodávajícího ze snímku na objednávce (§ 1820 odst. 1 písm. b, § 435). */
+function radkyProdavajiciho(data: Data): Array<[string, string]> {
+  const d = objekt(data.dodavatel);
+  if (!d) return [];
+  const radky: Array<[string, string]> = [];
+  const pole: Array<[string, string]> = [
+    ['nazev', 'Prodávající'],
+    ['ico', 'IČO'],
+    ['dic', 'DIČ'],
+    ['adresa', 'Sídlo'],
+    ['email', 'E-mail'],
+    ['zapisVRejstriku', 'Zápis'],
+  ];
+  for (const [klic, popisek] of pole) {
+    const hodnota = textNeboNull(d[klic]);
+    if (hodnota) radky.push([popisek, hodnota]);
+  }
+  return radky;
+}
+
+/** Tabulka položek s cenou za řádek. */
+function tabulkaPolozek(polozky: PolozkaEmailu[]): string {
+  const radky = polozky
+    .map(
+      (p) => `<tr>
+          <td style="padding:6px 0;font-size:14px;color:${BARVY.espresso};border-bottom:1px solid ${BARVY.sand};">
+            <strong>${e(p.nazev)}</strong><br>
+            <span style="font-size:13px;color:#6B5B4F;">${p.velikost ? `${e(p.velikost)} · ` : ''}${p.mnozstvi} ks</span>
+          </td>
+          <td style="padding:6px 0;font-size:14px;font-weight:600;text-align:right;vertical-align:top;color:${BARVY.espresso};border-bottom:1px solid ${BARVY.sand};">${e(kc(p.celkemKc))}</td>
+        </tr>`
+    )
+    .join('');
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 8px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  ${radky}
+</table>`;
+}
+
+function nadpisBloku(text: string): string {
+  return `<p style="margin:24px 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:${BARVY.espresso};">${e(text)}</p>`;
+}
+
 /** Popisky stavů objednávky pro zákaznici. */
 const POPIS_STAVU: Record<string, string> = {
   NOVA: 'přijali jsme ji a chystáme se do ní pustit',
@@ -303,14 +466,31 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         ? `${web}/odstoupeni?token=${encodeURIComponent(token)}`
         : `${web}/odstoupeni`;
 
+      /*
+       * --- Obsah smlouvy ---
+       *
+       * Číslo, zboží, cena s rozpisem, doprava, platba, prodávající a podmínky.
+       * Úloha z doby před touhle změnou nese jen `celkovaCena` – pak se
+       * vypíše aspoň ta, aby e-mail z fronty nespadl ani neztratil cenu.
+       */
+      const polozky = polozkyZDat(data);
+      const rozpis = rozpisZDat(data);
+      const kUhrade = cisloZ(data.kUhradeKc) ?? cisloZ(data.celkovaCena);
+      const dph = vetaDph(data);
+      const doruceni = radkyDoruceni(data);
+      const platebniUdaje = radkyPlatby(data);
+      const prodavajici = radkyProdavajiciho(data);
+      const sKUhrade: Array<[string, string]> = [
+        ...rozpis,
+        ...(kUhrade !== null ? ([['K úhradě', kc(kUhrade)]] as Array<[string, string]>) : []),
+      ];
+
       const radky: Array<[string, string]> = [['Číslo objednávky', cislo]];
-      if (typeof data.celkovaCena === 'number') {
-        radky.push(['Celkem', `${data.celkovaCena.toLocaleString('cs-CZ')} Kč`]);
-      }
+      if (kUhrade !== null) radky.push(['Celkem k úhradě', kc(kUhrade)]);
       if (data.zpusobPlatby) radky.push(['Platba', String(data.zpusobPlatby)]);
       if (data.zpusobDopravy) radky.push(['Doprava', String(data.zpusobDopravy)]);
       // Verze podmínek patří do potvrzení, ne jen do databáze: bez ní se
-      // zákaznice nedozví, s jakým zněním vlastně souhlasila.
+      // z e-mailu nepozná, s jakým zněním kupující souhlasil.
       if (data.verzePodminek) radky.push(['Obchodní podmínky', `verze ${String(data.verzePodminek)}`]);
 
       const odkazPodminky = data.verzePodminek
@@ -320,18 +500,22 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       const adresaProVraceni = data.adresaProVraceni ? String(data.adresaProVraceni) : null;
 
       /*
+       * Neutrální formulace. Šablona mluvila v ženském rodě („jakým jste
+       * platila", „souhlasila") – web míří na ženy, ale nakupují i muži,
+       * třeba dárek, a potvrzení smlouvy je dokument, ne oslovení.
+       *
        * --- Poučení o odstoupení, § 1820 odst. 1 a § 1822 odst. 1 o. z. ---
        *
-       * Poučení musí zákaznice dostat **v textové podobě na trvalém nosiči**.
+       * Poučení musí kupující dostat **v textové podobě na trvalém nosiči**.
        * Odkaz na web to nesplňuje: web se dá kdykoliv přepsat, takže z něj
-       * po roce nedokáže doložit, co jí bylo sděleno. E-mail v její schránce
-       * trvalý nosič je – proto tu stojí celé poučení, ne jen cesta k němu.
+       * po roce nejde doložit, co bylo sděleno. E-mail ve schránce trvalý
+       * nosič je – proto tu stojí celé poučení, ne jen cesta k němu.
        *
        * Věta o nákladech na vrácení není zdvořilost: podle § 1820 odst. 1
        * písm. i) je nese prodávající, pokud na ně kupujícího neupozornil.
        */
       const pouceni =
-        odstavec('<strong>Poučení o právu odstoupit od smlouvy</strong>') +
+        nadpisBloku('Poučení o právu odstoupit od smlouvy') +
         odstavec(
           'Máte právo odstoupit od smlouvy bez udání důvodu do 14 dnů ode dne, kdy vy nebo vámi ' +
             'určená třetí osoba (jiná než dopravce) převezmete poslední kus zboží z objednávky.'
@@ -342,8 +526,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
             'Lhůta je zachována, pokud odstoupení odešlete její poslední den. Přijetí vám potvrdíme s uvedením data a času.'
         ) +
         odstavec(
-          'Peníze vám vrátíme do 14 dnů od doručení odstoupení, stejným způsobem, jakým jste platila. ' +
-            'S vrácením můžeme počkat, dokud zboží neobdržíme zpět nebo dokud neprokážete, že jste ho odeslala.'
+          'Peníze vám vrátíme do 14 dnů od doručení odstoupení, stejným způsobem, jakým byla objednávka zaplacena. ' +
+            'S vrácením můžeme počkat, dokud zboží neobdržíme zpět nebo dokud nám neprokážete jeho odeslání.'
         ) +
         odstavec(
           (adresaProVraceni
@@ -366,8 +550,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         'Přijetí vám potvrdíme s uvedením data a času.',
         '',
         'Peníze vrátíme do 14 dnů od doručení odstoupení, stejným způsobem, jakým',
-        'jste platila. Můžeme počkat, dokud zboží neobdržíme zpět nebo dokud',
-        'neprokážete, že jste ho odeslala.',
+        'byla objednávka zaplacena. Můžeme počkat, dokud zboží neobdržíme zpět',
+        'nebo dokud nám neprokážete jeho odeslání.',
         '',
         adresaProVraceni
           ? `Zboží odešlete do 14 dnů od odstoupení na adresu: ${adresaProVraceni}`
@@ -377,6 +561,36 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         's jeho povahou a vlastnostmi.',
       ];
 
+      // --- HTML ---------------------------------------------------------
+      const htmlObjednavka =
+        (polozky.length ? nadpisBloku('Co jste si objednali') + tabulkaPolozek(polozky) : '') +
+        (polozky.length && sKUhrade.length ? panel(sKUhrade) : '') +
+        (dph ? odstavec(`<span style="font-size:13px;color:#6B5B4F;">${e(dph)}</span>`) : '');
+
+      const htmlPlatba = platebniUdaje.length
+        ? nadpisBloku('Platba převodem') +
+          panel(platebniUdaje) +
+          odstavec('Zboží odešleme, jakmile platba dorazí na účet. QR kód k platbě najdete také na stránce objednávky.')
+        : '';
+
+      const htmlDoruceni = doruceni.length ? nadpisBloku('Doručení') + panel(doruceni) : '';
+      const htmlProdavajici = prodavajici.length ? nadpisBloku('Prodávající') + panel(prodavajici) : '';
+
+      // --- Text ---------------------------------------------------------
+      const blokText = (nadpis: string, r: Array<[string, string]>): string[] =>
+        r.length ? [nadpis.toUpperCase(), ...r.map(([k, v]) => `${k}: ${v}`), ''] : [];
+
+      const textPolozky = polozky.length
+        ? [
+            'CO JSTE SI OBJEDNALI',
+            ...polozky.map(
+              (p) => `${p.nazev}${p.velikost ? ` (${p.velikost})` : ''}, ${p.mnozstvi} ks: ${kc(p.celkemKc)}`
+            ),
+            '',
+            ...blokText('Rozpis ceny', sKUhrade),
+          ]
+        : [];
+
       return {
         predmet: `Potvrzení objednávky ${cislo} – LINDA FASHION`,
         html: obalka(
@@ -384,14 +598,18 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           odstavec('Dobrý den,') +
           odstavec('vaši objednávku jsme přijali a pustíme se do ní. Jakmile ji předáme dopravci, dáme vám vědět.') +
           panel(radky) +
+          htmlObjednavka +
+          htmlPlatba +
+          htmlDoruceni +
           tlacitko('Zobrazit objednávku', odkaz) +
-          odstavec(
-            'Platíte-li převodem, najdete platební údaje i QR platbu na stránce objednávky. Zboží odesíláme po připsání částky.'
-          ) +
           pouceni +
           odstavec(
-            `Objednávka se řídí <a href="${odkazPodminky}" style="color:${BARVY.cognac};">obchodními podmínkami ve znění, se kterým jste souhlasila</a>. Tenhle odkaz vede na přesně to znění i po jeho pozdější změně – e-mail si proto uschovejte.`
-          )
+            `Na zboží se vztahuje zákonná odpovědnost za vady; jak ji uplatnit, popisuje <a href="${web}/reklamacni-rad" style="color:${BARVY.cognac};">reklamační řád</a>.`
+          ) +
+          odstavec(
+            `Objednávka se řídí <a href="${odkazPodminky}" style="color:${BARVY.cognac};">obchodními podmínkami ve znění platném pro tuto objednávku</a>. Odkaz vede na přesně to znění i po jeho pozdější změně – e-mail si proto uschovejte.`
+          ) +
+          htmlProdavajici
         ),
         text: [
           'Dobrý den,',
@@ -400,14 +618,67 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           '',
           ...radky.slice(1).map(([k, v]) => `${k}: ${v}`),
           '',
+          ...textPolozky,
+          ...(dph ? [dph, ''] : []),
+          ...blokText('Platba převodem', platebniUdaje),
+          ...blokText('Doručení', doruceni),
           `Detail objednávky: ${odkaz}`,
-          '',
-          'Platíte-li převodem, platební údaje i QR platbu najdete na stránce objednávky.',
           '',
           ...pouceniText,
           '',
-          `Obchodní podmínky ve znění, se kterým jste souhlasila: ${odkazPodminky}`,
+          `Reklamační řád (zákonná odpovědnost za vady): ${web}/reklamacni-rad`,
+          `Obchodní podmínky ve znění platném pro tuto objednávku: ${odkazPodminky}`,
+          '',
+          ...blokText('Prodávající', prodavajici),
           'Tento e-mail si prosím uschovejte.',
+        ].join('\n'),
+      };
+    }
+
+    /*
+     * Zpráva majitelce o nové objednávce.
+     *
+     * Dřív žádná nebyla: o reklamaci se majitelka e-mailem dozvěděla, o nákupu
+     * ne – objednávka jen tiše přibyla v administraci. U převodu to nevadí
+     * hned, ale dodací lhůta běží od objednání, ne od chvíle, kdy se někdo
+     * náhodou podívá do adminu.
+     *
+     * Schválně bez adresy a telefonu kupujícího: e-mail leží v cizí schránce
+     * (Gmail) a k vyřízení stačí odkaz do administrace, kde údaje jsou.
+     */
+    case 'nova-objednavka': {
+      const cislo = String(data.cisloObjednavky ?? '');
+      const polozky = polozkyZDat(data);
+      const kUhrade = cisloZ(data.kUhradeKc);
+      const odkazAdmin = data.orderId
+        ? `${web}/admin/objednavky/${encodeURIComponent(String(data.orderId))}`
+        : `${web}/admin/objednavky`;
+
+      const radky: Array<[string, string]> = [['Číslo objednávky', cislo]];
+      const jmeno = textNeboNull(data.jmeno);
+      if (jmeno) radky.push(['Kupující', jmeno]);
+      if (kUhrade !== null) radky.push(['K úhradě', kc(kUhrade)]);
+      if (data.zpusobPlatby) radky.push(['Platba', String(data.zpusobPlatby)]);
+      if (data.zpusobDopravy) radky.push(['Doprava', String(data.zpusobDopravy)]);
+
+      return {
+        predmet: `Nová objednávka ${cislo}${kUhrade !== null ? ` – ${kc(kUhrade)}` : ''}`,
+        html: obalka(
+          'Nová objednávka',
+          panel(radky) +
+            (polozky.length ? tabulkaPolozek(polozky) : '') +
+            tlacitko('Otevřít v administraci', odkazAdmin)
+        ),
+        text: [
+          `Nová objednávka ${cislo}`,
+          '',
+          ...radky.slice(1).map(([k, v]) => `${k}: ${v}`),
+          '',
+          ...polozky.map(
+            (p) => `${p.nazev}${p.velikost ? ` (${p.velikost})` : ''}, ${p.mnozstvi} ks: ${kc(p.celkemKc)}`
+          ),
+          '',
+          `Administrace: ${odkazAdmin}`,
         ].join('\n'),
       };
     }

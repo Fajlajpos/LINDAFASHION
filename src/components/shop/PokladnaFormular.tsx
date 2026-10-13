@@ -11,6 +11,7 @@ import { poslatJson } from '@/lib/api-klient';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
 import { nacistKody, ulozitKody } from '@/lib/ulozene-kody';
 import { vybratVydejniMisto } from '@/lib/packeta-widget';
+import { NAZEV_PLATBY } from '@/lib/objednavka-popisky';
 
 /* ------------------------------------------------------------------ */
 /* Stavební prvky pokladny – tvar nese stav, ne jen barva              */
@@ -855,11 +856,22 @@ export function PokladnaFormular({
               </div>
             )}
 
-            <div className="flex justify-between">
-              <dt className="text-linda-espresso/75">Doprava</dt>
+            {/* Název zvolené dopravy a platby přímo u tlačítka. Dřív tu byla
+                jen částka „Doprava 109 Kč" – kdo vybíral nahoře ve formuláři
+                a dole už jen zkontroloval souhrn, neviděl, čím a jak to
+                vlastně objednává. */}
+            <div className="flex justify-between gap-3">
+              <dt className="text-linda-espresso/75">
+                Doprava{vybranaDoprava ? ` – ${vybranaDoprava.nazev}` : ''}
+              </dt>
               <dd className={dopravaZdarma ? 'text-linda-sage' : 'text-linda-espresso'}>
                 {rozpis.doprava === 0 ? 'Zdarma' : `${halereNaCzk(rozpis.doprava).toLocaleString('cs-CZ')} Kč`}
               </dd>
+            </div>
+
+            <div className="flex justify-between gap-3">
+              <dt className="text-linda-espresso/75">Platba</dt>
+              <dd className="text-right text-linda-espresso">{NAZEV_PLATBY[zpusobPlatby] ?? zpusobPlatby}</dd>
             </div>
 
             {rozpis.zPoukazu > 0 && (

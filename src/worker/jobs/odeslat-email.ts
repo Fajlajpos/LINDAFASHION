@@ -34,6 +34,8 @@ export type TypEmailu =
   | 'newsletter-potvrzeni'
   | 'nova-zprava-z-formulare'
   | 'nova-reklamace'
+  // Majitelce při každé objednávce – dřív se o nákupu e-mailem nedozvěděla.
+  | 'nova-objednavka'
   // Chyběly tu, přestože je `sablony.ts` umí a endpointy je posílají. Union
   // se tím rozešel se skutečností a přestal být tím, k čemu je: seznamem,
   // proti kterému překladač pozná překlep v názvu typu.

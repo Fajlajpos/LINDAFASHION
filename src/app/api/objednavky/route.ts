@@ -8,7 +8,8 @@ import { FRONTY, publishJob } from '@/lib/queue';
 import { NAZEV_DOPRAVY, NAZEV_PLATBY } from '@/lib/objednavka-popisky';
 import { zalozitPlatbu } from '@/lib/gopay';
 import { czkNaHalere } from '@/lib/penize';
-import { nacistNastaveni } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDodaciLhuty } from '@/lib/nastaveni';
+import { obsahEmailuObjednavky } from '@/lib/email-objednavky';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,23 @@ export async function POST(request: Request) {
     // stejný soubor přepíše (viz `api/admin/objednavky/[id]`).
     await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: vysledek.data.id });
     await publishJob(FRONTY.VYGENEROVAT_POUKAZY, { orderId: vysledek.data.id });
+
+    const nastaveni = await nacistNastaveni();
+    const ulozena = await db.order.findUniqueOrThrow({
+      where: { id: vysledek.data.id },
+      include: {
+        items: {
+          include: { variant: { select: { velikost: true, product: { select: { nazev: true } } } } },
+        },
+      },
+    });
+    const obsah = obsahEmailuObjednavky(ulozena, nastaveni, {
+      cisloUctu: process.env.BANK_ACCOUNT_NUMBER?.trim() || null,
+      iban: process.env.BANK_IBAN?.trim() || null,
+    });
+    const nazevPlatby = NAZEV_PLATBY[vysledek.data.zpusobPlatby] ?? vysledek.data.zpusobPlatby;
+    const nazevDopravy = NAZEV_DOPRAVY[vstup.zpusobDopravy] ?? vstup.zpusobDopravy;
+
     await publishJob(FRONTY.ODESLAT_EMAIL, {
       typ: 'potvrzeni-objednavky',
       to: vstup.email,
@@ -69,8 +87,12 @@ export async function POST(request: Request) {
         // takže do zprávy patří veřejný token, ne číslo objednávky.
         verejnyToken: vysledek.data.verejnyToken,
         celkovaCena: vysledek.data.celkovaCenaKc,
-        zpusobPlatby: NAZEV_PLATBY[vysledek.data.zpusobPlatby] ?? vysledek.data.zpusobPlatby,
-        zpusobDopravy: NAZEV_DOPRAVY[vstup.zpusobDopravy] ?? vstup.zpusobDopravy,
+        zpusobPlatby: nazevPlatby,
+        zpusobDopravy: nazevDopravy,
+        // Obsah smlouvy (§ 1822): položky, rozpis ceny, DPH, doručení,
+        // platební údaje a prodávající – viz `obsahObjednavkyProEmail`.
+        ...obsah,
+        dodaciLhuta: popisDodaciLhuty(nastaveni),
         /*
          * Verze podmínek a adresa pro vrácení jdou do e-mailu schválně.
          *
@@ -80,9 +102,28 @@ export async function POST(request: Request) {
          * je – a proto v něm musí být samotné poučení, ne jen cesta k němu.
          */
         verzePodminek: vysledek.data.verzePodminek,
-        adresaProVraceni: (await nacistNastaveni()).adresaProVraceni,
+        adresaProVraceni: nastaveni.adresaProVraceni,
       },
     });
+
+    // Majitelce. Bez vyplněného e-mailu obchodu se nikam neposílá – stejně
+    // jako u reklamací; objednávka je pořád v administraci.
+    if (nastaveni.emailFirmy) {
+      await publishJob(FRONTY.ODESLAT_EMAIL, {
+        typ: 'nova-objednavka',
+        to: nastaveni.emailFirmy,
+        subject: `Nová objednávka ${vysledek.data.cisloObjednavky}`,
+        data: {
+          orderId: vysledek.data.id,
+          cisloObjednavky: vysledek.data.cisloObjednavky,
+          jmeno: vstup.dodaciJmenoPrijmeni,
+          polozky: obsah.polozky,
+          kUhradeKc: vysledek.data.kUhradeKc,
+          zpusobPlatby: nazevPlatby,
+          zpusobDopravy: nazevDopravy,
+        },
+      });
+    }
 
     /*
      * Platba kartou: objednávka je založená, teď se k ní připojí platba

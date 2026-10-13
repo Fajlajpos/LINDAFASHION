@@ -874,6 +874,21 @@ deleted with her browser history. That is not evidence.
   pointed at `/muj-ucet`, which a guest order can never reach — the customer landed on a
   login form for an account she does not have. Without a token the helper still falls back
   to `/muj-ucet`, so the token has to be in the job payload.
+- **The confirmation e-mail is the confirmation of the contract** (§ 1822 o. z., čl. 8 odst. 7
+  směrnice 2011/83/EU), not a receipt. It used to carry only „Celkem: 1 999 Kč" — nothing
+  about what was bought, from whom, or where to send the money. Now
+  [email-objednavky.ts](src/lib/email-objednavky.ts) maps the **stored** order (prices from
+  `cenaVDobeNakupu`, VAT and supplier from the order's snapshots, never today's `Settings`)
+  into items, price breakdown, VAT sentence, delivery, bank details (transfer with something
+  left to pay only — same rule as the invoice) and the seller's identification; the template
+  renders whatever is present and invents nothing, so a job queued before the change still
+  renders. Wording is neutral, not feminine: men buy here too and it is a contract document.
+  The owner gets `nova-objednavka` at `Settings.emailFirmy` — items, amount and an admin link,
+  **no address or phone** (it sits in a third-party mailbox). The checkout summary next to
+  the order button names the chosen shipping **and** payment method, not just the price.
+  **In dev every e-mail lands in Mailpit (http://localhost:8025)**, never in a real inbox —
+  and the worker runs under `ts-node` without reload, so template changes need `npm run dev`
+  restarted.
 - `Order.email` holds the contact address. Guest checkout has no `User`, so before this
   column the invoice for every unregistered order carried no e-mail at all.
 - PDF invoices embed **DejaVu Sans** from `assets/fonts/`. The PDF standard fonts have no

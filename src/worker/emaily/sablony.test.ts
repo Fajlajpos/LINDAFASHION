@@ -294,6 +294,113 @@ describe('sestavitEmail', () => {
    * náležitost** (§ 1830a o. z.): musí nést datum a čas přijetí. Testuje se
    * proto věcně, ne jen „něco se vykreslilo".
    */
+  /**
+   * Potvrzení objednávky je potvrzení **smlouvy** (§ 1822 o. z.). Dřív neslo
+   * jen „Celkem" – z e-mailu nešlo poznat, co bylo koupeno, od koho a kam
+   * poslat peníze.
+   */
+  describe('potvrzení objednávky nese obsah smlouvy', () => {
+    const plna = {
+      cisloObjednavky: '2026-00016',
+      verejnyToken: 'tok',
+      zpusobPlatby: 'Bankovní převod',
+      zpusobDopravy: 'PPL',
+      polozky: [{ nazev: 'Halenka Siena', velikost: 'M (38)', mnozstvi: 2, celkemKc: 1890 }],
+      mezisoucetKc: 1890,
+      slevaKc: 0,
+      dopravaKc: 109,
+      zPoukazuKc: 0,
+      kUhradeKc: 1999,
+      dph: { jePlatce: false, sazba: 21, dphKc: 0 },
+      dodani: { jmeno: 'Jana Nováková', adresa: 'Dlouhá 1, 356 01 Sokolov', vydejniMisto: null },
+      dodaciLhuta: 'Zboží skladem odesíláme do 3 pracovních dnů od přijetí platby.',
+      platebniUdaje: { cisloUctu: '123456789/0800', iban: 'CZ65 0800', vs: '202600016', castkaKc: 1999 },
+      dodavatel: { nazev: 'Martina Ludvíková', ico: '02688468', adresa: 'Rokycanova 1929, Sokolov' },
+    };
+
+    it('vypisuje zboží, rozpis ceny, doručení, platbu a prodávajícího – v HTML i v textu', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', plna)!;
+
+      for (const cast of [email.html, email.text]) {
+        expect(cast).toContain('Halenka Siena');
+        expect(cast).toContain('M (38)');
+        expect(cast).toContain('Doprava (PPL)');
+        expect(cast).toMatch(/K úhradě/);
+        expect(cast).toContain('Nejsme plátci DPH.');
+        expect(cast).toContain('Dlouhá 1, 356 01 Sokolov');
+        expect(cast).toContain('do 3 pracovních dnů');
+        expect(cast).toContain('123456789/0800');
+        expect(cast).toContain('202600016');
+        expect(cast).toContain('Martina Ludvíková');
+        expect(cast).toContain('02688468');
+        expect(cast).toContain('/reklamacni-rad');
+      }
+    });
+
+    it('platební údaje jen když přijdou (karta, zaplaceno poukazem)', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', { ...plna, platebniUdaje: null })!;
+      expect(email.text).not.toContain('PLATBA PŘEVODEM');
+      expect(email.html).not.toContain('Variabilní symbol');
+    });
+
+    it('plátce DPH: uvádí sazbu a částku ze snímku', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', {
+        ...plna,
+        dph: { jePlatce: true, sazba: 21, dphKc: 346.93 },
+      })!;
+      expect(email.text).toMatch(/DPH 21 % ve výši 346,93/);
+    });
+
+    it('úloha ze staré fronty (jen celková cena) se pořád vykreslí', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', {
+        cisloObjednavky: '2026-00001',
+        celkovaCena: 2490,
+      })!;
+      expect(email.text).toMatch(/Celkem k úhradě: 2[\s ]490 Kč/);
+      expect(email.text).not.toContain('CO JSTE SI OBJEDNALI');
+    });
+
+    it('mluví neutrálně, ne v ženském rodě', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', plna)!;
+      for (const cast of [email.html, email.text]) {
+        expect(cast).not.toMatch(/jste platila|jste ho odeslala|jste souhlasila/);
+      }
+    });
+  });
+
+  describe('nová objednávka pro majitelku', () => {
+    const data = {
+      orderId: 'ord_1',
+      cisloObjednavky: '2026-00016',
+      jmeno: 'Jana Nováková',
+      polozky: [{ nazev: 'Halenka Siena', velikost: 'M (38)', mnozstvi: 1, celkemKc: 945 }],
+      kUhradeKc: 1054,
+      zpusobPlatby: 'Bankovní převod',
+      zpusobDopravy: 'PPL',
+    };
+
+    it('odkazuje do administrace a nese položky a částku', () => {
+      const email = sestavitEmail('nova-objednavka', data)!;
+      expect(email.predmet).toContain('2026-00016');
+      for (const cast of [email.html, email.text]) {
+        expect(cast).toContain('/admin/objednavky/ord_1');
+        expect(cast).toContain('Halenka Siena');
+        expect(cast).toContain('Jana Nováková');
+      }
+    });
+
+    /* Zpráva leží v cizí schránce – k vyřízení stačí odkaz do administrace. */
+    it('nenese adresu ani telefon kupující', () => {
+      const email = sestavitEmail('nova-objednavka', {
+        ...data,
+        dodani: { adresa: 'Dlouhá 1, Sokolov' },
+        telefon: '+420 777 000 000',
+      })!;
+      expect(email.html).not.toContain('Dlouhá 1');
+      expect(email.text).not.toContain('777');
+    });
+  });
+
   describe('potvrzení odstoupení od smlouvy', () => {
     const prijato = '2026-06-30T22:30:00.000Z';
 
