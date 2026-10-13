@@ -17,8 +17,15 @@ Skript nečeká na budík, ale každých deset minut se ptá: **proběhl od posl
   `sleep` o dobu spánku a slot se minul;
 - **restart nezálohuje dvakrát** — pokus po posledním slotu už je zapsaný;
 - dohnaný běh je vždy po dnešním 04:10, takže **pořád až po retenci**;
-- **neúspěch se opakuje až v dalším slotu**, ne každých deset minut. Po opravě
-  příčiny pusť [ruční zálohu](#ruční-záloha).
+- **neúspěch se zkusí znovu za hodinu** — většina selhání je přechodná a celý den
+  kritické hlášky kvůli něčemu, co se samo spravilo, by jen otupilo pozornost.
+  Ne každých deset minut: nad plným diskem by se `pg_dump` jen točil dokola.
+  Po opravě příčiny jde hned pustit [ruční zálohu](#ruční-záloha);
+- **před `pg_dump` čeká až 5 minut, než databáze přijímá spojení** (`pg_isready`).
+  `depends_on: service_healthy` platí jen pro `docker compose up`. Po startu počítače
+  nebo rebootu serveru nahazuje kontejnery Docker sám a pouští je všechny naráz —
+  první záloha pak sáhla do Postgresu dřív, než naběhl, a skončila na
+  `Connection refused`.
 
 „Pokus" je `mtime` souboru `zalohy/stav.json`, který se zapisuje i při chybě.
 

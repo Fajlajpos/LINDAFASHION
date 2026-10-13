@@ -46,7 +46,11 @@ Consequences worth remembering:
   `./public/uploads` and `./storage`), so `npm run dev` starts it. The loop does **not**
   sleep until 04:10: every ten minutes it asks whether any attempt (`stav.json` mtime)
   happened since the last 04:10 UTC slot. A long `sleep` meant no backup for the whole first
-  day after a deploy and a skipped day after a suspended machine. Missing `stav.json` is
+  day after a deploy and a skipped day after a suspended machine. A failed attempt retries
+  after an hour, not the next day. Before `pg_dump` it waits for `pg_isready`:
+  `depends_on: service_healthy` only applies to `docker compose up` — when Docker itself
+  restarts containers after a boot it starts them all at once, and the first backup hit
+  `Connection refused` before Postgres was up. Missing `stav.json` is
   therefore **critical** on `/admin` — it used to be a mere recommendation only because dev
   had no backups. `.gitattributes` keeps `*.sh` in LF: the script is mounted straight from
   Windows, and a CRLF checkout (`core.autocrlf=true`) makes Alpine `sh` die on `set -eu`.

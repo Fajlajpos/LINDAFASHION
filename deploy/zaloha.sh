@@ -97,6 +97,25 @@ selhat() {
 
 # --- Jeden běh -------------------------------------------------------------
 
+# Jak dlouho čekat na databázi. Postgres po startu obvykle naběhne do pár
+# sekund; po nečistém vypnutí ale přehrává WAL a to trvá déle.
+CEKAT_NA_DB_SEKUND=300
+
+cekat_na_databazi() {
+  zbyva="$CEKAT_NA_DB_SEKUND"
+  while ! pg_isready --host=postgres --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+        > /dev/null 2>&1; do
+    if [ "$zbyva" -le 0 ]; then
+      return 1
+    fi
+    if [ "$zbyva" -eq "$CEKAT_NA_DB_SEKUND" ]; then
+      log "databáze ještě nepřijímá spojení, čekám…"
+    fi
+    sleep 5
+    zbyva=$(( zbyva - 5 ))
+  done
+}
+
 zalohovat() {
   mkdir -p "$DB_DIR" "$SOUBORY_DIR"
   razitko="$(date -u '+%Y-%m-%d_%H%M')"
@@ -110,6 +129,17 @@ zalohovat() {
   # serveru, plný disk) nesmí zůstat ležet pod jménem, které vypadá jako hotová
   # záloha — na to by se přišlo až ve chvíli, kdy je potřeba obnovit.
   db_soubor="$DB_DIR/$razitko.dump"
+
+  # Počkat, až Postgres přijímá spojení. `depends_on: service_healthy` v compose
+  # tohle nezaručí: platí jen pro `docker compose up`, ne když kontejnery po
+  # startu počítače nebo rebootu serveru nahazuje sám Docker. Ten pustí všechno
+  # naráz, záloha po startu sáhla do databáze o vteřinu dřív, než naběhla,
+  # a `pg_dump` skončil na „Connection refused".
+  if ! cekat_na_databazi; then
+    selhat "databáze nepřijímá spojení ani po $CEKAT_NA_DB_SEKUND s"
+    return 1
+  fi
+
   log "zálohuji databázi $POSTGRES_DB…"
 
   if ! PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
@@ -225,15 +255,40 @@ posledni_slot() {
 }
 
 # Kdy proběhl poslední pokus — `mtime` souboru `stav.json`, 0 když chybí.
-#
-# Pokus, ne úspěch: `stav.json` se zapisuje i při chybě. Neúspěšná záloha se tak
-# zopakuje v dalším slotu, ne každých deset minut — opakovat `pg_dump` nad plným
-# diskem by jen přidávalo do logu. Kdo opravil příčinu, pustí `--jednou`.
 posledni_pokus() {
   stat -c '%Y' "$STAV" 2>/dev/null || echo 0
 }
 
+posledni_selhal() {
+  grep -q '"uspech": false' "$STAV" 2>/dev/null
+}
+
+# Za jak dlouho zkusit neúspěšnou zálohu znovu.
+#
+# Dřív až v dalším slotu, tedy skoro za den. Jenže většina selhání je
+# přechodná — databáze po rebootu ještě nenaběhla, síť chvíli nejela — a celý
+# den by administrace kriticky hlásila něco, co se samo spravilo. Každých deset
+# minut ale ne: nad plným diskem by se `pg_dump` jen točil a plnil log.
+OPAKOVAT_PO_SEKUNDACH=3600
+
+# Je čas zálohovat? Od posledního slotu žádný pokus, nebo poslední pokus selhal
+# a od něj uplynula `OPAKOVAT_PO_SEKUNDACH`.
+je_na_rade() {
+  pokus="$(posledni_pokus)"
+  if [ "$pokus" -lt "$(posledni_slot)" ]; then
+    return 0
+  fi
+  if posledni_selhal && [ $(( $(date -u '+%s') - pokus )) -ge "$OPAKOVAT_PO_SEKUNDACH" ]; then
+    return 0
+  fi
+  return 1
+}
+
 oznamit_dalsi() {
+  if posledni_selhal; then
+    log "další pokus nejdřív za $(( OPAKOVAT_PO_SEKUNDACH / 60 )) min"
+    return
+  fi
   cekat=$(( $(posledni_slot) + 86400 - $(date -u '+%s') ))
   log "další záloha za $(( cekat / 3600 )) h $(( (cekat % 3600) / 60 )) min"
 }
@@ -244,13 +299,13 @@ case "${1:---smycka}" in
     ;;
   --smycka)
     log "zálohy zapnuté – denně v $ZALOHY_CAS UTC, držím $ZALOHY_DNU dní, ukládám do $ZALOHY_DIR"
-    if [ "$(posledni_pokus)" -ge "$(posledni_slot)" ]; then
+    if ! je_na_rade; then
       oznamit_dalsi
     fi
     while true; do
-      if [ "$(posledni_pokus)" -lt "$(posledni_slot)" ]; then
+      if je_na_rade; then
         # `|| true`: neúspěšná záloha nesmí shodit kontejner. Stav je zapsaný,
-        # administrace to ukáže a v dalším slotu se to zkusí znovu.
+        # administrace to ukáže a za hodinu se to zkusí znovu.
         zalohovat || true
         oznamit_dalsi
       fi
