@@ -7,7 +7,59 @@
  * Dvě pravidla, která musí platit vždy:
  *   • Volitelné kategorie startují VYPNUTÉ. Předzaškrtnutý souhlas GDPR neuznává.
  *   • Skript se smí načíst až po souhlasu, ne dřív a pak "vypnout".
+ *
+ * A tři, které se doplnily v 2026-10:
+ *   • Souhlas platí k **verzi** zásad a **12 měsíců**. Uložená volba bez verze
+ *     nebo k jinému textu se nepočítá a lišta se zeptá znovu – souhlas s textem,
+ *     který návštěvnice neviděla, není informovaný.
+ *   • Nabízí se jen to, co opravdu běží. Bez `NEXT_PUBLIC_GA_ID` se analytika
+ *     v liště neobjeví, bez obou ID se lišta neukáže vůbec – žádat souhlas
+ *     s nástrojem, který web nespouští, je slib, který nic nekryje.
+ *   • Když později přibude nástroj, se kterým se při minulém rozhodnutí
+ *     nepočítalo, lišta se zeptá znovu (`nabidnuto`). Jinak by „Povolit vše"
+ *     z doby bez Pixelu tiše pokrylo i Pixel.
  */
+
+/**
+ * Verze textu zásad cookies.
+ *
+ * Zvedněte ji při každé věcné změně zásad (`/cookies`, texty lišty). Zapisuje
+ * se do serverové evidence a prohlížeč podle ní pozná, že uložený souhlas
+ * patří ke starému textu.
+ *
+ * 2026-10-13: pryč nepravdivé „anonymně", přibyl seznam cookies, příjemci
+ * a předávání do USA.
+ */
+export const VERZE_ZASAD_COOKIES = '2026-10-13';
+
+/**
+ * Jak dlouho platí rozhodnutí, než se lišta zeptá znovu.
+ *
+ * Zákon lhůtu nestanoví; 12 měsíců je obvyklá praxe dozorových úřadů.
+ * Platí i pro odmítnutí – i to se po roce smí zeptat znovu.
+ */
+export const PLATNOST_SOUHLASU_DNU = 365;
+
+/*
+ * Která volitelná kategorie má nástroj. `process.env.NEXT_PUBLIC_*` se vkládá
+ * při buildu doslovně, proto přímé čtení, ne `process.env[klic]`.
+ */
+export function jeAnalytikaNastavena(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_GA_ID?.trim());
+}
+
+export function jeMarketingNastaven(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim());
+}
+
+export interface NastaveneKategorie {
+  analyticke: boolean;
+  marketingove: boolean;
+}
+
+export function nastaveneKategorie(): NastaveneKategorie {
+  return { analyticke: jeAnalytikaNastavena(), marketingove: jeMarketingNastaven() };
+}
 
 export interface SouhlasCookies {
   /** Košík, přihlášení, bezpečnost. Nelze odmítnout, proto tu není jako volba. */
@@ -38,26 +90,73 @@ export const VYCHOZI_SOUHLAS: SouhlasCookies = {
 /** Událost na `window`, aby skripty reagovaly na změnu bez načtení stránky. */
 export const UDALOST_ZMENA_SOUHLASU = 'linda:souhlas-zmenen';
 
+/** Co se ukládá do `localStorage` – volba plus to, k čemu se vztahuje. */
+interface UlozenySouhlas {
+  analyticke: boolean;
+  marketingove: boolean;
+  verze: string;
+  /** ISO 8601 – kdy návštěvnice rozhodla. */
+  rozhodnutoAt: string;
+  /** Které kategorie lišta v tu chvíli nabízela. */
+  nabidnuto: NastaveneKategorie;
+}
+
+/**
+ * Přečte uložený řetězec a rozhodne, jestli rozhodnutí ještě platí.
+ *
+ * Čistá funkce bez `window`, aby se dala testovat. `null` = zeptat se znovu:
+ * nic uloženo, poškozený JSON, jiná verze zásad, starší než
+ * `PLATNOST_SOUHLASU_DNU`, nebo dnes běží nástroj, který tehdy nabídnut nebyl.
+ *
+ * Volby starších verzí lišty (bez `verze`) neplatí schválně: byly dané
+ * k textu, který analytiku nepravdivě označoval za anonymní.
+ */
+export function platnySouhlas(
+  ulozeno: string | null,
+  ted: Date,
+  nastaveno: NastaveneKategorie
+): SouhlasCookies | null {
+  if (!ulozeno) return null;
+
+  let data: Partial<UlozenySouhlas>;
+  try {
+    data = JSON.parse(ulozeno);
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== 'object') return null;
+
+  if (data.verze !== VERZE_ZASAD_COOKIES) return null;
+
+  const kdy = new Date(data.rozhodnutoAt ?? '').getTime();
+  if (Number.isNaN(kdy)) return null;
+  if (ted.getTime() - kdy > PLATNOST_SOUHLASU_DNU * 24 * 60 * 60 * 1000) return null;
+
+  const nabidnuto = data.nabidnuto;
+  if (nastaveno.analyticke && !nabidnuto?.analyticke) return null;
+  if (nastaveno.marketingove && !nabidnuto?.marketingove) return null;
+
+  return {
+    nezbytne: true,
+    // Souhlas s nástrojem, který už neběží, se nevrací – kdyby se ID později
+    // vrátilo, nesmí se spustit na rozhodnutí, které je dávno pryč z oběhu.
+    analyticke: nastaveno.analyticke && data.analyticke === true,
+    marketingove: nastaveno.marketingove && data.marketingove === true,
+  };
+}
+
 /** Vrací `null`, dokud návštěvnice nerozhodla – podle toho se zobrazuje lišta. */
 export function nacistSouhlas(): SouhlasCookies | null {
   if (typeof window === 'undefined') return null;
 
-  const ulozeno = window.localStorage.getItem(KLIC_SOUHLASU);
-  if (!ulozeno) return null;
-
   try {
-    const data = JSON.parse(ulozeno) as Partial<SouhlasCookies> & {
-      // Starší verze lišty ukládala anglické názvy; ať se souhlas neztratí.
-      analytical?: boolean;
-      marketing?: boolean;
-    };
-
-    return {
-      nezbytne: true,
-      analyticke: Boolean(data.analyticke ?? data.analytical ?? false),
-      marketingove: Boolean(data.marketingove ?? data.marketing ?? false),
-    };
+    return platnySouhlas(
+      window.localStorage.getItem(KLIC_SOUHLASU),
+      new Date(),
+      nastaveneKategorie()
+    );
   } catch {
+    // Zablokované úložiště (soukromé okno, zakázaná data webu) = nerozhodnuto.
     return null;
   }
 }
@@ -97,6 +196,9 @@ export function odeslatSouhlasNaServer(souhlas: SouhlasCookies): void {
 
   void fetch('/api/souhlas', {
     method: 'POST',
+    // Odvolání souhlasu hned potom znovu načte stránku. Bez `keepalive` by
+    // prohlížeč požadavek při odchodu zrušil a v evidenci by odvolání chybělo.
+    keepalive: true,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       subjekt: idSubjektu(),
@@ -111,7 +213,22 @@ export function odeslatSouhlasNaServer(souhlas: SouhlasCookies): void {
 export function ulozitSouhlas(souhlas: SouhlasCookies): void {
   if (typeof window === 'undefined') return;
 
-  window.localStorage.setItem(KLIC_SOUHLASU, JSON.stringify(souhlas));
+  const nabidnuto = nastaveneKategorie();
+  const zaznam: UlozenySouhlas = {
+    // Souhlas jde jen s tím, co lišta nabídla – „Povolit vše" bez Pixelu
+    // nesmí uložit `marketingove: true` pro Pixel, který přibude později.
+    analyticke: nabidnuto.analyticke && souhlas.analyticke,
+    marketingove: nabidnuto.marketingove && souhlas.marketingove,
+    verze: VERZE_ZASAD_COOKIES,
+    rozhodnutoAt: new Date().toISOString(),
+    nabidnuto,
+  };
+
+  try {
+    window.localStorage.setItem(KLIC_SOUHLASU, JSON.stringify(zaznam));
+  } catch {
+    // Zablokované úložiště: volba platí aspoň do konce návštěvy přes událost níž.
+  }
   window.dispatchEvent(new CustomEvent<SouhlasCookies>(UDALOST_ZMENA_SOUHLASU, { detail: souhlas }));
 }
 

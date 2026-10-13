@@ -25,14 +25,9 @@
 import { db } from './db';
 import type { Prisma, TypSouhlasu } from '@prisma/client';
 
-/**
- * Verze textu zásad cookies.
- *
- * Zvedněte ji při každé věcné změně zásad. Bez toho evidence sice ukáže, že
- * návštěvnice souhlasila, ale ne s čím — a souhlas s textem, který v té době
- * neplatil, je stejně nepoužitelný jako žádný.
- */
-export const VERZE_ZASAD_COOKIES = '2026-08-18';
+/* Verze zásad cookies žije v `souhlas-cookies.ts`, protože ji potřebuje i lišta
+   v prohlížeči (souhlas k jiné verzi se nepočítá) a tenhle soubor tahá Prismu. */
+export { VERZE_ZASAD_COOKIES } from './souhlas-cookies';
 
 export interface VstupSouhlasu {
   typ: TypSouhlasu;

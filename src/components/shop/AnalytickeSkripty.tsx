@@ -17,6 +17,13 @@ import {
  *
  * ID se berou z .env. Dokud tam nejsou, komponenta nevykreslí nic, takže
  * e-shop funguje bez nich úplně stejně.
+ *
+ * Bez `anonymize_ip`: v GA4 ten parametr nedělá nic (IP adresy z EU Google
+ * neukládá nikdy) a v kódu jen vzbuzoval dojem, že měření je anonymní. Není –
+ * `_ga` nese identifikátor, data jsou pseudonymní, a tak je to i popsané.
+ *
+ * Skripty se po odvolání souhlasu samy neodnačtou; o to se stará
+ * `CookieBanner` znovunačtením stránky.
  */
 export function AnalytickeSkripty() {
   const [souhlas, setSouhlas] = useState<SouhlasCookies | null>(null);
@@ -42,7 +49,7 @@ export function AnalytickeSkripty() {
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', '${gaId}', { anonymize_ip: true });
+              gtag('config', '${gaId}');
             `}
           </Script>
         </>

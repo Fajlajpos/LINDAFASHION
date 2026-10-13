@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Mail, ShieldCheck } from 'lucide-react';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { RETENCE } from '@/lib/retence';
+import { jeAnalytikaNastavena, jeMarketingNastaven } from '@/lib/souhlas-cookies';
 
 export const dynamic = 'force-dynamic';
 
@@ -278,6 +279,22 @@ export default async function GDPRPage() {
             země, děje se tak na základě standardních smluvních doložek podle čl. 46 GDPR, nebo
             rozhodnutí o odpovídající ochraně.
           </p>
+
+          {/* Obecná věta výš stačí, dokud žádný takový nástroj neběží. S GA4 nebo
+              Pixelem se předání do USA děje doopravdy a musí být pojmenované. */}
+          {(jeAnalytikaNastavena() || jeMarketingNastaven()) && (
+            <p>
+              S vaším souhlasem s cookies mohou být údaje předány do USA –{' '}
+              {[
+                jeAnalytikaNastavena() && 'společnosti Google LLC (Google Analytics)',
+                jeMarketingNastaven() && 'společnosti Meta Platforms, Inc. (Meta Pixel)',
+              ]
+                .filter(Boolean)
+                .join(' a ')}
+              . Obě jsou certifikované v rámci EU-US Data Privacy Framework, pro který Evropská
+              komise 10. 7. 2023 rozhodla o odpovídající ochraně (čl. 45 GDPR).
+            </p>
+          )}
         </Sekce>
 
         <Sekce cislo={4} nadpis="Jaká máte práva">

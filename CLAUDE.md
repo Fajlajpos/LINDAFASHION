@@ -231,6 +231,8 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
   - Surfaces **overlapping a photo** (category card sunk into the hero): `shadow-neuFloat`.
     It drops the white highlight — over a dark image the highlight has nothing to sit on
     and paints a milky halo around the element. Only the warm espresso drop shadow is left.
+    **Same for dialogs over the dimmed `bg-black/60` backdrop** (size guide, cookie
+    settings): with `shadow-neuLg` they glowed with a white halo the owner rejected.
   - **Grain:** a `feTurbulence` noise layer on `body::before` (fixed, `multiply`, 0.15)
     gives the flat ground material. Opacity is measured, not guessed — turbulence returns
     variable alpha, so 0.05 yields a 4/255 spread (invisible) and 0.15 yields ~12. It is
@@ -591,6 +593,22 @@ deleted with her browser history. That is not evidence.
 - The cookie subject id is `crypto.randomUUID()` and deliberately **not** derived from
   IP or a browser fingerprint: such a key would itself be the tracking that the consent
   is supposed to authorize.
+- **Withdrawal reloads the page.** `next/script` never unloads GA4 or the Pixel, and GA4
+  reports `pushState` navigations by itself — so after „Pouze nezbytné" it kept measuring
+  and recreated the deleted `_ga` on the next click. `CookieBanner` now deletes the cookies
+  and calls `location.reload()`; the evidence POST carries `keepalive` so the reload does
+  not cancel it.
+- **A stored choice is valid only for `VERZE_ZASAD_COOKIES`, for 12 months, and for the
+  tools that were offered** (`platnySouhlas` in [souhlas-cookies.ts](src/lib/souhlas-cookies.ts),
+  covered by its test). Bump the version on every material change of `/cookies` or the
+  banner copy — the version moved there from `souhlasy.ts` because the browser needs it.
+- **Offer only what runs.** Categories exist only while their `NEXT_PUBLIC_*` id is set;
+  with neither id the banner does not appear at all and `/cookies` says nothing optional
+  is used. GA4 is described as **pseudonymous, never „anonymní"** — `_ga` carries an id,
+  and consent given on a false description is not informed. „Pouze nezbytné" has exactly
+  the styling of „Povolit vše": a faded reject button is the nudge EDPB and ÚOOÚ call
+  deceptive design. `/cookies` lists every cookie and storage key with its duration; a new
+  `localStorage` key belongs there too.
 - Recording never blocks the user-facing action. `zaznamenatSouhlas` swallows failures
   and `odeslatSouhlasNaServer` is fire-and-forget — an unreachable database must not
   make the cookie bar unclickable, and consent is valid because it was given, not

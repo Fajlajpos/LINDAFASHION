@@ -6,11 +6,27 @@ import { ShieldCheck, Settings, X, Check } from 'lucide-react';
 import {
   VYCHOZI_SOUHLAS,
   nacistSouhlas,
+  nastaveneKategorie,
   odeslatSouhlasNaServer,
   smazatSledovaciCookies,
   ulozitSouhlas,
   type SouhlasCookies,
 } from '@/lib/souhlas-cookies';
+
+/* Konstanta modulu, ne stav: `NEXT_PUBLIC_*` je vložené při buildu, za běhu
+   se nemění. */
+const NASTAVENO = nastaveneKategorie();
+const NECO_VOLITELNEHO = NASTAVENO.analyticke || NASTAVENO.marketingove;
+
+/** Věta pro lištu – jen o nástrojích, které opravdu běží. */
+function popisVolitelnych(): string {
+  const casti: string[] = [];
+  if (NASTAVENO.analyticke) casti.push('měříme návštěvnost přes Google Analytics');
+  if (NASTAVENO.marketingove) {
+    casti.push('měříme účinnost reklam na Facebooku a Instagramu přes Meta Pixel');
+  }
+  return casti.join(' a ');
+}
 
 interface CookieBannerProps {
   isOpenExternal?: boolean;
@@ -32,8 +48,9 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
   useEffect(() => {
     const ulozeny = nacistSouhlas();
 
-    // Lišta se ukáže jen tomu, kdo ještě nerozhodl.
-    if (!ulozeny && !isOpenExternal) {
+    // Lišta se ukáže jen tomu, kdo ještě nerozhodl – a jen když je vůbec
+    // o čem rozhodovat. Bez GA i Pixelu web nic volitelného neukládá.
+    if (!ulozeny && !isOpenExternal && NECO_VOLITELNEHO) {
       setShowBanner(true);
     }
 
@@ -47,8 +64,16 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     }
   }, [isOpenExternal]);
 
-  const saveConsent = (souhlas: SouhlasCookies) => {
+  const saveConsent = (volba: SouhlasCookies) => {
     const predchozi = nacistSouhlas();
+
+    // Souhlasit jde jen s tím, co běží – stejné maskování jako v `ulozitSouhlas`,
+    // aby evidence na serveru neříkala víc než prohlížeč.
+    const souhlas: SouhlasCookies = {
+      nezbytne: true,
+      analyticke: NASTAVENO.analyticke && volba.analyticke,
+      marketingove: NASTAVENO.marketingove && volba.marketingove,
+    };
 
     ulozitSouhlas(souhlas);
 
@@ -66,13 +91,27 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
     setShowSettingsModal(false);
     if (onCloseExternal) onCloseExternal();
 
-    // Odvolání souhlasu musí odstranit i cookies, které skripty stihly založit –
-    // samotné nenačtení skriptu při další návštěvě nestačí.
+    /*
+     * Odvolání musí platit hned, ne až při příští návštěvě.
+     *
+     * Jednou načtený GA4 a Pixel v otevřené stránce zůstanou, i když je
+     * `AnalytickeSkripty` přestane vykreslovat – `next/script` skript
+     * neodnačte. GA4 navíc sám hlásí přechody mezi stránkami (pushState),
+     * takže po kliknutí na „Pouze nezbytné" měřil dál a smazanou `_ga` si
+     * při dalším přechodu založil znovu. Odvolání tak bylo jen naoko.
+     *
+     * Jediný spolehlivý konec obou knihoven je zahodit stránku: smazat
+     * cookies a načíst ji znovu – už bez skriptů. Záznam pro evidenci odchází
+     * s `keepalive`, takže ho znovunačtení nezruší.
+     */
     const odvolano =
       (predchozi?.analyticke && !souhlas.analyticke) ||
       (predchozi?.marketingove && !souhlas.marketingove);
 
-    if (odvolano) smazatSledovaciCookies();
+    if (odvolano) {
+      smazatSledovaciCookies();
+      window.location.reload();
+    }
   };
 
   const handleAcceptAll = () => {
@@ -100,10 +139,13 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
               <div className="space-y-1">
                 <h4 className="font-serif text-lg text-linda-sand">Ochrana vašeho soukromí &amp; Cookies</h4>
                 <p className="text-xs leading-relaxed text-linda-cream/80">
-                  Tento e-shop používá soubory cookies pro zajištění správného fungování košíku a přihlášení (nezbytné), pro analýzu návštěvnosti a pro přizpůsobení reklam na naši nabídku (marketingové). Detaily najdete v našich{' '}
+                  Nezbytné soubory pro košík a přihlášení používáme vždy. S vaším souhlasem navíc{' '}
+                  {popisVolitelnych()}. Souhlas můžete kdykoliv odvolat v patičce webu. Podrobnosti
+                  najdete v{' '}
                   <Link href="/cookies" className="text-linda-sand underline underline-offset-2">
                     zásadách používání cookies
-                  </Link>.
+                  </Link>
+                  .
                 </p>
               </div>
             </div>
@@ -119,10 +161,14 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
                 <Settings className="h-3.5 w-3.5" aria-hidden="true" />
                 Nastavení
               </button>
+              {/* Odmítnutí vypadá přesně jako souhlas. Dřív bylo skoro průhledné
+                  vedle plného koňakového „Povolit vše" – takové postrčení
+                  k souhlasu dozorové úřady (EDPB, ÚOOÚ) hodnotí jako
+                  zavádějící design a souhlas získaný přes něj jako nesvobodný. */}
               <button
                 type="button"
                 onClick={handleRejectOptional}
-                className="min-h-touch cursor-pointer rounded-full bg-white/[0.04] px-4 text-xs font-medium text-linda-cream shadow-neuOnDark transition-all duration-200 hover:bg-white/10 active:shadow-neuOnDarkInset"
+                className="min-h-touch cursor-pointer rounded-full bg-linda-cognac px-5 text-xs font-semibold text-white shadow-neuOnDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuOnDarkInset"
               >
                 Pouze nezbytné
               </button>
@@ -141,7 +187,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
       {/* Modal s detailním nastavením kategorií */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="relative my-auto w-full max-w-lg space-y-6 rounded-2xl bg-linda-cream p-6 text-linda-espresso shadow-neuLg sm:p-8">
+          <div className="relative my-auto w-full max-w-lg space-y-6 rounded-2xl bg-linda-cream p-6 text-linda-espresso shadow-neuFloat sm:p-8">
             <button
               type="button"
               onClick={() => {
@@ -157,7 +203,9 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
             <div>
               <h3 className="font-serif text-2xl text-linda-espresso">Nastavení souborů cookies</h3>
               <p className="mt-1 text-xs text-linda-espresso/70">
-                Zde můžete udělit nebo odvolat souhlas s jednotlivými typy souborů cookies.
+                {NECO_VOLITELNEHO
+                  ? 'Zde můžete udělit nebo odvolat souhlas s jednotlivými typy souborů cookies. Odvolání platí okamžitě.'
+                  : 'Tento e-shop teď nepoužívá žádné analytické ani marketingové nástroje, jen nezbytné soubory pro košík a přihlášení. Není tedy s čím souhlasit.'}
               </p>
             </div>
 
@@ -165,9 +213,14 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
                 stejný jazyk jako vstupní pole na zbytku webu. */}
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+                {/* `span`, ne `h4`: globální styl nadpisů ho dělal patkovým,
+                    zatímco obě volitelné kategorie pod ním jsou bezpatkové. */}
                 <div>
-                  <h4 className="text-sm font-semibold text-linda-espresso">Technické &amp; Nezbytné (Povinné)</h4>
-                  <p className="mt-0.5 text-linda-espresso/70">Potřebné pro košík, autentizaci a bezpečnost webu.</p>
+                  <span className="block text-sm font-semibold text-linda-espresso">Nezbytné (vždy zapnuté)</span>
+                  <p className="mt-0.5 text-linda-espresso/70">
+                    Košík, oblíbené, přihlášení a zapamatování vaší volby. Bez nich web nefunguje,
+                    proto souhlas nepotřebují.
+                  </p>
                 </div>
                 <input
                   type="checkbox"
@@ -181,42 +234,76 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
               {/* Celý řádek je `<label>`: samotné zaškrtávátko měří 16 px, což
                   je třetina dotykového minima. Souhlas se má dát potvrdit
                   napoprvé, ne po třetím pokusu. */}
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
-                <span>
-                  <span className="block text-sm font-semibold text-linda-espresso">Analytické cookies</span>
-                  <span className="mt-0.5 block text-linda-espresso/70">Pomáhají nám anonymně měřit návštěvnost a zlepšovat web.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={prefs.analyticke}
-                  onChange={(e) => setPrefs({ ...prefs, analyticke: e.target.checked })}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
-                />
-              </label>
+              {/* „Anonymně" tu stálo neprávem: GA4 pracuje s identifikátorem
+                  v cookie `_ga`, data jsou pseudonymní. Souhlas daný na
+                  nepravdivou informaci není informovaný (čl. 4 bod 11 GDPR). */}
+              {NASTAVENO.analyticke && (
+                <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+                  <span>
+                    <span className="block text-sm font-semibold text-linda-espresso">Analytické cookies (Google Analytics)</span>
+                    <span className="mt-0.5 block text-linda-espresso/70">
+                      Měří, jak se web používá, abychom ho mohli zlepšovat. Google vám přidělí
+                      identifikátor a data mohou být předána do USA.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={prefs.analyticke}
+                    onChange={(e) => setPrefs({ ...prefs, analyticke: e.target.checked })}
+                    className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
+                  />
+                </label>
+              )}
 
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
-                <span>
-                  <span className="block text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</span>
-                  <span className="mt-0.5 block text-linda-espresso/70">Slouží k zobrazování relevantních reklam na naši nabídku.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={prefs.marketingove}
-                  onChange={(e) => setPrefs({ ...prefs, marketingove: e.target.checked })}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
-                />
-              </label>
+              {NASTAVENO.marketingove && (
+                <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+                  <span>
+                    <span className="block text-sm font-semibold text-linda-espresso">Marketingové cookies (Meta Pixel)</span>
+                    <span className="mt-0.5 block text-linda-espresso/70">
+                      Měří účinnost našich reklam na Facebooku a Instagramu a umožní vám je
+                      zobrazit. Údaje získává i Meta a mohou být předány do USA.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={prefs.marketingove}
+                    onChange={(e) => setPrefs({ ...prefs, marketingove: e.target.checked })}
+                    className="h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
+                  />
+                </label>
+              )}
             </div>
 
+            <p className="text-xs text-linda-espresso/70">
+              Seznam všech souborů a doby jejich uložení najdete v{' '}
+              <Link href="/cookies" className="font-semibold text-linda-cognac underline underline-offset-2">
+                zásadách používání cookies
+              </Link>
+              .
+            </p>
+
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleSaveCustom}
-                className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
-              >
-                <Check className="h-4 w-4" aria-hidden="true" />
-                Uložit mé předvolby
-              </button>
+              {NECO_VOLITELNEHO ? (
+                <button
+                  type="button"
+                  onClick={handleSaveCustom}
+                  className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+                >
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Uložit mé předvolby
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    if (onCloseExternal) onCloseExternal();
+                  }}
+                  className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cognac px-6 text-xs font-medium text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
+                >
+                  Zavřít
+                </button>
+              )}
             </div>
           </div>
         </div>

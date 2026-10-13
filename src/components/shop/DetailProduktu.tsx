@@ -529,7 +529,7 @@ export function DetailProduktu({
             aria-labelledby="pruvodce-nadpis"
             /* Klik uvnitř okna nesmí propadnout na zástěnu a zavřít ho. */
             onClick={(e) => e.stopPropagation()}
-            className="relative my-auto w-full max-w-md space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neuLg"
+            className="relative my-auto w-full max-w-md space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neuFloat"
           >
             <h2 id="pruvodce-nadpis" className="font-serif text-2xl text-linda-espresso">
               Průvodce velikostmi a jak se měřit
