@@ -274,6 +274,7 @@ export const Footer: React.FC<FooterProps> = ({
                   siteKey={captchaSiteKey}
                   onToken={setCaptcha}
                   resetSignal={resetCaptchy}
+                  naTmavem
                 />
 
                 {chyba && (

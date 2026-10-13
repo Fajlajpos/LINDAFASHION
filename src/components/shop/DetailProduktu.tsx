@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import {
   AlertCircle,
@@ -513,8 +514,14 @@ export function DetailProduktu({
         </div>
       </div>
 
-      {/* Průvodce velikostmi */}
-      {prubvodceOtevren && (
+      {/* Průvodce velikostmi – přes portál do `body`, stejně jako `Vyber`.
+          Komponenta vrací fragment, takže zástěna byla přímým potomkem obalu
+          stránky se `space-y-16` – a ten každému dalšímu potomkovi přidává
+          `margin-top: 4rem`. `fixed inset-0` s okrajem 64 px začínal pod
+          hlavičkou (změřeno: `top = 64`), takže menu nahoře zůstalo světlé
+          a klikatelné. V `body` žádný takový okraj není. Otevírá se až
+          kliknutím, takže `document` existuje. */}
+      {prubvodceOtevren && createPortal(
         /* Zástěna skroluje, ne obsah okna: `items-center` přes `overflow-y-auto`
            drží okno na středu, dokud se vejde, a jakmile přeroste (telefon na
            šířku, zvětšené systémové písmo), začne se dát doskrolovat. Bez toho
@@ -561,7 +568,8 @@ export function DetailProduktu({
               Rozumím
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

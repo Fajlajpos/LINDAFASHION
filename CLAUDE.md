@@ -233,6 +233,11 @@ layout, UX, accessibility and to fill genuine gaps, then add the gap as a token.
     and paints a milky halo around the element. Only the warm espresso drop shadow is left.
     **Same for dialogs over the dimmed `bg-black/60` backdrop** (size guide, cookie
     settings): with `shadow-neuLg` they glowed with a white halo the owner rejected.
+    Such a dialog goes to `document.body` through `createPortal`. The size guide was a
+    direct child of the page wrapper's `space-y-16`, which gives every following sibling
+    `margin-top: 4rem` — a `fixed inset-0` backdrop with that margin started 64 px down,
+    exactly under the header, and left the menu bright and clickable. Same trap for any
+    `fixed` element placed inside a `space-y-*` container.
   - **Grain:** a `feTurbulence` noise layer on `body::before` (fixed, `multiply`, 0.15)
     gives the flat ground material. Opacity is measured, not guessed — turbulence returns
     variable alpha, so 0.05 yields a 4/255 spread (invisible) and 0.15 yields ~12. It is
@@ -386,9 +391,15 @@ What is still missing:
   renders nothing without `TURNSTILE_SITE_KEY`. Both halves must stay coupled: server-side
   checking without a widget would reject every submission the moment `.env` is filled in.
   A Cloudflare outage is also let through on purpose — a closed contact form costs more
-  than the spam, and the per-IP limiter still applies. Wired into `/api/kontakt`; other
-  public forms take the same two lines (`captcha` in the schema, `overitCaptchu` after
-  `parse`, `<Captcha>` before the submit button).
+  than the spam, and the per-IP limiter still applies. Wired into all five public forms
+  (contact, newsletter in the footer and on the homepage, registration, stock watch); a new
+  one takes the same two lines (`captcha` in the schema, `overitCaptchu` after `parse`,
+  `<Captcha>` inside the `<form>`, before the submit button).
+  **The Cloudflare script loads on first interaction with the form, never on render.** The
+  footer newsletter is on every page, so an eager widget would hand Cloudflare the IP of
+  every page view once the key is set — and the shop would lose the property that browsing
+  sends nothing anywhere. `Captcha` waits for `focusin` / `pointerdown` / `input` on its
+  enclosing `<form>`; outside a form it activates at once.
 - **Payments (GoPay) are wired end to end** and switch on with `GOPAY_*` in `.env` — the
   `zpusobPlatby` enum checks `jeNastaveno()` at request time rather than listing values, so
   no code changes when the keys land. Three rules worth keeping:
@@ -618,7 +629,12 @@ deleted with her browser history. That is not evidence.
   `cookiefirst-id`, Application Insights telemetry (`AI_buffer`) and pulls OpenStreetMap
   tiles and Google Fonts. We cannot switch that off and it does not belong in our settings
   — it loads only when she opens the map and asks for its own consent there. `/cookies`
-  describes it, together with the QR image from `api.qrserver.com` and Turnstile.
+  describes it, together with Turnstile.
+- **The payment QR is generated on our server** (`qrPlatbaSvg` in [qr-code.ts](src/lib/qr-code.ts),
+  `qrcode` package, inlined as a `data:` SVG). It used to be an `<img>` from
+  `api.qrserver.com`, so the customer's browser sent a third party her IP plus account
+  number, amount and VS in the URL — a recipient with no contract, and an outage hid the QR
+  mid-payment. Do not put an external QR service back.
 - Recording never blocks the user-facing action. `zaznamenatSouhlas` swallows failures
   and `odeslatSouhlasNaServer` is fire-and-forget — an unreachable database must not
   make the cookie bar unclickable, and consent is valid because it was given, not

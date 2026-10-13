@@ -41,10 +41,10 @@ nebo potvrzení o akceptaci podmínek.
 | 4 | Zásilkovna / PPL / Česká pošta | samostatný správce | Jméno, adresa, telefon, e-mail | ☐ nevyřešeno | |
 | 5 | Google (GA4) | zpracovatel / společný správce | Identifikátory a chování na webu | ☐ nevyřešeno | |
 | 6 | Meta (Pixel) | společní správci (čl. 26) | Identifikátory a chování na webu | ☐ nevyřešeno | |
-| 7 | Cloudflare (Turnstile, případně CDN) | zpracovatel | IP adresa, technické údaje o požadavku | ☐ nevyřešeno | |
+| 7 | Cloudflare (Turnstile, případně CDN) | zpracovatel | IP adresa, technické údaje o požadavku — jen od toho, kdo začne vyplňovat formulář (skript se načítá až po kliknutí do něj, ne při prohlížení) | ☐ nevyřešeno | |
 | 8 | Účetní / daňový poradce | zpracovatel (nebo samostatný správce) | Fakturační údaje | ☐ nevyřešeno | |
 | 9 | Zálohovací služba, pokud je jiná než hosting | zpracovatel | Kopie celé databáze | ☑ netýká se — zálohy zůstávají na serveru hostingu (řádek 1), žádný další subjekt se jich nedotkne. Změní se, jakmile se začnou odvážet jinam (cloudové úložiště, cizí NAS). Viz [`zalohy-a-obnova.md`](zalohy-a-obnova.md) | |
-| 10 | api.qrserver.com (obrázek QR platby) | samostatný správce | IP adresa zákaznice; v adrese obrázku číslo účtu, částka a variabilní symbol | ☐ nevyřešeno | |
+| 10 | ~~api.qrserver.com (obrázek QR platby)~~ | — | — | ☑ netýká se — QR kód se od 2026-10 generuje na našem serveru (`qrPlatbaSvg` v `src/lib/qr-code.ts`), prohlížeč zákaznice se na žádnou cizí službu neobrací | |
 
 **Google a Meta se spouštějí až po souhlasu s cookies** — do té doby se z webu
 neodesílá nic (viz `src/lib/souhlas-cookies.ts`). Smlouva je ale potřeba **dřív**,

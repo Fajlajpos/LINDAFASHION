@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 /**
  * Widget Cloudflare Turnstile.
@@ -82,9 +82,14 @@ interface Props {
   onToken: (token: string | null) => void;
   /** Změna hodnoty vyžádá nový token (po neúspěšném odeslání formuláře). */
   resetSignal?: number;
+  /**
+   * Formulář sedí na tmavé ploše (patička). Vysvětlující věta byla napevno
+   * `espresso` – na čokoládové patičce hnědá na hnědé, tedy neviditelná.
+   */
+  naTmavem?: boolean;
 }
 
-export function Captcha({ siteKey, onToken, resetSignal = 0 }: Props) {
+export function Captcha({ siteKey, onToken, resetSignal = 0, naTmavem = false }: Props) {
   const kontejner = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const popis = useId();
@@ -94,8 +99,43 @@ export function Captcha({ siteKey, onToken, resetSignal = 0 }: Props) {
   const onTokenRef = useRef(onToken);
   onTokenRef.current = onToken;
 
+  /*
+   * Skript Cloudflaru se načte až ve chvíli, kdy návštěvnice začne formulář
+   * vyplňovat – ne při vykreslení.
+   *
+   * Newsletter je v patičce, tedy na každé stránce. Načítat Turnstile hned by
+   * znamenalo, že s vyplněným klíčem dostane Cloudflare IP adresu každého
+   * zobrazení každé stránky, i od lidí, kteří formulář nikdy nevyplní – a web,
+   * který při prohlížení nic neukládá ani nikam neposílá, by tím o tu vlastnost
+   * přišel. Ochrana formuláře potřebuje ověřit jen toho, kdo ho odesílá.
+   *
+   * Spouštěč je první `focusin`, `pointerdown` nebo `input` uvnitř obalového
+   * `<form>` (`pointerdown` kvůli Safari, které tlačítka kliknutím nefokusuje).
+   * Do odeslání má widget čas, než se vypíše e-mail; kdo by odeslal dřív, než
+   * token dorazí, dostane od serveru hlášku u pole a captcha se resetuje.
+   * Bez obalového formuláře se aktivuje hned, jako dřív.
+   */
+  const [aktivni, setAktivni] = useState(false);
+
   useEffect(() => {
-    if (!siteKey || !kontejner.current) return;
+    if (!siteKey || aktivni || !kontejner.current) return;
+
+    const formular = kontejner.current.closest('form');
+    if (!formular || formular.contains(document.activeElement)) {
+      setAktivni(true);
+      return;
+    }
+
+    const aktivovat = () => setAktivni(true);
+    const udalosti = ['focusin', 'pointerdown', 'input'] as const;
+    for (const u of udalosti) formular.addEventListener(u, aktivovat);
+    return () => {
+      for (const u of udalosti) formular.removeEventListener(u, aktivovat);
+    };
+  }, [siteKey, aktivni]);
+
+  useEffect(() => {
+    if (!siteKey || !aktivni || !kontejner.current) return;
 
     let zruseno = false;
     const prvek = kontejner.current;
@@ -131,7 +171,7 @@ export function Captcha({ siteKey, onToken, resetSignal = 0 }: Props) {
         widgetId.current = null;
       }
     };
-  }, [siteKey]);
+  }, [siteKey, aktivni]);
 
   useEffect(() => {
     if (resetSignal > 0 && widgetId.current && window.turnstile) {
@@ -145,8 +185,12 @@ export function Captcha({ siteKey, onToken, resetSignal = 0 }: Props) {
   return (
     <div className="space-y-1.5">
       <div ref={kontejner} aria-describedby={popis} />
-      <p id={popis} className="text-[11px] leading-relaxed text-linda-espresso/70">
-        Formulář chrání Cloudflare Turnstile proti automatickému odesílání.
+      <p
+        id={popis}
+        className={`text-[11px] leading-relaxed ${naTmavem ? 'text-linda-cream/80' : 'text-linda-espresso/70'}`}
+      >
+        Formulář chrání Cloudflare Turnstile proti automatickému odesílání. Načte se, až do
+        formuláře kliknete.
       </p>
     </div>
   );

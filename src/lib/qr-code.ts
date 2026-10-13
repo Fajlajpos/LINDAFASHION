@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 /**
  * Generátor české QR Platby (Standard SPD 1.0)
  */
@@ -19,20 +21,18 @@ export function generateQrPaymentString(params: {
 }
 
 /**
- * Adresa obrázku QR platby u externí služby.
+ * QR kód platby jako SVG, vyrobený na serveru.
  *
- * **Pozor, tohle je příjemce osobních údajů.** Obrázek si stahuje prohlížeč
- * zákaznice, takže se na `api.qrserver.com` dostane její IP adresa a v adrese
- * obrázku i číslo účtu, částka a variabilní symbol. Služba proto patří do
- * evidence příjemců (`dokumenty/zpracovatele-a-smlouvy.md`, položka 10) a do
- * zásad ochrany osobních údajů.
+ * Dřív se obrázek stahoval z `api.qrserver.com` – přímo prohlížečem zákaznice.
+ * Cizí služba tak dostala její IP adresu a v adrese obrázku číslo účtu, částku
+ * a variabilní symbol: příjemce osobních údajů bez smlouvy, a navíc závislost
+ * uprostřed platebního kroku (výpadek služby = žádný QR). Teď se kód počítá
+ * tady a do stránky jde hotový, takže z platby neodchází nic nikam.
  *
- * Zároveň je to externí závislost uprostřed platebního kroku: když služba
- * vypadne, QR kód se nevykreslí. Potvrzovací stránka to snese – číslo účtu
- * i variabilní symbol jsou vedle vypsané textem, takže se dá zaplatit i bez
- * obrázku. Kdyby se to mělo řešit, správná cesta je generovat QR lokálně.
+ * Úroveň opravy chyb M (15 %) je to, co bankovní aplikace čtou bez potíží
+ * i z displeje s odleskem. `margin: 0`, protože bílý okraj kolem kódu kreslí
+ * stránka sama.
  */
-export function getQrPaymentImageUrl(spdString: string, size = 220): string {
-  const encoded = encodeURIComponent(spdString);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}`;
+export async function qrPlatbaSvg(spdString: string): Promise<string> {
+  return QRCode.toString(spdString, { type: 'svg', errorCorrectionLevel: 'M', margin: 0 });
 }

@@ -234,20 +234,16 @@ export default function CookiesInfoPage() {
                 .
               </p>
             </li>
-            <li className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
-              <p className="font-semibold">QR kód pro platbu převodem</p>
-              <p className="mt-1 text-linda-espresso/80">
-                Na potvrzení objednávky placené převodem se obrázek QR kódu načítá ze služby
-                api.qrserver.com. Ta nic neukládá do vašeho prohlížeče, ale uvidí vaši IP
-                adresu a platební údaje obsažené v kódu (číslo účtu, částku a variabilní symbol).
-              </p>
-            </li>
+            {/* QR kód platby tu míval vlastní kartu – stahoval se z api.qrserver.com.
+                Teď ho vyrábí náš server, takže žádná cizí služba nevzniká. */}
             <li className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
               <p className="font-semibold">Ochrana formulářů před spamem</p>
               <p className="mt-1 text-linda-espresso/80">
-                Pokud je zapnutá, ověřuje služba Cloudflare Turnstile u kontaktního formuláře,
-                že ho odesílá člověk. Slouží bezpečnosti webu; Cloudflare při tom zpracovává
-                technické údaje o prohlížeči a IP adresu.
+                Pokud je zapnutá, ověřuje služba Cloudflare Turnstile, že formulář odesílá člověk
+                – u kontaktního formuláře, přihlášení k novinkám, registrace a hlídání dostupnosti.
+                Načte se až ve chvíli, kdy do formuláře kliknete, ne při prohlížení webu. Slouží
+                bezpečnosti webu; Cloudflare při tom zpracovává technické údaje o prohlížeči
+                a IP adresu.
               </p>
             </li>
           </ul>

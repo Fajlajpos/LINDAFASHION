@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { CheckCircle, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
-import { generateQrPaymentString, getQrPaymentImageUrl } from '@/lib/qr-code';
+import { generateQrPaymentString, qrPlatbaSvg } from '@/lib/qr-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,15 +63,19 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
   const zobrazitQr =
     objednavka.zpusobPlatby === 'bankovni_prevod' && kUhrade > 0 && Boolean(iban);
 
+  // SVG se vyrobí tady na serveru a do stránky jde jako `data:` adresa –
+  // prohlížeč zákaznice si kvůli QR nesahá na žádný cizí server.
   const qrUrl = zobrazitQr
-    ? getQrPaymentImageUrl(
-        generateQrPaymentString({
-          iban,
-          amount: kUhrade,
-          variableSymbol: variabilniSymbol,
-          message: `Objednavka ${objednavka.cisloObjednavky}`,
-        })
-      )
+    ? `data:image/svg+xml;utf8,${encodeURIComponent(
+        await qrPlatbaSvg(
+          generateQrPaymentString({
+            iban,
+            amount: kUhrade,
+            variableSymbol: variabilniSymbol,
+            message: `Objednavka ${objednavka.cisloObjednavky}`,
+          })
+        )
+      )}`
     : null;
 
   return (

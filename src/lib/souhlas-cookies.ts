@@ -30,8 +30,10 @@
  * 2026-10-13: pryč nepravdivé „anonymně", přibyl seznam cookies, příjemci,
  * předávání do USA a služby třetích stran (mapa Zásilkovny, QR platba,
  * Turnstile).
+ * 2026-10-13.2: QR platba už nejde přes api.qrserver.com; Turnstile se načítá
+ * až po kliknutí do formuláře.
  */
-export const VERZE_ZASAD_COOKIES = '2026-10-13';
+export const VERZE_ZASAD_COOKIES = '2026-10-13.2';
 
 /**
  * Jak dlouho platí rozhodnutí, než se lišta zeptá znovu.
