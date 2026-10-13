@@ -49,13 +49,13 @@ const NEZBYTNE: Polozka[] = [
   {
     nazev: 'linda_cart',
     druh: 'úložiště prohlížeče (localStorage)',
-    ucel: 'Obsah nákupního košíku.',
+    ucel: 'Obsah nákupního košíku. Vznikne, až do košíku něco vložíte.',
     doba: 'do vyprázdnění košíku nebo smazání dat prohlížeče',
   },
   {
     nazev: 'linda_favorites',
     druh: 'úložiště prohlížeče (localStorage)',
-    ucel: 'Kousky, které jste si označili srdíčkem.',
+    ucel: 'Kousky, které jste si označili srdíčkem. Vznikne prvním srdíčkem.',
     doba: 'do odebrání nebo smazání dat prohlížeče',
   },
   {
@@ -203,6 +203,55 @@ export default function CookiesInfoPage() {
             </p>
           </Sekce>
         )}
+
+        {/* Ověřeno průchodem webu v prohlížeči (2026-10): widget Zásilkovny si
+            ve svém okně ukládá vlastní položky (mimo jiné `cookiefirst-id`
+            a telemetrii `AI_buffer`) a stahuje mapy a písma z cizích serverů.
+            Ovládat to neumíme – běží na doméně Zásilkovny a o volitelné
+            cookies se ptá vlastní lištou přímo v mapě. Proto to sem patří
+            jako informace, ne jako přepínač v našem nastavení. */}
+        <Sekce nadpis="Služby jiných firem, které spustíte sami">
+          <p>
+            Následující služby se nenačítají při prohlížení webu, ale až když je sami použijete.
+            Běží na serverech svých provozovatelů, kteří za ně odpovídají.
+          </p>
+          <ul className="space-y-3">
+            <li className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+              <p className="font-semibold">Mapa výdejních míst Zásilkovny</p>
+              <p className="mt-1 text-linda-espresso/80">
+                Otevře se v pokladně tlačítkem pro výběr výdejního místa. Provozuje ji Zásilkovna
+                s.r.o., která si ve svém okně ukládá vlastní údaje a o volitelné cookies vás
+                požádá vlastní lištou přímo v mapě. Mapové podklady a písma se při tom stahují
+                ze serverů OpenStreetMap a Google. Podrobnosti najdete v zásadách na{' '}
+                <a
+                  href="https://www.zasilkovna.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-linda-cognac underline underline-offset-2"
+                >
+                  zasilkovna.cz
+                </a>
+                .
+              </p>
+            </li>
+            <li className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+              <p className="font-semibold">QR kód pro platbu převodem</p>
+              <p className="mt-1 text-linda-espresso/80">
+                Na potvrzení objednávky placené převodem se obrázek QR kódu načítá ze služby
+                api.qrserver.com. Ta nic neukládá do vašeho prohlížeče, ale uvidí vaši IP
+                adresu a platební údaje obsažené v kódu (číslo účtu, částku a variabilní symbol).
+              </p>
+            </li>
+            <li className="rounded-xl bg-linda-sandLight p-4 shadow-neuInsetSm">
+              <p className="font-semibold">Ochrana formulářů před spamem</p>
+              <p className="mt-1 text-linda-espresso/80">
+                Pokud je zapnutá, ověřuje služba Cloudflare Turnstile u kontaktního formuláře,
+                že ho odesílá člověk. Slouží bezpečnosti webu; Cloudflare při tom zpracovává
+                technické údaje o prohlížeči a IP adresu.
+              </p>
+            </li>
+          </ul>
+        </Sekce>
 
         <Sekce nadpis="Jak souhlas změnit nebo odvolat">
           <p>

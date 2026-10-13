@@ -275,7 +275,8 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({
             </div>
 
             <p className="text-xs text-linda-espresso/70">
-              Seznam všech souborů a doby jejich uložení najdete v{' '}
+              Mapa výdejních míst Zásilkovny v pokladně je služba jiné firmy a na své cookies se
+              ptá vlastní lištou. Seznam všech souborů a doby jejich uložení najdete v{' '}
               <Link href="/cookies" className="font-semibold text-linda-cognac underline underline-offset-2">
                 zásadách používání cookies
               </Link>

@@ -609,6 +609,16 @@ deleted with her browser history. That is not evidence.
   the styling of „Povolit vše": a faded reject button is the nudge EDPB and ÚOOÚ call
   deceptive design. `/cookies` lists every cookie and storage key with its duration; a new
   `localStorage` key belongs there too.
+- **Nothing is written to the browser on a mere page view.** Audited in a real browser
+  (2026-10): a fresh visitor browsing the shop gets no cookie and no storage key. `linda_cart`
+  and `linda_favorites` used to be written as `[]` on the first render; the exemption from
+  consent covers only storage for a service she asked for, so both now appear with the first
+  item and are removed when emptied. Keep it that way for any new key.
+- **The Packeta map is a third party with its own consent bar.** Inside its iframe it stores
+  `cookiefirst-id`, Application Insights telemetry (`AI_buffer`) and pulls OpenStreetMap
+  tiles and Google Fonts. We cannot switch that off and it does not belong in our settings
+  — it loads only when she opens the map and asks for its own consent there. `/cookies`
+  describes it, together with the QR image from `api.qrserver.com` and Turnstile.
 - Recording never blocks the user-facing action. `zaznamenatSouhlas` swallows failures
   and `odeslatSouhlasNaServer` is fire-and-forget — an unreachable database must not
   make the cookie bar unclickable, and consent is valid because it was given, not

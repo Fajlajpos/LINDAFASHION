@@ -92,9 +92,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
 
   // Zápis do prohlížeče – i přihlášená zákaznice ho má, aby košík byl
   // okamžitě po ruce ještě před odpovědí serveru.
+  //
+  // Prázdný košík se **nezapisuje**, klíč se maže. Dřív vznikl `linda_cart`
+  // s `[]` při prvním zobrazení jakékoliv stránky. Bez souhlasu se do
+  // prohlížeče smí ukládat jen to, co je nezbytné pro službu, o kterou si
+  // návštěvnice sama řekla (§ 89 odst. 3 zák. č. 127/2005 Sb.) – a o košík
+  // si řekne až prvním „Přidat do košíku".
   useEffect(() => {
     if (!nacteno) return;
-    localStorage.setItem(KLIC, JSON.stringify(cart));
+    if (cart.length === 0) localStorage.removeItem(KLIC);
+    else localStorage.setItem(KLIC, JSON.stringify(cart));
   }, [cart, nacteno]);
 
   /** Sloučení s košíkem u účtu. Běží jednou po přihlášení. */

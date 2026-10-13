@@ -89,9 +89,13 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode; prihlasen?
     setNacteno(true);
   }, []);
 
+  // Prázdný seznam se nezapisuje – stejný důvod jako u košíku: úložiště bez
+  // souhlasu jen pro službu, o kterou si návštěvnice řekla. Klíč vznikne až
+  // prvním srdíčkem, ne při prvním zobrazení stránky.
   useEffect(() => {
     if (!nacteno) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+    if (favorites.length === 0) localStorage.removeItem(STORAGE_KEY);
+    else localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
   }, [favorites, nacteno]);
 
   /* Po přihlášení pošleme oblíbené z prohlížeče na server a převezmeme

@@ -27,8 +27,9 @@
  * se do serverové evidence a prohlížeč podle ní pozná, že uložený souhlas
  * patří ke starému textu.
  *
- * 2026-10-13: pryč nepravdivé „anonymně", přibyl seznam cookies, příjemci
- * a předávání do USA.
+ * 2026-10-13: pryč nepravdivé „anonymně", přibyl seznam cookies, příjemci,
+ * předávání do USA a služby třetích stran (mapa Zásilkovny, QR platba,
+ * Turnstile).
  */
 export const VERZE_ZASAD_COOKIES = '2026-10-13';
 
