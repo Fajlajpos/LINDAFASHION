@@ -816,7 +816,8 @@ deleted with her browser history. That is not evidence.
   platba) → `/pokladna/shrnuti`.** Údaje come first at the owner's request (2026-10); the cart and
   the step-2 sidebar therefore show „Doprava a platba – vyberete v dalším kroku" instead of the
   preselected carrier's price, and the address card says it is used for delivery unless a pickup
-  point is chosen next. Steps 2–4 sit in the `pokladna/(kroky)` route group whose layout loads
+  point is chosen next. The stepper is **not** shown on `/kosik` (owner, 2026-10) — browsing the cart
+  is not ordering yet; it appears from Údaje on, with Košík as a finished step linking back. Steps 2–4 sit in the `pokladna/(kroky)` route group whose layout loads
   settings once and holds `PokladnaProvider` ([pokladna-kontext.tsx](src/lib/pokladna-kontext.tsx));
   `/pokladna/potvrzeni` is outside it on purpose. The draft is mirrored to `sessionStorage`
   `linda_pokladna` only after the first edit and is wiped by `clearCart()`. `useStrazceKroku`

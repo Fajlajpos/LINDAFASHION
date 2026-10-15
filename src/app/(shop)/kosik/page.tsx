@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { KosikObsah } from '@/components/shop/KosikObsah';
-import { KrokyPokladny } from '@/components/shop/pokladna/KrokyPokladny';
 import { jeNastaveno } from '@/lib/gopay';
 import { nacistNastaveni, popisDph } from '@/lib/nastaveni';
 
@@ -14,6 +13,10 @@ export const metadata: Metadata = {
 
 /**
  * Košík – první krok objednávky.
+ *
+ * Krokovač pokladny tu schválně není (majitelka, 2026-10): v košíku si
+ * zákaznice teprve prohlíží, co vybrala, a „Košík › Údaje › Doprava…"
+ * nad tím působilo, jako by už objednávala. Ukazuje se až od kroku Údaje.
  *
  * Server sem dodá jen práh dopravy zdarma z administrace a to, čím lze
  * platit – zbytek žije v prohlížeči, protože nepřihlášená zákaznice má košík
@@ -31,10 +34,9 @@ export default async function KosikPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="space-y-5 border-b border-linda-sand pb-6">
+    <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="border-b border-linda-sand pb-6">
         <h1 className="font-serif text-4xl text-linda-espresso">Nákupní košík</h1>
-        <KrokyPokladny aktivni={1} />
       </div>
 
       <KosikObsah

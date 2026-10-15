@@ -74,7 +74,9 @@ async function main() {
         cenaDopravyZasilkovna: 79,
         cenaDopravyPPL: 109,
         cenaDopravyCeskaPosta: 99,
-        prahDopravaZdarma: 2500,
+        // Doprava zdarma zatím není (majitelka, 2026-10). `null` = žádný práh,
+        // a web pak „doprava zdarma" nikde neslibuje. Zapíná se v administraci.
+        prahDopravaZdarma: null,
       },
     });
   }
