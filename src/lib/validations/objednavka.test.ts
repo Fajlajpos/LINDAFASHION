@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { objednavkaSchema, vyzadujeVydejniMisto } from './objednavka';
+import { objednavkaSchema, udajeSchema, vyzadujeVydejniMisto } from './objednavka';
 
 const zaklad = {
   polozky: [{ variantId: 'v1', mnozstvi: 1 }],
@@ -89,6 +89,47 @@ describe('objednavkaSchema', () => {
   it('prázdný kód znamená žádný kód, ne prázdný řetězec', () => {
     const v = objednavkaSchema.parse({ ...zaklad, slevovyKod: '   ' });
     expect(v.slevovyKod).toBeNull();
+  });
+});
+
+describe('ocekavanaCena', () => {
+  it('je nepovinná', () => {
+    expect(objednavkaSchema.safeParse(zaklad).success).toBe(true);
+  });
+
+  it('přijme celé haléře', () => {
+    const vysledek = objednavkaSchema.safeParse({
+      ...zaklad,
+      ocekavanaCena: { celkemHaleru: 259000, kUhradeHaleru: 0 },
+    });
+    expect(vysledek.success).toBe(true);
+  });
+
+  it('odmítne zlomky a záporné částky', () => {
+    for (const ocekavanaCena of [
+      { celkemHaleru: 10.5, kUhradeHaleru: 0 },
+      { celkemHaleru: 100, kUhradeHaleru: -1 },
+    ]) {
+      expect(objednavkaSchema.safeParse({ ...zaklad, ocekavanaCena }).success).toBe(false);
+    }
+  });
+});
+
+describe('udajeSchema', () => {
+  it('stejné hlášky jako objednávka – prázdné PSČ i e-mail', () => {
+    const vysledek = udajeSchema.safeParse({ ...zaklad, email: '', dodaciPsc: '' });
+    expect(vysledek.success).toBe(false);
+    if (vysledek.success) return;
+
+    const pole = vysledek.error.issues.map((i) => i.path[0]);
+    expect(pole).toContain('email');
+    expect(pole).toContain('dodaciPsc');
+  });
+
+  it('telefon a poznámka jsou nepovinné', () => {
+    expect(
+      udajeSchema.safeParse({ ...zaklad, dodaciTelefon: null, poznamka: null }).success
+    ).toBe(true);
   });
 });
 

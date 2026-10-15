@@ -87,9 +87,52 @@ export const objednavkaSchema = z.object({
   souhlasPodminky: z.literal(true, {
     errorMap: () => ({ message: 'Bez souhlasu s obchodními podmínkami nelze objednávku dokončit.' }),
   }),
+
+  /*
+   * Částka ze shrnutí, kterou zákaznice potvrdila (§ 1826a odst. 1 o. z.).
+   *
+   * Server cenu počítá vždycky sám; tohle není cena, za kterou se prodává,
+   * ale pojistka, že se neprodá za jinou, než jakou viděla. Nesedí-li na
+   * výpočet, objednávka se odmítne a shrnutí se načte znovu.
+   *
+   * Volitelná jen kvůli požadavkům sestaveným mimo pokladnu (testy); formulář
+   * ji posílá vždycky.
+   */
+  ocekavanaCena: z
+    .object({
+      celkemHaleru: z.number().int().nonnegative(),
+      kUhradeHaleru: z.number().int().nonnegative(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export type ObjednavkaVstup = z.infer<typeof objednavkaSchema>;
+
+/** Náhled ve shrnutí pokladny: jen to, co ovlivňuje cenu. */
+export const nahledSchema = objednavkaSchema.pick({
+  polozky: true,
+  zpusobDopravy: true,
+  slevovyKod: true,
+  darkovyPoukaz: true,
+});
+
+/**
+ * Kontaktní a doručovací údaje – krok „Údaje" v pokladně.
+ *
+ * Prohlížeč je kontroluje stejným schématem jako server, aby chyba zazněla
+ * u pole hned při „Pokračovat", ne až po odeslání ze shrnutí. Poslední slovo
+ * má pořád server.
+ */
+export const udajeSchema = objednavkaSchema.pick({
+  email: true,
+  dodaciJmenoPrijmeni: true,
+  dodaciUlice: true,
+  dodaciMesto: true,
+  dodaciPsc: true,
+  dodaciTelefon: true,
+  poznamka: true,
+});
 
 /** Zásilkovna vyžaduje výběr výdejního místa – ostatní dopravci ne. */
 export function vyzadujeVydejniMisto(zpusob: string): boolean {

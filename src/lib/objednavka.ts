@@ -10,8 +10,15 @@
  */
 import { Prisma } from '@prisma/client';
 import { db } from './db';
-import { czkNaHalere, halereNaCzk, prodejniCena, spocitatObjednavku, type Halere } from './penize';
-import { dphZCelkem, nacistNastaveni } from './nastaveni';
+import {
+  czkNaHalere,
+  halereNaCzk,
+  prodejniCena,
+  spocitatObjednavku,
+  type Halere,
+  type RozpisObjednavky,
+} from './penize';
+import { dphZCelkem, nacistNastaveni, type NastaveniWebu } from './nastaveni';
 import { snimekDodavatele } from './dodavatel';
 import { verzeProObjednavku } from './pravni-dokumenty';
 import type { ObjednavkaVstup } from './validations/objednavka';
@@ -42,9 +49,7 @@ export interface VysledekObjednavky {
 }
 
 /** Ceny dopravy z administrace; bez vyplnění metoda není k dispozici. */
-async function cenaDopravy(zpusob: string): Promise<Halere | null> {
-  const nastaveni = await nacistNastaveni();
-
+function cenaDopravy(zpusob: string, nastaveni: NastaveniWebu): Halere | null {
   const podleZpusobu: Record<string, number | null> = {
     zasilkovna: nastaveni.cenaDopravyZasilkovna,
     ppl: nastaveni.cenaDopravyPPL,
@@ -120,6 +125,191 @@ export interface KontextObjednavky {
   ip?: string | null;
 }
 
+/** Co z objednávky potřebuje výpočet ceny – náhled ve shrnutí posílá jen tohle. */
+export type VstupNabidky = Pick<ObjednavkaVstup, 'polozky' | 'zpusobDopravy' | 'slevovyKod' | 'darkovyPoukaz'>;
+
+export interface PolozkaNabidky {
+  variantId: string;
+  mnozstvi: number;
+  /** Prodejní cena za kus z databáze. */
+  cenaHaleru: Halere;
+  nazev: string;
+  velikost: string;
+  barva: string | null;
+}
+
+/** Spočítaná nabídka: přesně to, co by objednávka v tuhle chvíli uložila. */
+interface Nabidka {
+  polozky: PolozkaNabidky[];
+  discountCodeId: string | null;
+  procentoSlevy: number;
+  /** Zapamatovaný limit – kontrola vyčerpání patří až do `UPDATE` při zápisu. */
+  limitPouziti: number | null;
+  giftCardId: string | null;
+  rozpis: RozpisObjednavky;
+}
+
+/**
+ * Zboží, kód, poukaz a výpočet – jediné místo, které říká, kolik objednávka stojí.
+ *
+ * Volá ho transakce objednávky i náhled ve shrnutí pokladny. Dvě kopie téhož
+ * výpočtu by se dřív nebo později rozešly a shrnutí by ukazovalo jinou částku,
+ * než jakou pak objednávka naúčtuje – přesně to, co § 1826a odst. 1 o. z. chce
+ * vyloučit: cenu musí zákaznice vidět **bezprostředně před** odesláním.
+ *
+ * Nic nezapisuje. Kontroly tu slouží k hezké hlášce; o skladu, limitu kódu
+ * a zůstatku poukazu rozhoduje až podmínka v `UPDATE` při zápisu.
+ */
+async function spocitatNabidku(
+  klient: Prisma.TransactionClient,
+  vstup: VstupNabidky,
+  nastaveni: NastaveniWebu,
+  doprava: Halere
+): Promise<Nabidka> {
+  // --- 1. Zboží a sklad --------------------------------------------------
+  const varianty = await klient.productVariant.findMany({
+    where: { id: { in: vstup.polozky.map((p) => p.variantId) } },
+    include: { product: true },
+  });
+
+  const podleId = new Map(varianty.map((v) => [v.id, v]));
+  const polozky: PolozkaNabidky[] = [];
+
+  for (const vstupniPolozka of vstup.polozky) {
+    const varianta = podleId.get(vstupniPolozka.variantId);
+
+    if (!varianta || !varianta.product.aktivni) {
+      throw new ChybaZbozi('Některý produkt v košíku už není v nabídce. Zkontrolujte prosím košík.');
+    }
+
+    if (varianta.skladem < vstupniPolozka.mnozstvi) {
+      throw new ChybaZbozi(
+        varianta.skladem === 0
+          ? `„${varianta.product.nazev} (${varianta.velikost})" je vyprodaná.`
+          : `Z „${varianta.product.nazev} (${varianta.velikost})" zbývá jen ${varianta.skladem} ks.`
+      );
+    }
+
+    polozky.push({
+      variantId: varianta.id,
+      mnozstvi: vstupniPolozka.mnozstvi,
+      // Cena z databáze, ne z prohlížeče.
+      cenaHaleru: prodejniCena(varianta.product.cena, varianta.product.cenaPoSleve),
+      nazev: varianta.product.nazev,
+      velikost: varianta.velikost,
+      barva: varianta.barva,
+    });
+  }
+
+  // --- 2. Slevový kód ----------------------------------------------------
+  let discountCodeId: string | null = null;
+  let procentoSlevy = 0;
+  let limitPouziti: number | null = null;
+
+  if (vstup.slevovyKod) {
+    const kod = await klient.discountCode.findUnique({ where: { kod: vstup.slevovyKod } });
+    const ted = new Date();
+
+    const platny =
+      kod &&
+      kod.aktivni &&
+      (!kod.platnyOd || kod.platnyOd <= ted) &&
+      (!kod.platnyDo || kod.platnyDo >= ted) &&
+      (kod.limitPouziti === null || kod.pocetPouziti < kod.limitPouziti);
+
+    if (!platny) {
+      throw new ChybaPole('slevovyKod', 'Tento slevový kód není platný.');
+    }
+
+    discountCodeId = kod.id;
+    procentoSlevy = kod.procentoSlevy;
+    limitPouziti = kod.limitPouziti;
+  }
+
+  // --- 3. Dárkový poukaz -------------------------------------------------
+  let giftCardId: string | null = null;
+  let zustatekPoukazu: Halere = 0;
+
+  if (vstup.darkovyPoukaz) {
+    const poukaz = await klient.giftCard.findUnique({ where: { kod: vstup.darkovyPoukaz } });
+    const ted = new Date();
+
+    const platny =
+      poukaz &&
+      poukaz.aktivni &&
+      (!poukaz.platnyDo || poukaz.platnyDo >= ted) &&
+      czkNaHalere(poukaz.zustatek) > 0;
+
+    if (!platny) {
+      throw new ChybaPole('darkovyPoukaz', 'Tento dárkový poukaz není platný nebo je vyčerpaný.');
+    }
+
+    giftCardId = poukaz.id;
+    zustatekPoukazu = czkNaHalere(poukaz.zustatek);
+  }
+
+  // --- 4. Výpočet --------------------------------------------------------
+  // Doprava zdarma se posuzuje z ceny zboží po slevě.
+  const bezDopravy = spocitatObjednavku({
+    polozky: polozky.map((p) => ({ cenaZaKus: p.cenaHaleru, mnozstvi: p.mnozstvi })),
+    procentoSlevy,
+  });
+
+  const prah = nastaveni.prahDopravaZdarma;
+  const dopravaVysledna =
+    prah !== null && halereNaCzk(bezDopravy.mezisoucet - bezDopravy.sleva) >= prah ? 0 : doprava;
+
+  const rozpis = spocitatObjednavku({
+    polozky: polozky.map((p) => ({ cenaZaKus: p.cenaHaleru, mnozstvi: p.mnozstvi })),
+    procentoSlevy,
+    doprava: dopravaVysledna,
+    zustatekPoukazu,
+  });
+
+  return { polozky, discountCodeId, procentoSlevy, limitPouziti, giftCardId, rozpis };
+}
+
+/** Dopravce bez ceny v administraci nejde spočítat, a tedy ani objednat. */
+const CHYBA_DOPRAVY: ChybaObjednavky = {
+  zprava: 'Zkontrolujte prosím vyplněné údaje.',
+  pole: { zpusobDopravy: 'Tento způsob dopravy momentálně nenabízíme.' },
+  status: 422,
+};
+
+export interface NahledObjednavky {
+  polozky: PolozkaNabidky[];
+  procentoSlevy: number;
+  rozpis: RozpisObjednavky;
+}
+
+/**
+ * Náhled pro shrnutí pokladny – stejný výpočet jako objednávka, bez zápisu.
+ *
+ * Shrnutí dřív počítal prohlížeč z cen uložených v košíku. Ty se ověřují jen
+ * při načtení stránky, takže když majitelka mezitím změnila cenu nebo poukaz
+ * někdo dočerpal, zákaznice potvrdila jednu částku a objednávka uložila jinou.
+ */
+export async function nahledObjednavky(
+  vstup: VstupNabidky
+): Promise<{ ok: true; data: NahledObjednavky } | { ok: false; chyba: ChybaObjednavky }> {
+  const nastaveni = await nacistNastaveni();
+
+  const doprava = cenaDopravy(vstup.zpusobDopravy, nastaveni);
+  if (doprava === null) return { ok: false, chyba: CHYBA_DOPRAVY };
+
+  try {
+    const nabidka = await spocitatNabidku(db, vstup, nastaveni, doprava);
+    return {
+      ok: true,
+      data: { polozky: nabidka.polozky, procentoSlevy: nabidka.procentoSlevy, rozpis: nabidka.rozpis },
+    };
+  } catch (err) {
+    const chyba = prevestChybu(err);
+    if (chyba) return { ok: false, chyba };
+    throw err;
+  }
+}
+
 export async function vytvoritObjednavku(
   vstup: ObjednavkaVstup,
   userId: string | null,
@@ -138,17 +328,8 @@ export async function vytvoritObjednavku(
     };
   }
 
-  const doprava = await cenaDopravy(vstup.zpusobDopravy);
-  if (doprava === null) {
-    return {
-      ok: false,
-      chyba: {
-        zprava: 'Zkontrolujte prosím vyplněné údaje.',
-        pole: { zpusobDopravy: 'Tento způsob dopravy momentálně nenabízíme.' },
-        status: 422,
-      },
-    };
-  }
+  const doprava = cenaDopravy(vstup.zpusobDopravy, nastaveni);
+  if (doprava === null) return { ok: false, chyba: CHYBA_DOPRAVY };
 
   if (vstup.zpusobDopravy === 'zasilkovna' && !vstup.vydejniMistoId) {
     return {
@@ -172,104 +353,28 @@ export async function vytvoritObjednavku(
   /** Jeden pokus o zápis; `posun` posouvá pořadové číslo po kolizi. */
   const zapsat = (posun: number) =>
     db.$transaction(async (tx) => {
-      // --- 1. Zboží a sklad ------------------------------------------------
-      const varianty = await tx.productVariant.findMany({
-        where: { id: { in: vstup.polozky.map((p) => p.variantId) } },
-        include: { product: true },
-      });
+      const { polozky, discountCodeId, limitPouziti, giftCardId, rozpis } = await spocitatNabidku(
+        tx,
+        vstup,
+        nastaveni,
+        doprava
+      );
 
-      const podleId = new Map(varianty.map((v) => [v.id, v]));
-      const polozky: Array<{ variantId: string; mnozstvi: number; cenaHaleru: Halere }> = [];
-
-      for (const vstupniPolozka of vstup.polozky) {
-        const varianta = podleId.get(vstupniPolozka.variantId);
-
-        if (!varianta || !varianta.product.aktivni) {
-          throw new ChybaZbozi('Některý produkt v košíku už není v nabídce. Zkontrolujte prosím košík.');
-        }
-
-        if (varianta.skladem < vstupniPolozka.mnozstvi) {
-          throw new ChybaZbozi(
-            varianta.skladem === 0
-              ? `„${varianta.product.nazev} (${varianta.velikost})" je vyprodaná.`
-              : `Z „${varianta.product.nazev} (${varianta.velikost})" zbývá jen ${varianta.skladem} ks.`
-          );
-        }
-
-        polozky.push({
-          variantId: varianta.id,
-          mnozstvi: vstupniPolozka.mnozstvi,
-          // Cena z databáze, ne z prohlížeče.
-          cenaHaleru: prodejniCena(varianta.product.cena, varianta.product.cenaPoSleve),
-        });
+      /*
+       * Částka, kterou zákaznice viděla ve shrnutí, musí být ta, kterou
+       * objednávka uloží (§ 1826a odst. 1 o. z.). Když se mezitím změnila
+       * cena, zůstatek poukazu nebo vypršel kód, objednávka se nezaloží
+       * a shrnutí se načte znovu – raději o krok víc než smlouva za jinou
+       * cenu, než jakou potvrdila. Kontrola je před prvním zápisem, takže
+       * sklad, kód i poukaz zůstanou nedotčené.
+       */
+      if (
+        vstup.ocekavanaCena &&
+        (vstup.ocekavanaCena.celkemHaleru !== rozpis.celkem ||
+          vstup.ocekavanaCena.kUhradeHaleru !== rozpis.kUhrade)
+      ) {
+        throw new ChybaCeny();
       }
-
-      // --- 2. Slevový kód --------------------------------------------------
-      let discountCodeId: string | null = null;
-      let procentoSlevy = 0;
-      /** Zapamatovaný limit – kontrola vyčerpání patří až do `UPDATE` níž. */
-      let limitPouziti: number | null = null;
-
-      if (vstup.slevovyKod) {
-        const kod = await tx.discountCode.findUnique({ where: { kod: vstup.slevovyKod } });
-        const ted = new Date();
-
-        const platny =
-          kod &&
-          kod.aktivni &&
-          (!kod.platnyOd || kod.platnyOd <= ted) &&
-          (!kod.platnyDo || kod.platnyDo >= ted) &&
-          (kod.limitPouziti === null || kod.pocetPouziti < kod.limitPouziti);
-
-        if (!platny) {
-          throw new ChybaPole('slevovyKod', 'Tento slevový kód není platný.');
-        }
-
-        discountCodeId = kod.id;
-        procentoSlevy = kod.procentoSlevy;
-        limitPouziti = kod.limitPouziti;
-      }
-
-      // --- 3. Dárkový poukaz ----------------------------------------------
-      let giftCardId: string | null = null;
-      let zustatekPoukazu: Halere = 0;
-
-      if (vstup.darkovyPoukaz) {
-        const poukaz = await tx.giftCard.findUnique({ where: { kod: vstup.darkovyPoukaz } });
-        const ted = new Date();
-
-        const platny =
-          poukaz &&
-          poukaz.aktivni &&
-          (!poukaz.platnyDo || poukaz.platnyDo >= ted) &&
-          czkNaHalere(poukaz.zustatek) > 0;
-
-        if (!platny) {
-          throw new ChybaPole('darkovyPoukaz', 'Tento dárkový poukaz není platný nebo je vyčerpaný.');
-        }
-
-        giftCardId = poukaz.id;
-        zustatekPoukazu = czkNaHalere(poukaz.zustatek);
-      }
-
-      // --- 4. Výpočet ------------------------------------------------------
-      // Doprava zdarma se posuzuje z ceny zboží po slevě.
-      const bezDopravy = spocitatObjednavku({
-        polozky: polozky.map((p) => ({ cenaZaKus: p.cenaHaleru, mnozstvi: p.mnozstvi })),
-        procentoSlevy,
-      });
-
-      const prah = nastaveni.prahDopravaZdarma;
-      const dopravaVysledna =
-        prah !== null && halereNaCzk(bezDopravy.mezisoucet - bezDopravy.sleva) >= prah ? 0 : doprava;
-
-      const rozpis = spocitatObjednavku({
-        polozky: polozky.map((p) => ({ cenaZaKus: p.cenaHaleru, mnozstvi: p.mnozstvi })),
-        procentoSlevy,
-        doprava: dopravaVysledna,
-        zustatekPoukazu,
-      });
-
       // --- 5. Zápis --------------------------------------------------------
       const cisloObjednavky = await dalsiCisloObjednavky(tx, posun);
 
@@ -379,11 +484,8 @@ export async function vytvoritObjednavku(
         });
 
         if (zmeneno.count !== 1) {
-          const varianta = podleId.get(p.variantId);
           throw new ChybaZbozi(
-            varianta
-              ? `„${varianta.product.nazev} (${varianta.velikost})" nám mezitím někdo vykoupil. Upravte prosím množství v košíku.`
-              : 'Některý produkt v košíku mezitím došel. Zkontrolujte prosím košík.'
+            `„${p.nazev} (${p.velikost})" nám mezitím někdo vykoupil. Upravte prosím množství v košíku.`
           );
         }
       }
@@ -489,27 +591,43 @@ export async function vytvoritObjednavku(
 
     return { ok: true, data: vysledek };
   } catch (err) {
-    if (err instanceof ChybaZbozi) {
-      return { ok: false, chyba: { zprava: err.message, status: 409 } };
-    }
-
-    if (err instanceof ChybaPole) {
-      return {
-        ok: false,
-        chyba: {
-          zprava: 'Zkontrolujte prosím vyplněné údaje.',
-          pole: { [err.pole]: err.message },
-          status: 422,
-        },
-      };
-    }
-
+    const chyba = prevestChybu(err);
+    if (chyba) return { ok: false, chyba };
     throw err;
   }
 }
 
+/** Očekávané chyby výpočtu na odpověď pro formulář; neznámé vrací `null`. */
+function prevestChybu(err: unknown): ChybaObjednavky | null {
+  if (err instanceof ChybaZbozi) {
+    return { zprava: err.message, status: 409 };
+  }
+
+  if (err instanceof ChybaCeny) {
+    // Pole `ocekavanaCena` podle něj shrnutí pozná, že má náhled načíst znovu.
+    return { zprava: err.message, pole: { ocekavanaCena: err.message }, status: 409 };
+  }
+
+  if (err instanceof ChybaPole) {
+    return {
+      zprava: 'Zkontrolujte prosím vyplněné údaje.',
+      pole: { [err.pole]: err.message },
+      status: 422,
+    };
+  }
+
+  return null;
+}
+
 /** Zboží mezitím zmizelo nebo se vyprodalo. */
 class ChybaZbozi extends Error {}
+
+/** Částka se od zobrazení shrnutí změnila. */
+class ChybaCeny extends Error {
+  constructor() {
+    super('Cena objednávky se od zobrazení souhrnu změnila. Zkontrolujte prosím nový souhrn a objednejte znovu.');
+  }
+}
 
 /** Chyba patřící ke konkrétnímu poli formuláře. */
 class ChybaPole extends Error {

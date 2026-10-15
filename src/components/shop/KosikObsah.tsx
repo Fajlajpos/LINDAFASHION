@@ -12,6 +12,8 @@ import {
   ShoppingBag,
   Tag,
   Trash2,
+  Truck,
+  Wallet,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { poslatJson } from '@/lib/api-klient';
@@ -25,6 +27,11 @@ interface Props {
   prahDopravaZdarma: number | null;
   /** Věta o DPH podle toho, zda je e-shop plátcem (sekce 11). */
   popisDph: string;
+  /**
+   * Čím lze zaplatit – musí zaznít „nejpozději na začátku objednávacího
+   * procesu" (čl. 8 odst. 3 směrnice 2011/83/EU), tedy už v košíku.
+   */
+  platebniProstredky: string[];
 }
 
 /**
@@ -37,7 +44,7 @@ interface Props {
  * Kódy se ověřují proti stejnému endpointu jako v pokladně a přenášejí se
  * tam přes `sessionStorage`, aby je nebylo nutné zadávat dvakrát.
  */
-export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
+export function KosikObsah({ prahDopravaZdarma, popisDph, platebniProstredky }: Props) {
   const {
     cart,
     removeFromCart,
@@ -45,6 +52,7 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
     odebranePolozky,
     potvrditOdebrani,
     synchronizuje,
+    nacteno,
   } = useCart();
 
   const [kodVstup, setKodVstup] = useState('');
@@ -138,9 +146,9 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
     setOveruje(false);
   };
 
-  /* Než doběhne první ověření u serveru, prázdný košík ještě nemusí být
-     prázdný – hlásit to hned by bylo matoucí. */
-  if (cart.length === 0 && synchronizuje) {
+  /* Než se košík načte z prohlížeče a ověří u serveru, prázdný košík ještě
+     nemusí být prázdný – hlásit to hned by bylo matoucí. */
+  if (cart.length === 0 && (!nacteno || synchronizuje)) {
     return (
       <p className="flex items-center justify-center gap-2 py-16 text-xs text-linda-espresso/70">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -382,7 +390,7 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
 
             <div className="flex justify-between">
               <dt>Doprava</dt>
-              <dd>{doDopravyZdarma === 0 && prahDopravaZdarma !== null ? 'Zdarma' : 'Vyberete v dalším kroku'}</dd>
+              <dd>{doDopravyZdarma === 0 && prahDopravaZdarma !== null ? 'Zdarma' : 'Vyberete v pokladně'}</dd>
             </div>
 
             {/* Součet sedí v prohlubni – nejdůležitější číslo stránky má
@@ -402,14 +410,28 @@ export function KosikObsah({ prahDopravaZdarma, popisDph }: Props) {
           )}
 
           <p className="text-[11px] text-linda-espresso/70">
-            Konečnou částku uvidíte v pokladně, jakmile vyberete dopravu. {popisDph}
+            Konečnou částku uvidíte ve shrnutí před odesláním objednávky. {popisDph}
           </p>
+
+          {/* Omezení dodání a platební prostředky „nejpozději na začátku
+              objednávacího procesu" (čl. 8 odst. 3 směrnice 2011/83/EU) –
+              tady proces začíná. */}
+          <ul className="space-y-1.5 text-[11px] text-linda-espresso/75">
+            <li className="flex items-start gap-2">
+              <Truck className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+              Doručujeme v rámci České republiky.
+            </li>
+            <li className="flex items-start gap-2">
+              <Wallet className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+              Zaplatit můžete {platebniProstredky.join(', ').replace(/, ([^,]*)$/, ' nebo $1')}.
+            </li>
+          </ul>
 
           <Link
             href="/pokladna"
             className="flex min-h-touch w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linda-cognac py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm"
           >
-            Pokračovat k pokladně
+            Pokračovat k údajům
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>

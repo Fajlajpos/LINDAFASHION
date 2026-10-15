@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { db } from './db';
-import { vytvoritObjednavku } from './objednavka';
+import { nahledObjednavky, vytvoritObjednavku } from './objednavka';
 import {
   skladem,
   vstupObjednavky,
@@ -333,6 +333,103 @@ describe('vytvoritObjednavku', () => {
 
       expect(vysledek.ok).toBe(false);
       if (!vysledek.ok) expect(vysledek.chyba.pole?.zpusobDopravy).toBeTruthy();
+    });
+  });
+
+  /*
+   * Shrnutí pokladny ukazuje náhled a objednávka se odesílá s částkou z něj
+   * (§ 1826a odst. 1 o. z.: cenu musí zákaznice vidět bezprostředně před
+   * odesláním). Náhled a objednávka proto musí počítat totéž – a když se cena
+   * mezi nimi změní, objednávka nesmí projít za jinou částku.
+   */
+  describe('náhled a očekávaná cena', () => {
+    it('náhled spočítá přesně to, co objednávka uloží', async () => {
+      await zalozitNastaveni({ prahDopravaZdarma: 5000 });
+      const { variantId } = await zalozitProdukt({ cena: 1200, skladem: 5 });
+      await zalozitSlevovyKod('LETO10', 10);
+      await zalozitPoukaz('POUKAZ300', 300);
+
+      const vstup = vstupObjednavky([{ variantId, mnozstvi: 2 }], {
+        slevovyKod: 'LETO10',
+        darkovyPoukaz: 'POUKAZ300',
+      });
+
+      const nahled = await nahledObjednavky(vstup);
+      expect(nahled.ok).toBe(true);
+      if (!nahled.ok) return;
+
+      // Náhled nic nezapisuje.
+      expect(await skladem(variantId)).toBe(5);
+      expect(nahled.data.polozky[0]).toMatchObject({ variantId, mnozstvi: 2, cenaHaleru: 120000 });
+
+      const vysledek = await vytvoritObjednavku(
+        {
+          ...vstup,
+          ocekavanaCena: {
+            celkemHaleru: nahled.data.rozpis.celkem,
+            kUhradeHaleru: nahled.data.rozpis.kUhrade,
+          },
+        },
+        null
+      );
+
+      expect(vysledek.ok).toBe(true);
+      if (!vysledek.ok) return;
+
+      const objednavka = await db.order.findUniqueOrThrow({ where: { id: vysledek.data.id } });
+      expect(Number(objednavka.celkovaCena) * 100).toBe(nahled.data.rozpis.celkem);
+      expect(vysledek.data.kUhradeKc * 100).toBe(nahled.data.rozpis.kUhrade);
+    });
+
+    it('odmítne objednávku, když se cena od náhledu změnila, a nic nezapíše', async () => {
+      const { variantId, productId } = await zalozitProdukt({ cena: 1000, skladem: 3 });
+      await zalozitSlevovyKod('ZMENA', 10);
+      await zalozitPoukaz('ZMENA500', 500);
+
+      const vstup = vstupObjednavky([{ variantId, mnozstvi: 1 }], {
+        slevovyKod: 'ZMENA',
+        darkovyPoukaz: 'ZMENA500',
+      });
+      const nahled = await nahledObjednavky(vstup);
+      if (!nahled.ok) throw new Error('náhled měl projít');
+
+      // Majitelka mezitím zdraží.
+      await db.product.update({ where: { id: productId }, data: { cena: 1200 } });
+
+      const vysledek = await vytvoritObjednavku(
+        {
+          ...vstup,
+          ocekavanaCena: {
+            celkemHaleru: nahled.data.rozpis.celkem,
+            kUhradeHaleru: nahled.data.rozpis.kUhrade,
+          },
+        },
+        null
+      );
+
+      expect(vysledek.ok).toBe(false);
+      if (vysledek.ok) return;
+      expect(vysledek.chyba.status).toBe(409);
+      expect(vysledek.chyba.pole?.ocekavanaCena).toBeTruthy();
+
+      // Kontrola je před prvním zápisem: sklad, kód ani poukaz se nehnuly.
+      expect(await db.order.count()).toBe(0);
+      expect(await skladem(variantId)).toBe(3);
+      const kod = await db.discountCode.findUniqueOrThrow({ where: { kod: 'ZMENA' } });
+      expect(kod.pocetPouziti).toBe(0);
+      const poukaz = await db.giftCard.findUniqueOrThrow({ where: { kod: 'ZMENA500' } });
+      expect(Number(poukaz.zustatek)).toBe(500);
+    });
+
+    it('náhled vrátí chybu kódu u pole, stejně jako objednávka', async () => {
+      const { variantId } = await zalozitProdukt();
+
+      const nahled = await nahledObjednavky(
+        vstupObjednavky([{ variantId, mnozstvi: 1 }], { slevovyKod: 'NEEXISTUJE' })
+      );
+
+      expect(nahled.ok).toBe(false);
+      if (!nahled.ok) expect(nahled.chyba.pole?.slevovyKod).toBeTruthy();
     });
   });
 

@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { CartItemType } from './types';
 import { nacist, poslatJson } from './api-klient';
 import { zapomenoutKody } from './ulozene-kody';
+import { zapomenoutKoncept } from './pokladna-uloziste';
 
 /**
  * Košík.
@@ -36,6 +37,14 @@ interface CartContextType {
   potvrditOdebrani: () => void;
   /** Než doběhne první synchronizace, košík ještě nemusí být úplný. */
   synchronizuje: boolean;
+  /**
+   * Košík už je načtený z prohlížeče.
+   *
+   * Do té chvíle je `cart` prázdný jen proto, že `localStorage` se čte až
+   * v efektu – stránka, která by podle něj hlásila „Košík je prázdný“, by to
+   * nepřihlášené zákaznici na okamžik ukázala i s plným košíkem.
+   */
+  nacteno: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -231,8 +240,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
 
   const clearCart = () => {
     setCart([]);
-    // S košíkem padají i uplatněné kódy – patřily k tomuhle nákupu.
+    // S košíkem padají i uplatněné kódy a rozpracovaná pokladna – patřily
+    // k tomuhle nákupu.
     zapomenoutKody();
+    zapomenoutKoncept();
     if (prihlasen) void poslatJson('/api/kosik', undefined, 'DELETE');
   };
 
@@ -256,6 +267,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
         odebranePolozky,
         potvrditOdebrani: () => setOdebranePolozky([]),
         synchronizuje,
+        nacteno,
       }}
     >
       {children}

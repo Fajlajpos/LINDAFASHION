@@ -160,7 +160,14 @@ Smlouva se uzavírá v českém jazyce. Náklady na použití prostředků komun
 
 Prezentace zboží v e-shopu je informativního charakteru a nejde o návrh na uzavření smlouvy. Kupní smlouva vzniká doručením potvrzení objednávky na e-mail kupujícího.
 
-Před odesláním objednávky má kupující možnost zkontrolovat a měnit údaje, které do objednávky vložil. Odesláním objednávky kupující potvrzuje, že se s těmito VOP seznámil a souhlasí s nimi.
+Objednávka se vytváří v těchto krocích:
+
+- **1. Košík** – kupující vloží zboží do košíku, může měnit množství a uplatnit slevový kód nebo dárkový poukaz.
+- **2. Údaje** – kupující vyplní kontaktní údaje a adresu.
+- **3. Doprava a platba** – kupující zvolí způsob doručení (případně výdejní místo) a způsob platby; u každého je uvedena cena.
+- **4. Shrnutí** – před odesláním se zobrazí přehled objednaného zboží, zadané údaje, doprava, platba a celková cena včetně všech poplatků. U každé části je odkaz zpět do příslušného kroku, kde lze chyby vzniklé při zadávání opravit.
+
+Objednávku kupující odešle tlačítkem „Objednat a zaplatit" poté, co vyjádří souhlas s těmito VOP. Odesláním objednávky kupující potvrzuje, že se s těmito VOP seznámil a souhlasí s nimi. Přijetí objednávky prodávající neprodleně potvrdí e-mailem.
 
 Objednávka zavazuje kupujícího k zaplacení; tlačítko, kterým se objednávka odesílá, je proto označeno „Objednat a zaplatit".
 

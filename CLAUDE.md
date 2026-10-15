@@ -442,7 +442,7 @@ it was not: the Czech novela was approved by the Chamber on 10 July 2026 and tak
 confusion) · the model
 withdrawal form promised by the confirmation page and by the invoice was nowhere on the
 site (nařízení vlády 363/2013 Sb.) · the order button said „Objednat závazně", which says
-that it binds but not to what (§ 1826 odst. 3) · `Reklamace.lhutaDo` was stored and
+that it binds but not to what (§ 1826a odst. 2) · `Reklamace.lhutaDo` was stored and
 backfilled but never computed for new rows and nothing warned before the 30-day deadline ·
 complaints required a login, which a guest order can never have · nothing was ever deleted,
 so contact messages, stock watches, audit log and `ipObjednavky` were kept forever (čl. 5
@@ -812,6 +812,24 @@ deleted with her browser history. That is not evidence.
 
 ## Orders — rules that are easy to break
 
+- **Checkout is four URLs: `/kosik` → `/pokladna` (údaje) → `/pokladna/doprava` (doprava a
+  platba) → `/pokladna/shrnuti`.** Údaje come first at the owner's request (2026-10); the cart and
+  the step-2 sidebar therefore show „Doprava a platba – vyberete v dalším kroku" instead of the
+  preselected carrier's price, and the address card says it is used for delivery unless a pickup
+  point is chosen next. Steps 2–4 sit in the `pokladna/(kroky)` route group whose layout loads
+  settings once and holds `PokladnaProvider` ([pokladna-kontext.tsx](src/lib/pokladna-kontext.tsx));
+  `/pokladna/potvrzeni` is outside it on purpose. The draft is mirrored to `sessionStorage`
+  `linda_pokladna` only after the first edit and is wiped by `clearCart()`. `useStrazceKroku`
+  sends a direct visit to a later step back to the first unfinished one — a step counts as done
+  only once its „Pokračovat" was clicked, because the address is prefilled and delivery is
+  preselected. The summary is the § 1826a odst. 1 screen: everything with an „Upravit" link back
+  (§ 1826 odst. 1 písm. c), and **its price comes from `/api/pokladna/nahled`**, which runs the same
+  `spocitatNabidku` as the order. The order is sent with `ocekavanaCena`; if the server's result
+  differs, it answers 409 with `pole.ocekavanaCena` before writing anything and the summary reloads
+  — the shop never charges a price the customer did not see. The terms checkbox stands alone; the
+  privacy notice is a sentence, not part of a required consent (čl. 6/1 b GDPR). Delivery
+  restriction (ČR only) and payment means are stated in the cart, where the process starts
+  (čl. 8 odst. 3 směrnice 2011/83/EU).
 - **Prices come from the database, never from the request.** [objednavka.ts](src/lib/objednavka.ts)
   re-reads every variant; the browser only sends `variantId` and `mnozstvi`.
 - The whole write is **one transaction**: order, stock decrement, discount-code counter and

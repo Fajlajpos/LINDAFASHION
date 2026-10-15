@@ -65,6 +65,13 @@ const NEZBYTNE: Polozka[] = [
     doba: 'do zavření okna prohlížeče',
   },
   {
+    nazev: 'linda_pokladna',
+    druh: 'úložiště relace (sessionStorage)',
+    ucel:
+      'Rozpracovaná objednávka – zvolená doprava a platba a vyplněné kontaktní a doručovací údaje, aby se při obnovení stránky neztratily. Vznikne první volbou v pokladně a smaže se odesláním objednávky.',
+    doba: 'do odeslání objednávky nebo zavření okna prohlížeče',
+  },
+  {
     nazev: 'linda_cookie_consent',
     druh: 'úložiště prohlížeče (localStorage)',
     ucel: 'Vaše volba v nastavení cookies, abychom se neptali při každé návštěvě.',
