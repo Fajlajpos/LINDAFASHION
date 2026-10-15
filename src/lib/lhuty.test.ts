@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DNU_NA_ODSTOUPENI,
+  popisSplatnosti,
+  SPLATNOST_PRACOVNICH_DNU,
   DNU_NA_REKLAMACI,
   lhutaNaOdstoupeni,
   lhutaNaVyrizeni,
@@ -97,5 +99,24 @@ describe('stavLhuty', () => {
     // Marné uplynutí zakládá právo odstoupit od smlouvy – hlásit ho o den
     // dřív by majitelku honilo zbytečně, o den později pozdě.
     expect(stavLhuty(ted, ted)).toBe('blizi_se');
+  });
+});
+
+/*
+ * Splatnost stojí v obchodních podmínkách (čl. 5) i na dokladu, v e-mailu
+ * a na potvrzení. Kdyby se číslo změnilo jen tady, zákaznice by dostala jinou
+ * lhůtu, než na jakou přistoupila – test na to upozorní.
+ */
+describe('splatnost převodu', () => {
+  it('tři pracovní dny, stejně jako v obchodních podmínkách', () => {
+    expect(SPLATNOST_PRACOVNICH_DNU).toBe(3);
+    expect(popisSplatnosti()).toBe('do 3 pracovních dnů od objednávky');
+  });
+
+  it('výchozí znění podmínek uvádí tutéž lhůtu', async () => {
+    const { VYCHOZI_ZNENI } = await import('./pravni-dokumenty');
+    expect(VYCHOZI_ZNENI['obchodni-podminky'].obsah).toContain(
+      `do ${SPLATNOST_PRACOVNICH_DNU} pracovních dnů od odeslání objednávky`
+    );
   });
 });

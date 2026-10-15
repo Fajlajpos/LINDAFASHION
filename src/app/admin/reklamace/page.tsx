@@ -101,6 +101,9 @@ export default function AdminReklamacePage() {
   const [chyba, setChyba] = useState<string | null>(null);
   const [meniId, setMeniId] = useState<string | null>(null);
   const [hlaska, setHlaska] = useState<string | null>(null);
+  /** Rozepsané vyjádření ke každé reklamaci – odejde zákaznici s vyřízením. */
+  const [poznamky, setPoznamky] = useState<Record<string, string>>({});
+  const [chybyPoznamek, setChybyPoznamek] = useState<Record<string, string>>({});
 
   const nacistData = useCallback(async () => {
     const vysledek = await nacist<{ reklamace: Reklamace[]; celkem: number }>(
@@ -110,6 +113,7 @@ export default function AdminReklamacePage() {
     if (vysledek.ok) {
       setReklamace(vysledek.data.reklamace);
       setCelkem(vysledek.data.celkem);
+      setPoznamky(Object.fromEntries(vysledek.data.reklamace.map((r) => [r.id, r.poznamkaAdmina ?? ''])));
     } else {
       setChyba(vysledek.chyba);
     }
@@ -122,6 +126,19 @@ export default function AdminReklamacePage() {
   }, [nacistData]);
 
   const zmenitStav = async (r: Reklamace, novyStav: string) => {
+    const poznamka = (poznamky[r.id] ?? '').trim();
+
+    // Stejné pravidlo jako na serveru – hláška hned u pole, ne až po odeslání.
+    if (novyStav === 'VYRIZENA_ZAMITNUTA' && !poznamka) {
+      setChybyPoznamek((c) => ({
+        ...c,
+        [r.id]: 'Zamítnutí je potřeba odůvodnit – zákaznice odůvodnění dostane e-mailem.',
+      }));
+      document.getElementById(`poznamka-${r.id}`)?.focus();
+      return;
+    }
+    setChybyPoznamek((c) => ({ ...c, [r.id]: '' }));
+
     if (novyStav === 'VYRIZENA_UZNANA' && r.typ === 'VRACENI') {
       const potvrzeno = window.confirm(
         'Uznáním vrácení se kusy automaticky vrátí na sklad. Pokračovat?'
@@ -135,13 +152,16 @@ export default function AdminReklamacePage() {
 
     const vysledek = await poslatJson<{ vracenoNaSklad: boolean }>(
       `/api/admin/reklamace/${r.id}`,
-      { stav: novyStav, poznamkaAdmina: r.poznamkaAdmina },
+      { stav: novyStav, poznamkaAdmina: poznamka || null },
       'PATCH'
     );
 
     if (vysledek.ok) {
       if (vysledek.data.vracenoNaSklad) setHlaska('Kusy byly vráceny na sklad.');
       await nacistData();
+    } else if (vysledek.pole?.poznamkaAdmina) {
+      const zprava = vysledek.pole.poznamkaAdmina;
+      setChybyPoznamek((c) => ({ ...c, [r.id]: zprava }));
     } else {
       setChyba(vysledek.chyba);
     }
@@ -279,6 +299,53 @@ export default function AdminReklamacePage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Vyjádření pro zákaznici. Po vyřízení už jen ke čtení – odešlo
+                    jí e-mailem a vyřízená reklamace se znovu nevyřizuje. */}
+                {OTEVRENE.includes(r.stav) ? (
+                  <div>
+                    <label
+                      htmlFor={`poznamka-${r.id}`}
+                      className="mb-1 block text-[11px] font-semibold text-linda-espresso"
+                    >
+                      Vyjádření pro zákaznici (u zamítnutí povinné)
+                    </label>
+                    <textarea
+                      id={`poznamka-${r.id}`}
+                      rows={2}
+                      maxLength={2000}
+                      disabled={meniId === r.id}
+                      value={poznamky[r.id] ?? ''}
+                      onChange={(e) => {
+                        const hodnota = e.target.value;
+                        setPoznamky((p) => ({ ...p, [r.id]: hodnota }));
+                        if (chybyPoznamek[r.id]) setChybyPoznamek((c) => ({ ...c, [r.id]: '' }));
+                      }}
+                      aria-invalid={chybyPoznamek[r.id] ? true : undefined}
+                      aria-describedby={`poznamka-${r.id}-napoveda`}
+                      placeholder="Např. Šaty vyměníme za nový kus. / Vada vznikla praním v rozporu s visačkou."
+                      className="w-full rounded-xl bg-linda-sandLight px-4 py-3 text-xs text-linda-espresso shadow-neuInsetSm placeholder:text-linda-espresso/60 disabled:opacity-60"
+                    />
+                    <p
+                      id={`poznamka-${r.id}-napoveda`}
+                      role={chybyPoznamek[r.id] ? 'alert' : undefined}
+                      className={`mt-1 text-[11px] ${
+                        chybyPoznamek[r.id] ? 'font-medium text-red-800' : 'text-linda-espresso/70'
+                      }`}
+                    >
+                      {chybyPoznamek[r.id] || 'Pošle se zákaznici v e-mailu o vyřízení.'}
+                    </p>
+                  </div>
+                ) : (
+                  r.poznamkaAdmina && (
+                    <p className="text-xs text-linda-espresso/85">
+                      <span className="font-semibold">
+                        {r.stav === 'VYRIZENA_ZAMITNUTA' ? 'Odůvodnění:' : 'Vyjádření:'}
+                      </span>{' '}
+                      {r.poznamkaAdmina}
+                    </p>
+                  )
+                )}
 
                 <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
                   <label htmlFor={`stav-${r.id}`} className="text-[11px] font-semibold text-linda-espresso">

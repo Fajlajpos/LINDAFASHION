@@ -817,6 +817,19 @@ deleted with her browser history. That is not evidence.
 - **The invoice prints the VAT breakdown** from the order snapshot (`sazbaDph`, `dphHaleru`),
   never from today's settings, and only for a VAT payer. A non-payer must not show VAT at all.
 
+- **Terms version 2026-10-15** describes the shop as it runs: checkout steps, no code of conduct,
+  **bank-transfer due date of 3 working days** (`SPLATNOST_PRACOVNICH_DNU` in [lhuty.ts](src/lib/lhuty.ts);
+  owner's decision — the same text is printed by the confirmation page, the e-mail, the invoice and
+  the checkout, and a test checks it against `VYCHOZI_ZNENI`), dispatch counted from payment,
+  gift cards, one discount code per order, seller withdrawal (unpaid, not picked up — actual
+  costs may be claimed, owner 2026-10 —, sold out). **Changing any of these means a new terms
+  version**, published with `npm run pravni:vlozit` (append-only). Unpaid orders are cancelled by
+  hand in admin; there is no automatic job.
+- **Rejecting a complaint requires a reason** (§ 19 odst. 1 zák. o ochraně spotřebitele): the
+  admin PATCH refuses `VYRIZENA_ZAMITNUTA` without `poznamkaAdmina`, the admin list has the field,
+  and `reklamace-vyrizena` prints it as „Odůvodnění" together with the date of resolution. Until
+  then the form had no field at all and rejections went out without a word.
+
 ## Orders — rules that are easy to break
 
 - **Checkout is four URLs: `/kosik` → `/pokladna` (údaje) → `/pokladna/doprava` (doprava a

@@ -18,6 +18,24 @@ export const DNU_NA_REKLAMACI = 30;
 export const DNU_NA_ODSTOUPENI = 14;
 
 /**
+ * Splatnost kupní ceny při platbě převodem (čl. 5 obchodních podmínek).
+ *
+ * Smluvní, ne zákonná lhůta – rozhodla ji majitelka. Pracovní dny, protože
+ * převod mezi bankami může trvat den a víkend by kalendářní lhůtu zkrátil.
+ * Po marném uplynutí může majitelka objednávku zrušit (ručně v adminu).
+ *
+ * **Musí sedět se zněním podmínek.** Kdo ji změní, vydá i novou verzi
+ * obchodních podmínek – jinak by doklad a e-mail slibovaly jinou lhůtu, než
+ * na jakou zákaznice přistoupila.
+ */
+export const SPLATNOST_PRACOVNICH_DNU = 3;
+
+/** Text splatnosti pro platební údaje (stránka, e-mail, doklad). */
+export function popisSplatnosti(): string {
+  return `do ${SPLATNOST_PRACOVNICH_DNU} pracovních dnů od objednávky`;
+}
+
+/**
  * Lhůta pro vyřízení reklamace.
  *
  * Není to interní cíl, ale datum s následkem: marným uplynutím vzniká

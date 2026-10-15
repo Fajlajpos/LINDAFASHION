@@ -8,6 +8,7 @@ import { usePokladna, useStrazceKroku } from '@/lib/pokladna-kontext';
 import { czkNaHalere, halereNaCzk, spocitatObjednavku } from '@/lib/penize';
 import { nacistKody } from '@/lib/ulozene-kody';
 import { vybratVydejniMisto } from '@/lib/packeta-widget';
+import { popisSplatnosti } from '@/lib/lhuty';
 import { Hlaska, KrokKarty, NavigaceKroku, Pole, TRIDY_HLAVNIHO_TLACITKA, Volba } from './prvky';
 import { NacitaniKroku } from './NacitaniKroku';
 import { PrubeznySouhrn } from './PrubeznySouhrn';
@@ -229,7 +230,7 @@ export function KrokDoprava() {
                   Bankovní převod
                 </>
               }
-              popis="Údaje k platbě i QR kód dostanete hned po odeslání objednávky."
+              popis={`Údaje k platbě i QR kód dostanete hned po odeslání objednávky. Zaplaťte prosím ${popisSplatnosti()}.`}
               cena={<span className="text-linda-sage">Zdarma</span>}
             />
 

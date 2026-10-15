@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { CheckCircle, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
+import { popisSplatnosti } from '@/lib/lhuty';
 import { generateQrPaymentString, qrPlatbaSvg } from '@/lib/qr-code';
 
 export const dynamic = 'force-dynamic';
@@ -59,9 +60,18 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
   const cisloUctu = process.env.BANK_ACCOUNT_NUMBER ?? '';
   const variabilniSymbol = objednavka.cisloObjednavky.replace(/\D/g, '');
 
-  // QR platba dává smysl jen u převodu, který ještě není uhrazený.
-  const zobrazitQr =
-    objednavka.zpusobPlatby === 'bankovni_prevod' && kUhrade > 0 && Boolean(iban);
+  /*
+   * Výzva k platbě jen u převodu, který ještě není uhrazený ani zrušený.
+   * Dřív se řídila jen částkou a způsobem platby, takže stránka vyzývala
+   * „Zaplaťte převodem" i u objednávky, kterou majitelka označila jako
+   * zaplacenou nebo kterou zákaznice stornovala. Stejné pravidlo má doklad.
+   */
+  const cekaNaPrevod =
+    objednavka.zpusobPlatby === 'bankovni_prevod' &&
+    kUhrade > 0 &&
+    objednavka.stavPlatby !== 'ZAPLACENO' &&
+    objednavka.stav !== 'ZRUSENA';
+  const zobrazitQr = cekaNaPrevod && Boolean(iban);
 
   // SVG se vyrobí tady na serveru a do stránky jde jako `data:` adresa –
   // prohlížeč zákaznice si kvůli QR nesahá na žádný cizí server.
@@ -92,7 +102,7 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
       </div>
 
       {/* Platební údaje */}
-      {kUhrade > 0 && objednavka.zpusobPlatby === 'bankovni_prevod' && (
+      {cekaNaPrevod && (
         <section className="space-y-4 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
           <h2 className="flex items-center gap-2 font-serif text-2xl text-linda-espresso">
             <QrCode className="h-5 w-5 text-linda-cognac" aria-hidden="true" />
@@ -114,6 +124,10 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
                 <dd className="text-base font-semibold text-linda-cognac">
                   {kUhrade.toLocaleString('cs-CZ')} Kč
                 </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-linda-espresso/75">Splatnost</dt>
+                <dd className="text-right font-semibold text-linda-espresso">{popisSplatnosti()}</dd>
               </div>
             </dl>
 

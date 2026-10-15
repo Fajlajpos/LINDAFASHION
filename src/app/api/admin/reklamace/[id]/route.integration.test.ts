@@ -182,6 +182,32 @@ describe('PATCH /api/admin/reklamace/[id]', () => {
     expect(objednavka.stav).toBe('VRACENA');
   });
 
+  it('zamítnutí bez odůvodnění odmítne a reklamaci nechá otevřenou', async () => {
+    const { orderId } = await pripravitObjednavku();
+
+    const reklamace = await db.reklamace.create({
+      data: { orderId, typ: 'REKLAMACE', duvod: 'Rozpáraný šev.' },
+    });
+
+    const bez = await PATCH(pozadavek({ stav: 'VYRIZENA_ZAMITNUTA', poznamkaAdmina: '   ' }), {
+      params: { id: reklamace.id },
+    });
+
+    expect(bez.status).toBe(422);
+    expect((await bez.json()).pole?.poznamkaAdmina).toBeTruthy();
+    expect((await db.reklamace.findUniqueOrThrow({ where: { id: reklamace.id } })).stav).toBe('PRIJATA');
+
+    const s = await PATCH(
+      pozadavek({ stav: 'VYRIZENA_ZAMITNUTA', poznamkaAdmina: 'Vada vznikla praním na 90 °C.' }),
+      { params: { id: reklamace.id } }
+    );
+
+    expect(s.status).toBe(200);
+    const ulozena = await db.reklamace.findUniqueOrThrow({ where: { id: reklamace.id } });
+    expect(ulozena.stav).toBe('VYRIZENA_ZAMITNUTA');
+    expect(ulozena.poznamkaAdmina).toBe('Vada vznikla praním na 90 °C.');
+  });
+
   it('uznaná reklamace sklad nezvyšuje – vadný kus se do prodeje nevrací', async () => {
     const { prvni, orderId } = await pripravitObjednavku();
 

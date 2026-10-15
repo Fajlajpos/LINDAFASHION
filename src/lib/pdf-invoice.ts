@@ -14,6 +14,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { halereNaCzk, type Halere } from './penize';
+import { popisSplatnosti } from './lhuty';
 
 export interface PolozkaFaktury {
   nazev: string;
@@ -347,6 +348,7 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
     if (platba.iban) radky.push(['IBAN', platba.iban]);
     radky.push(['Variabilní symbol', platba.variabilniSymbol]);
     radky.push(['Částka k úhradě', castka(platba.kUhradeHaleru)]);
+    radky.push(['Splatnost', popisSplatnosti()]);
 
     let yRadek = yPlatba + 18;
 

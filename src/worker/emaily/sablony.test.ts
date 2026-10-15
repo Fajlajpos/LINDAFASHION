@@ -154,6 +154,38 @@ describe('sestavitEmail', () => {
   });
 
   /*
+   * § 19 odst. 1 zák. o ochraně spotřebitele: potvrzení o datu vyřízení
+   * a u zamítnutí písemné odůvodnění. Reklamační řád obojí slibuje, takže
+   * vyjádření u zamítnutí musí být nadepsané jako odůvodnění.
+   */
+  it('vyřízená reklamace nese datum vyřízení a zamítnutí odůvodnění', () => {
+    const zamitnuta = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'REKLAMACE',
+      stav: 'VYRIZENA_ZAMITNUTA',
+      poznamka: 'Vada vznikla praním v rozporu s visačkou.',
+      // 22:30 UTC je v Praze už další den.
+      datumVyrizeni: '2026-10-16T22:30:00.000Z',
+    })!;
+
+    expect(zamitnuta.html).toContain('Datum vyřízení');
+    expect(zamitnuta.html).toContain('17. 10. 2026');
+    expect(zamitnuta.html).toContain('Odůvodnění:');
+    expect(zamitnuta.text).toContain('Odůvodnění: Vada vznikla praním');
+
+    const uznana = sestavitEmail('reklamace-vyrizena', {
+      cisloObjednavky: '2026-00042',
+      typ: 'REKLAMACE',
+      stav: 'VYRIZENA_UZNANA',
+      poznamka: 'Pošleme nový kus.',
+    })!;
+
+    expect(uznana.html).toContain('Vyjádření:');
+    // Starší úloha bez data řádek prostě nemá, nic si nevymýšlí.
+    expect(uznana.html).not.toContain('Datum vyřízení');
+  });
+
+  /*
    * `Reklamace.token` se generoval od začátku, ale nikam se neposílal, takže
    * se k němu zákaznice bez účtu neměla jak dostat a stav žádosti nezjistila.
    * Odkaz musí mířit na `?t=`, ne `?token=` – stejná past, na kterou se
@@ -335,6 +367,12 @@ describe('sestavitEmail', () => {
         expect(cast).toContain('02688468');
         expect(cast).toContain('/reklamacni-rad');
       }
+    });
+
+    it('platební údaje nesou splatnost z obchodních podmínek', () => {
+      const email = sestavitEmail('potvrzeni-objednavky', plna)!;
+      expect(email.html).toContain('Splatnost');
+      expect(email.text).toContain('do 3 pracovních dnů od objednávky');
     });
 
     it('platební údaje jen když přijdou (karta, zaplaceno poukazem)', () => {

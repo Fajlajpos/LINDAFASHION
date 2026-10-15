@@ -19,6 +19,7 @@
 
 // Relativně, ne přes `@/` – soubor se kompiluje do buildu workeru.
 import { NAZEV_ZPUSOBU_VYRIZENI, type ZpusobVyrizeni } from '../../lib/objednavka-popisky';
+import { popisSplatnosti } from '../../lib/lhuty';
 
 const BARVY = {
   paper: '#F6F3EC',
@@ -269,6 +270,8 @@ function radkyPlatby(data: Data): Array<[string, string]> {
   if (iban) radky.push(['IBAN', iban]);
   if (vs) radky.push(['Variabilní symbol', vs]);
   if (castka !== null) radky.push(['Částka', kc(castka)]);
+  // Splatnost z podmínek (čl. 5) – bez ní zákaznice neví, dokdy zaplatit.
+  radky.push(['Splatnost', popisSplatnosti()]);
   return ucet || iban ? radky : [];
 }
 
@@ -1160,9 +1163,18 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
         tokenZadosti ? `?t=${encodeURIComponent(tokenZadosti)}` : ''
       }`;
 
+      /* Datum vyřízení – § 19 odst. 1 zák. o ochraně spotřebitele chce
+         potvrzení o datu a způsobu vyřízení. Starší úlohy ve frontě ho
+         nemají, řádek pak prostě chybí. */
+      const datumVyrizeni = data.datumVyrizeni
+        ? new Date(String(data.datumVyrizeni)).toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })
+        : null;
+      const popisekPoznamky = uznano ? 'Vyjádření' : 'Odůvodnění';
+
       const radky: Array<[string, string]> = [
         ['Objednávka', cislo],
         ['Výsledek', uznano ? 'Uznáno' : 'Zamítnuto'],
+        ...(datumVyrizeni ? [['Datum vyřízení', datumVyrizeni] as [string, string]] : []),
       ];
 
       const zaver = uznano
@@ -1180,7 +1192,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
             `vaši ${jeVraceni ? 'žádost o vrácení' : 'reklamaci'} k objednávce <strong>${e(cislo)}</strong> jsme vyřídili.`
           ) +
           panel(radky) +
-          (poznamka ? odstavec(`<strong>Vyjádření:</strong> ${e(poznamka)}`) : '') +
+          (poznamka ? odstavec(`<strong>${popisekPoznamky}:</strong> ${e(poznamka)}`) : '') +
           odstavec(zaver) +
           tlacitko('Zobrazit stav žádosti', odkazNaStav)
         ),
@@ -1190,7 +1202,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           `vaši ${jeVraceni ? 'žádost o vrácení' : 'reklamaci'} k objednávce ${cislo} jsme vyřídili.`,
           '',
           `Výsledek: ${uznano ? 'Uznáno' : 'Zamítnuto'}`,
-          poznamka ? `Vyjádření: ${poznamka}` : '',
+          datumVyrizeni ? `Datum vyřízení: ${datumVyrizeni}` : '',
+          poznamka ? `${popisekPoznamky}: ${poznamka}` : '',
           '',
           zaver,
           '',

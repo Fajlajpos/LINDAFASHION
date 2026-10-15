@@ -14,15 +14,29 @@ function jeFinalni(stav: string): stav is FinalniStav {
   return (FINALNI as readonly string[]).includes(stav);
 }
 
-const schema = z.object({
-  stav: z.enum(['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA', 'VYRIZENA_ZAMITNUTA']),
-  poznamkaAdmina: z
-    .string()
-    .max(2000)
-    .optional()
-    .nullable()
-    .transform((v) => (v?.trim() ? v.trim() : null)),
-});
+const schema = z
+  .object({
+    stav: z.enum(['PRIJATA', 'RESI_SE', 'VYRIZENA_UZNANA', 'VYRIZENA_ZAMITNUTA']),
+    poznamkaAdmina: z
+      .string()
+      .max(2000)
+      .optional()
+      .nullable()
+      .transform((v) => (v?.trim() ? v.trim() : null)),
+  })
+  /*
+   * Zamítnutí se musí odůvodnit – § 19 odst. 1 zák. č. 634/1992 Sb. chce
+   * při zamítnutí reklamace písemné odůvodnění a reklamační řád ho slibuje.
+   * Vyjádření jde zákaznici v e-mailu o vyřízení. Dřív formulář žádné pole
+   * pro něj neměl, takže zamítnutí odcházelo bez jediného slova.
+   *
+   * Platí i pro zamítnuté vrácení – jedno pravidlo se pamatuje snáz a
+   * vysvětlení tam zákaznice potřebuje stejně.
+   */
+  .refine((v) => v.stav !== 'VYRIZENA_ZAMITNUTA' || v.poznamkaAdmina !== null, {
+    message: 'Zamítnutí je potřeba odůvodnit – zákaznice odůvodnění dostane e-mailem.',
+    path: ['poznamkaAdmina'],
+  });
 
 /**
  * PATCH /api/admin/reklamace/[id] – změna stavu reklamace či vrácení.
@@ -222,6 +236,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             typ: reklamace.typ,
             stav: vstup.stav,
             poznamka: vstup.poznamkaAdmina,
+            datumVyrizeni: new Date().toISOString(),
             /* Klíč k `/reklamace/stav`. Bez něj vede odkaz v e-mailu jen na
                vyhledávací formulář a zákaznice musí znovu opisovat číslo
                objednávky s e-mailem. */
