@@ -71,6 +71,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(vstup.stav === 'DORUCENA' && objednavka.datumDoruceni === null
         ? { datumDoruceni: ted }
         : {}),
+      /*
+       * Datum zaplacení – tiskne se na doklad jako „Uhrazeno dne".
+       *
+       * Jen při přechodu na ZAPLACENO, stejně jako data výše: druhé uložení
+       * téhož stavu by datum úhrady posunulo na dnešek. Vrácení na „čeká na
+       * platbu" je oprava omylu, takže datum maže; „peníze vráceny" ho
+       * nechává – zaplaceno opravdu bylo.
+       */
+      ...(vstup.stavPlatby === 'ZAPLACENO' && objednavka.stavPlatby !== 'ZAPLACENO'
+        ? { zaplacenoAt: ted }
+        : {}),
+      ...(vstup.stavPlatby === 'CEKA_NA_PLATBU' ? { zaplacenoAt: null } : {}),
     };
 
     if (obnovujeZeZruseni) {
@@ -155,15 +167,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     /*
-     * Po označení „zaplaceno" se doklad přepíše.
+     * Doklad se přepíše, kdykoliv se změní to, co na něm stojí: platba
+     * („Uhrazeno dne", údaje k úhradě) nebo zrušení.
      *
      * Při založení objednávky vzniká podklad k platbě – u bankovního převodu
-     * tou dobou ještě nikdo nezaplatil. Bez tohohle kroku by v `storage/faktury/`
-     * navždy zůstala ta první verze. Úloha zapisuje pod stejným názvem souboru
-     * (`číslo objednávky.pdf`), takže jde o přepis, ne o druhý doklad.
+     * tou dobou ještě nikdo nezaplatil. Bez přepisu by v `storage/faktury/`
+     * navždy zůstala ta první verze; u zrušené objednávky i s číslem účtu
+     * a výzvou k úhradě, takže šlo zaplatit nákup, který neplatí. Úloha
+     * zapisuje pod stejným názvem souboru (`číslo objednávky.pdf`), takže jde
+     * o přepis, ne o druhý doklad.
      */
-    if (vstup.stavPlatby === 'ZAPLACENO') {
+    const zmenilaSePlatba = vstup.stavPlatby !== undefined && vstup.stavPlatby !== objednavka.stavPlatby;
+
+    if (rusi || zmenilaSePlatba || vstup.stavPlatby === 'ZAPLACENO') {
       await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: params.id });
+    }
+
+    if (vstup.stavPlatby === 'ZAPLACENO') {
       await publishJob(FRONTY.VYGENEROVAT_POUKAZY, { orderId: params.id });
 
       /*

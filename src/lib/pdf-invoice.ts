@@ -25,6 +25,18 @@ export interface PodkladFaktury {
   cisloObjednavky: string;
   datumVystaveni: Date;
 
+  /**
+   * Stav dokladu, tištěný pod jeho číslem.
+   *
+   * Dřív na dokladu nebylo, jestli je zaplaceno – po úhradě z něj jen zmizel
+   * blok s platebními údaji, takže zákaznici nic nepotvrzovalo, že zaplatila.
+   * A zrušená objednávka si nesla dál výzvu k úhradě i s číslem účtu.
+   */
+  stav:
+    | { druh: 'zaplaceno'; dne: Date | null }
+    | { druh: 'ceka' }
+    | { druh: 'zruseno' };
+
   dodavatel: {
     nazev: string;
     ico: string | null;
@@ -142,6 +154,8 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
   const ESPRESSO = '#2B2019';
   const COGNAC = '#7A4B32';
   const SEDA = '#6B5D52';
+  const ZELENA = '#3F6B4E';
+  const CERVENA = '#9B2C2C';
 
   // --- Hlavička ---
   doc.font('tucny').fontSize(20).fillColor(ESPRESSO).text('LINDA FASHION', 50, 50);
@@ -170,6 +184,27 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
       70,
       { align: 'right' },
     );
+
+  /*
+   * Stav pod datem. Datum úhrady opět v české zóně. Objednávky zaplacené
+   * dřív, než se datum začalo ukládat, mají jen „Uhrazeno" – vymyslet jim
+   * datum by bylo horší než ho neuvést.
+   */
+  const stav = podklad.stav;
+  const textStavu =
+    stav.druh === 'zruseno'
+      ? 'ZRUŠENO – objednávka byla stornována, nehraďte'
+      : stav.druh === 'zaplaceno'
+        ? stav.dne
+          ? `Uhrazeno ${stav.dne.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}`
+          : 'Uhrazeno'
+        : 'Čeká na úhradu';
+
+  doc
+    .font('tucny')
+    .fontSize(9)
+    .fillColor(stav.druh === 'zruseno' ? CERVENA : stav.druh === 'zaplaceno' ? ZELENA : COGNAC)
+    .text(textStavu, 50, 83, { align: 'right' });
 
   doc.moveTo(50, 100).lineTo(545, 100).strokeColor(COGNAC).lineWidth(1).stroke();
 
@@ -201,14 +236,22 @@ export async function vytvoritFakturuPdf(podklad: PodkladFaktury): Promise<Buffe
     podklad.odberatel.email,
   ].filter(Boolean) as string[];
 
-  const maxRadku = Math.max(dodavatelRadky.length, odberatelRadky.length);
+  /*
+   * Každý sloupec si počítá výšku sám. Dřív stál každý řádek na pevných
+   * `y + i * 14`, takže když se dlouhý údaj zalomil („Zapsána v živnostenském
+   * rejstříku vedeném Městským úřadem …“), druhý řádek se vytiskl přes ten
+   * další – a nečitelné bylo právě „Neplátce DPH“ a zápis v rejstříku.
+   */
+  const vypsatSloupec = (radky: string[], x: number, sirka: number): number => {
+    let yRadku = y;
+    for (const r of radky) {
+      doc.text(r, x, yRadku, { width: sirka });
+      yRadku += doc.heightOfString(r, { width: sirka }) + 2;
+    }
+    return yRadku;
+  };
 
-  for (let i = 0; i < maxRadku; i++) {
-    if (dodavatelRadky[i]) doc.text(dodavatelRadky[i], 50, y + i * 14, { width: 250 });
-    if (odberatelRadky[i]) doc.text(odberatelRadky[i], 320, y + i * 14, { width: 225 });
-  }
-
-  y += maxRadku * 14 + 30;
+  y = Math.max(vypsatSloupec(dodavatelRadky, 50, 250), vypsatSloupec(odberatelRadky, 320, 225)) + 30;
 
   // --- Položky ---
   doc.font('tucny').fontSize(9).fillColor(SEDA);

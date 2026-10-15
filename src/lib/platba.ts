@@ -107,7 +107,7 @@ export async function vyhodnotitPlatbu(platbaId: string): Promise<VysledekPlatby
       stavPlatby: { not: 'ZAPLACENO' },
       stav: { notIn: ['ZRUSENA', 'VRACENA'] },
     },
-    data: { stavPlatby: 'ZAPLACENO' },
+    data: { stavPlatby: 'ZAPLACENO', zaplacenoAt: new Date() },
   });
 
   if (zmeneno.count !== 1) {

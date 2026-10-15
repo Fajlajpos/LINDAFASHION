@@ -407,6 +407,7 @@ export async function vytvoritObjednavku(
           zpusobPlatby: vstup.zpusobPlatby,
           // Poukazem plně uhrazená objednávka je zaplacená hned.
           stavPlatby: rozpis.kUhrade === 0 ? 'ZAPLACENO' : 'CEKA_NA_PLATBU',
+          zaplacenoAt: rozpis.kUhrade === 0 ? new Date() : null,
           poznamka: vstup.poznamka?.trim() || null,
 
           /*

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { overitUzivatele } from '@/lib/auth';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
+import { FRONTY, publishJob } from '@/lib/queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (!zruseno) {
       return odpovedChyba('Tuto objednávku už někdo mezitím zrušil.', 409);
     }
+
+    // Doklad v účtu dřív zůstal i po stornu s číslem účtu a výzvou k úhradě.
+    // Přepis ho označí jako zrušený a platební údaje z něj zmizí.
+    await publishJob(FRONTY.VYGENEROVAT_FAKTURU, { orderId: objednavka.id });
 
     return odpovedOk({ zprava: 'Objednávka byla zrušena a zboží vráceno do nabídky.' });
   } catch (err) {

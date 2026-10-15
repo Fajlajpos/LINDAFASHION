@@ -40,6 +40,10 @@ describe('vytvoritObjednavku', () => {
 
     // 2 × 2500 + doprava 90
     expect(vysledek.data.celkovaCenaKc).toBe(5090);
+
+    // Převodem ještě nezaplaceno – žádné datum úhrady.
+    const objednavka = await db.order.findUniqueOrThrow({ where: { id: vysledek.data.id } });
+    expect(objednavka.zaplacenoAt).toBeNull();
     expect(await skladem(variantId)).toBe(3);
   });
 
@@ -240,6 +244,8 @@ describe('vytvoritObjednavku', () => {
 
       const objednavka = await db.order.findUniqueOrThrow({ where: { id: vysledek.data.id } });
       expect(objednavka.stavPlatby).toBe('ZAPLACENO');
+      // Datum úhrady jde na doklad („Uhrazeno dne“).
+      expect(objednavka.zaplacenoAt).not.toBeNull();
     });
 
     it('odmítne vyčerpaný poukaz', async () => {

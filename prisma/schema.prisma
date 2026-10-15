@@ -396,6 +396,11 @@ model Order {
   vydejniMistoNazev String?
   zpusobPlatby      String
   stavPlatby        String
+  /// Kdy byla objednávka uhrazena – doklad z něj tiskne „Uhrazeno dne“.
+  /// Zapisuje se jen při přechodu na ZAPLACENO, ne při dalším uložení téhož
+  /// stavu. Objednávky zaplacené dřív, než sloupec existoval, mají `null`
+  /// a zpětně se nedoplňují – datum by bylo vymyšlené.
+  zaplacenoAt       DateTime?
 
   /// Identifikátor platby u brány (GoPay). Notifikace i návratová adresa
   /// nesou jen tohle id, takže je to jediná vazba mezi objednávkou a platbou.

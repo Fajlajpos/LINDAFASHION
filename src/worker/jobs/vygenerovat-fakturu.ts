@@ -34,7 +34,8 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
   const nastaveni = await db.settings.findUnique({ where: { id: 1 } });
 
   const polozky: PolozkaFaktury[] = objednavka.items.map((i) => ({
-    nazev: `${i.variant.product.nazev} (${i.variant.velikost})`,
+    // Velikost bývá sama se závorkou – „S (36)“ – takže ne do další závorky.
+    nazev: `${i.variant.product.nazev}, velikost ${i.variant.velikost}`,
     mnozstvi: i.mnozstvi,
     cenaZaKusHaleru: czkNaHalere(i.cenaVDobeNakupu),
   }));
@@ -79,12 +80,26 @@ export async function vygenerovatFakturuUloha(data: UlohaFaktura): Promise<void>
    * U zaplacené objednávky se nevytisknou – vyzývat k platbě něco, co je
    * uhrazené, je návod k druhé platbě.
    */
-  const cekaNaPlatbu = objednavka.stavPlatby !== 'ZAPLACENO';
+  const zaplaceno = objednavka.stavPlatby === 'ZAPLACENO';
+  const zrusena = objednavka.stav === 'ZRUSENA';
   const prevodem = objednavka.zpusobPlatby === 'bankovni_prevod';
+
+  /*
+   * Zrušená objednávka nesmí nést výzvu k úhradě – zákaznice si doklad
+   * stáhne v účtu a podle čísla účtu by zaplatila nákup, který neplatí.
+   * Zaplacená a pak zrušená objednávka se označí jako zrušená taky; vrácení
+   * peněz řeší majitelka zvlášť.
+   */
+  const cekaNaPlatbu = !zaplaceno && !zrusena;
 
   const pdf = await vytvoritFakturuPdf({
     cisloObjednavky: objednavka.cisloObjednavky,
     datumVystaveni: objednavka.createdAt,
+    stav: zrusena
+      ? { druh: 'zruseno' }
+      : zaplaceno
+        ? { druh: 'zaplaceno', dne: objednavka.zaplacenoAt }
+        : { druh: 'ceka' },
     dodavatel: {
       nazev: dodavatel?.nazev || 'LINDA FASHION',
       ico: dodavatel?.ico ?? null,

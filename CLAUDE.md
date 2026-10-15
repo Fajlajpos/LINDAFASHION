@@ -682,6 +682,13 @@ deleted with her browser history. That is not evidence.
   They are omitted once `stavPlatby` is `ZAPLACENO`: a demand for payment on a settled order
   is an invitation to pay twice. The withdrawal address in the footer comes from `APP_URL`,
   not a hardcoded domain.
+  **The document states its state under the date**: „Uhrazeno <datum>" from `Order.zaplacenoAt`
+  (written only on the transition to `ZAPLACENO` — order paid by voucher, GoPay notification, admin;
+  cleared when the admin reverts to „čeká na platbu"; old rows stay `null` and print just „Uhrazeno"),
+  „Čeká na úhradu", or „ZRUŠENO – nehraďte" with no payment block. It used to say none of it, so
+  a paid order had no proof of payment and a **cancelled** order kept its account number and amount
+  in the customer's account. The PDF is therefore regenerated on every payment change and on every
+  cancel (customer storno and admin).
 - Prices in the shop include VAT, so `dphZCelkem` computes tax **from the top**:
   `celkem − celkem / (1 + sazba/100)`. `celkem × sazba` overstates 21 % VAT by a fifth.
 - `ipObjednavky` is proof of a distance contract (legitimate interest), kept shorter
