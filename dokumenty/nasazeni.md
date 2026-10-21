@@ -1,233 +1,357 @@
-# Nasazení e-shopu – postup krok za krokem
+# Spuštění e-shopu – kompletní postup
 
-Návod pro den, kdy se e-shop poprvé pustí na internet. Technické detaily
-(co dělá který kontejner, jak fungují zálohy) jsou v [README](../README.md);
-tady je **pořadí kroků a to, na čem se dá ztroskotat**.
+Všechno, co je potřeba vyřídit, než e-shop poběží na internetu, v pořadí, ve kterém
+na sobě kroky závisí. Zaškrtávej průběžně.
 
-Počítej s tím, že první nasazení zabere půl dne. Ne proto, že by bylo těžké,
-ale protože se čeká: na DNS, na certifikát, na schválení platební brány.
+**Sestava:** doména u českého registrátora → VPS u **OVHcloud** (Ubuntu 24.04) →
+**Coolify** (nasazuje z GitHubu automaticky po každém pushi) → náš `docker-compose.yml`
+(web, worker, Postgres, zálohy).
 
----
+Hetzner byl první volba, ale jeho levné servery (CX/CAX) jsou od září 2026
+nedostupné a řada CPX po zdražení vychází zhruba třikrát dráž. Postup je
+u kteréhokoli poskytovatele VPS stejný – liší se jen část B1.
 
-## Co musí být hotové předem
-
-| Věc | Kdo ji obstará | Pozn. |
-|---|---|---|
-| Doména | majitelka, na svůj účet | blokuje všechno ostatní |
-| VPS | ty | aspoň 4 GB RAM |
-| Klíče GoPay | majitelka | e-shop jede i bez nich (bankovní převod) |
-| Klíče Zásilkovny | hotovo | `PACKETA_API_KEY`, `PACKETA_API_PASSWORD`, `PACKETA_ESHOP` |
-| Heslo aplikace pro Gmail | hotovo | připravené v `.env` jako zakomentovaný blok |
-
-**Doména i VPS patří majitelce**, ne tobě. Je to majetek obchodu: kdyby se
-vaše cesty rozešly, nesmí e-shop zhasnout s tvým účtem.
+> **Všechno, co se platí, patří majitelce.** Doména, server i platební brána se
+> zakládají na její jméno, její IČO a její kartu; vývojář dostane jen přístupy.
+> Kdyby se cesty rozešly, nesmí e-shop zhasnout s cizím účtem.
 
 ---
 
-## 1. Doména
+## Přehled
 
-Kterýkoli registrátor (Wedos, Forpsi, Active24, Cloudflare). U objednávky:
-
-- **držitel = majitelka** (jméno, IČO, její e-mail)
-- **zapni automatické prodloužení** – propadlá doména znamená mrtvý e-shop
-  i e-maily a může ji koupit kdokoli jiný
-- **nekupuj webhosting** od registrátora, web poběží na VPS
-- DNS nech u registrátora, stačí
+| # | Co | Kdo | Blokuje |
+|---|---|---|---|
+| A1 | Doména | majitelka | DNS, GoPay, HTTPS |
+| A2 | Účet OVHcloud + server | majitelka platí, vývojář nastaví | všechno technické |
+| A3 | Heslo aplikace pro Gmail | majitelka | e-maily zákaznicím |
+| A4 | Číslo účtu a IBAN | majitelka | platby převodem |
+| A5 | GoPay | majitelka | platba kartou (e-shop jede i bez ní) |
+| A6 | Česká pošta, PPL | majitelka rozhodne | nabídka dopravy |
+| A7 | Schválení obchodních podmínek | majitelka | spuštění |
+| B1–B9 | Server, Coolify, nasazení | vývojář | — |
+| C | GoPay zapnout | vývojář | — |
+| D | Běžný provoz | vývojář | — |
 
 ---
 
-## 2. VPS
+# A. S majitelkou
 
-Ubuntu LTS, **aspoň 4 GB RAM**. Menší nestačí: současně běží web, Postgres
-a worker, který fotky zpracovává Sharpem a ten si paměť vezme.
+## A1. Doména `lindafashion.cz`
 
-Po vytvoření dostaneš IP adresu a přístup přes SSH.
+- [ ] U kteréhokoli českého registrátora (Wedos, Forpsi, Active24…) ověřit, že je volná.
+- [ ] Objednat. **Držitel:** Martina Ludvíková, sídlo, IČO 02688468, e-mail
+      `lindafashioneshop@gmail.com`.
+- [ ] **Zapnout automatické prodlužování.** Propadlou doménu může koupit kdokoli
+      a s ní zmizí web i e-maily.
+- [ ] **Nic nepřikupovat** – webhosting, e-mail ani „SSL certifikát". Web poběží na
+      vlastním serveru a HTTPS si zařídí sám.
+- [ ] Vývojář dostane přístup k nastavení DNS (krok B4).
 
-### Zabezpečení, než začneš cokoli instalovat
+## A2. OVHcloud – účet a server
+
+**Účet:**
+- [ ] ovhcloud.com → vytvořit účet na `lindafashioneshop@gmail.com`, údaje podnikatelky
+      (jméno, sídlo, IČO), platební karta.
+- [ ] Pokud OVH chce ověřit totožnost nebo platbu, udělat to rovnou – server se jinak
+      nevydá.
+
+**Server (konfigurátor VPS):**
+- [ ] **VPS Model 2: 4 vCore, 8 GB RAM, 75 GB NVMe.** Méně než 4 GB RAM ne – sestavení
+      webu po každém pushi potřebuje paměť navíc k běžícímu provozu.
+- [ ] **Lokalita v EU** (Frankfurt, Gravelines, Strasbourg, Varšava) – kvůli osobním údajům.
+- [ ] **Systém Ubuntu 24.04**, bez předinstalovaných aplikací. 26.04 také funguje, ale
+      24.04 je vyzkoušenější a podporu má do roku 2029.
+- [ ] **Automatické zálohy** přiobjednat. Naše noční zálohy leží na témže serveru
+      a ztrátu celého serveru nepřežijí; tyhle ano.
+- [ ] **Platba:** konfigurátor nabízí i 12 měsíců předem (levnější, ale nevratné).
+      Na začátek měsíčně, na roční přejít, až web běží.
+- [ ] Po zaplacení přijde e-mail s **IP adresou** serveru.
+
+## A3. Gmail – heslo aplikace
+
+Majitelka přihlášená do `lindafashioneshop@gmail.com`:
+- [ ] Účet Google → Zabezpečení → zapnout **Dvoufázové ověření**.
+- [ ] Ve vyhledávání účtu Google: **„Hesla aplikací"** → název `LINDA e-shop` → Vytvořit.
+- [ ] Opsat 16znakové heslo (ukáže se jen jednou). **Neposílat chatem ani e-mailem** –
+      vloží se rovnou do Coolify jako `SMTP_PASSWORD`.
+
+Zdarma má Gmail limit kolem 500 zpráv denně, na butik dost.
+
+## A4. Bankovní účet
+
+- [ ] Číslo účtu (`123456789/0800`) a IBAN (`CZ…`) účtu, na který mají chodit platby.
+      Tisknou se na doklad, do e-mailu i do QR kódu. Překlep = peníze na cizím účtu.
+
+## A5. GoPay
+
+- [ ] Zjistit stav registrace (podaná 11. 9. 2026).
+- [ ] Domluvit, že web poběží na `https://lindafashion.cz`. GoPay před schválením web
+      prochází (obchodní podmínky, kontakty, ceny, doprava, reklamace), takže **finální
+      schválení přijde až po spuštění** – do té doby e-shop nabízí jen převod.
+- [ ] Zeptat se, zda na webu chtějí logo GoPay nebo loga karet.
+- [ ] Po schválení získat **GoID, ClientID, ClientSecret** – testovací (sandbox) i ostré.
+
+## A6. Doprava – Česká pošta a PPL
+
+- [ ] **Česká pošta – jakou službu?**
+  - *Balík Do ruky* (na adresu) – web ho umí už teď.
+  - *Balíkovna* (výdejní místa pošty) – je potřeba doprogramovat výběr místa.
+- [ ] **Jak bude podávat?** Na přepážce bez smlouvy, nebo přes online podání na webu
+      České pošty (tisk štítků, obvykle levnější; smlouva se slevami při vyšším objemu).
+      Napojení přes API nemáme – číslo zásilky se zapisuje u objednávky ručně.
+- [ ] **PPL – má s nimi smlouvu?** Pokud ne, cena PPL v nastavení zůstane prázdná
+      a pokladna PPL nenabídne. Nabízet dopravu, kterou neposílá, nejde.
+- [ ] Ceny, které bude zákaznicím účtovat (vyplní v B8).
+
+Zásilkovna je hotová – účet schválený, klíče jsou v klientské sekci.
+
+## A7. Obchodní podmínky
+
+- [ ] Majitelka projde `/obchodni-podminky` a `/reklamacni-rad` (verze 2026-10-15) a
+      potvrdí hlavně: **splatnost převodu 3 pracovní dny**, náhradu skutečných nákladů
+      u nevyzvednuté zásilky, poukazy bez časového omezení a bez proplacení.
+- [ ] Každá změna = nové znění (`VYCHOZI_ZNENI` v `src/lib/pravni-dokumenty.ts`)
+      a nové vydání v kroku B8. Splatnost žije i v `SPLATNOST_PRACOVNICH_DNU`
+      v `src/lib/lhuty.ts` – musí sedět.
+
+---
+
+# B. Server a nasazení
+
+## B1. Přihlášení na server
+
+Na svém počítači (jednou):
 
 ```bash
-# přihlášení klíčem místo heslem (na svém počítači)
-ssh-keygen -t ed25519
-ssh-copy-id root@<IP>
-
-# na serveru: vypnout přihlašování heslem
-sudo nano /etc/ssh/sshd_config      # PasswordAuthentication no
-sudo systemctl restart ssh
-
-# firewall – ven jen SSH a web
-sudo ufw allow OpenSSH
-sudo ufw allow 80
-sudo ufw allow 443
-sudo ufw enable
-
-# bezpečnostní aktualizace samy
-sudo apt install unattended-upgrades
+ssh-keygen -t ed25519          # Enter, Enter – klíč vznikne v ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub      # tenhle veřejný klíč patří na server
 ```
 
-Databáze ani aplikace se zvenčí nevystavují vůbec – chodí se na ně přes
-vnitřní síť Dockeru.
-
----
-
-## 3. Docker
+Klíč se vloží při objednávce serveru, nebo se nahraje dodatečně
+(`ssh-copy-id ubuntu@<IP>`). U OVH je výchozí uživatel `ubuntu`, ne `root`:
 
 ```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER      # pak se odhlas a přihlas znovu
-docker compose version             # kontrola
+ssh ubuntu@<IP>
+sudo -i                        # administrátorská práva pro další kroky
 ```
 
----
-
-## 4. Kód na server
+## B2. Základní zabezpečení, swap
 
 ```bash
-git clone <adresa repozitáře> linda-fashion
-cd linda-fashion
+apt update && apt upgrade -y
+apt install -y unattended-upgrades       # bezpečnostní záplaty se instalují samy
+
+# firewall – ven jen SSH, web a dočasně panel Coolify
+ufw allow OpenSSH
+ufw allow 80
+ufw allow 443
+ufw allow 8000
+ufw enable
+
+# swap 4 GB – záchranná brzda, kdyby sestavení webu došla paměť
+fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
 ```
 
-U soukromého repozitáře budeš potřebovat přístupový token nebo nasazovací
-klíč. Alternativa bez gitu je zkopírovat složku přes `scp`, ale pak se
-aktualizace dělají hůř.
+Přihlašování heslem vypnout (jen klíčem): v `/etc/ssh/sshd_config` nastavit
+`PasswordAuthentication no` a `systemctl restart ssh`. **Předtím ověřit, že přihlášení
+klíčem funguje**, jinak se na server nedostaneš.
 
----
+Docker si nainstaluje Coolify samo. Databáze ani aplikace nepublikují porty ven.
 
-## 5. Soubor `.env`
+## B3. Coolify
 
 ```bash
-cp .env.example .env
-nano .env
+curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 ```
 
-Co **musí** být vyplněné:
+- [ ] **Hned** otevřít `http://<IP>:8000` a založit admin účet. Kdo tam přijde první,
+      je administrátor.
+- [ ] Server → **Docker Cleanup** zapnout (staré image po buildech jinak zaplní disk).
+- [ ] **Sources → + Add → GitHub App**, nainstalovat jen na repozitář
+      `Fajlajpos/LINDAFASHION` (může zůstat soukromý).
+- [ ] Volitelně panel na vlastní doménu `https://coolify.lindafashion.cz`
+      (DNS v B4) a pak port 8000 zavřít: `ufw delete allow 8000`.
 
-```bash
-DATABASE_URL=              # produkční compose si ji doplní sám na hostname `postgres`
-POSTGRES_USER=             # vymyslíš
-POSTGRES_PASSWORD=         # dlouhé náhodné heslo
-POSTGRES_DB=linda_fashion
+## B4. DNS
 
-AUTH_SECRET=               # node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-APP_URL=https://<doména>   # bez lomítka na konci
-
-ADMIN_EMAIL=lindafashioneshop@gmail.com
-ADMIN_PASSWORD=            # heslo majitelky do administrace
-
-BANK_ACCOUNT_NUMBER=
-BANK_IBAN=
-```
-
-### Pozor na tyhle tři věci
-
-**SMTP.** Vývojový `.env` míří na Mailpit (`SMTP_HOST=localhost`). Na server
-patří **produkční blok pro Gmail**, který je v `.env` připravený zakomentovaný.
-Když se zkopíruje vývojová verze, e-shop se tváří, že e-maily odesílá, ale
-zákaznice nedostane nic – a potvrzení objednávky je povinné (§ 1822 o. z.).
-
-**`NEXT_PUBLIC_*` a `APP_URL` se vpékají do stránky při buildu.**
-`NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` i `APP_URL` proto musí být
-v `.env` **před** prvním `up -d --build`. Doplnit je později znamená image
-přestavět, samotný restart nestačí. U `APP_URL` je to vidět hůř než
-u analytiky: web běží normálně, jen `robots.txt` a odkazy pro vyhledávače
-míří na náhradní `lindafashion.cz`.
-
-**`WEB_BIND` nech na `127.0.0.1`.** Znamená to, že se na web dá jen přes Caddy.
-Kdo ho přepne na `0.0.0.0`, otevře hádání hesel: brzda se řídí hlavičkou
-`X-Forwarded-For`, kterou si při přímém přístupu může kdokoli vymyslet.
-
----
-
-## 6. Doména do Caddyfile
-
-V souboru `Caddyfile` je zatím zástupná doména. Přepiš první řádek na tu
-skutečnou:
-
-```
-tvojedomena.cz, www.tvojedomena.cz {
-```
-
-Bez toho si Caddy vyžádá certifikát na cizí doménu a HTTPS nenaběhne.
-
----
-
-## 7. DNS
-
-U registrátora nastav dva **A záznamy** na IP adresu serveru:
+U registrátora:
 
 | Typ | Název | Hodnota |
 |---|---|---|
-| A | `@` | IP adresa VPS |
-| A | `www` | IP adresa VPS |
+| A | `@` | IP serveru |
+| A | `www` | IP serveru |
+| A | `coolify` | IP serveru (jen pro panel) |
 
-Než se to rozšíří, trvá obvykle minuty, výjimečně hodiny. Zkontroluj:
+Kontrola: `nslookup lindafashion.cz` musí vrátit IP serveru. Obvykle minuty, výjimečně
+hodiny. **Nasazovat až potom** – certifikát pro HTTPS se jinak nevydá.
+
+## B5. Úpravy projektu pro Coolify – před prvním nasazením
+
+`docker-compose.yml` je psaný pro holý server s vlastní Caddy. Pro Coolify:
+
+- [ ] **Caddy nepouštět.** Coolify má vlastní proxy na 80/443. U nás je Caddy jen
+      v profilu `proxy`, takže se bez něj nespustí – stačí profil nezapínat.
+- [ ] **Zálohy na pevnou cestu** (např. `/srv/linda/zalohy`) místo `./zalohy`. Relativní
+      cesta míří do složky s kódem, kterou Coolify při nasazení přepisuje.
+- [ ] **Pevné `container_name`** ověřit proti Coolify (při novém nasazení nesmí
+      kolidovat se starým kontejnerem).
+- [ ] Ověřit, že proxy Coolify posílá skutečnou IP návštěvníka v `X-Forwarded-For` –
+      opírá se o ni brzda proti hádání hesel.
+- [ ] Ověřit, že `APP_URL` a `NEXT_PUBLIC_*` se dostanou do sestavení jako build args.
+
+## B6. Projekt v Coolify
+
+- [ ] **Projects → + Add** → `LINDA FASHION` → prostředí `production`
+      → **+ New → Private Repository (with GitHub App)**.
+- [ ] Repozitář `LINDAFASHION`, větev `main`, **Build Pack: Docker Compose**,
+      soubor `/docker-compose.yml`.
+- [ ] U služby **web** doména `https://lindafashion.cz:3000` (port říká, kde web uvnitř
+      poslouchá; zákaznice ho v adrese neuvidí). Přesměrování `www` → bez `www`.
+- [ ] **Environment Variables** (Developer view, vložit najednou):
 
 ```bash
-nslookup tvojedomena.cz
+# Databáze – heslo dlouhé a náhodné, nikde jinde nepoužité
+POSTGRES_USER=linda
+POSTGRES_PASSWORD=
+POSTGRES_DB=linda_fashion
+
+# Přihlášení – vygenerovat:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+AUTH_SECRET=
+APP_URL=https://lindafashion.cz
+WEB_BIND=127.0.0.1
+
+# První administrátorka (založí se, jen když v databázi žádná není)
+ADMIN_EMAIL=lindafashioneshop@gmail.com
+ADMIN_PASSWORD=
+
+# Převod (A4)
+BANK_ACCOUNT_NUMBER=
+BANK_IBAN=
+
+# Zásilkovna – PACKETA_ESHOP je „Označení" odesílatele, musí sedět na znak
+PACKETA_API_KEY=
+PACKETA_API_PASSWORD=
+PACKETA_ESHOP=
+
+# E-mail přes Gmail (A3) – EMAIL_FROM musí mít stejnou adresu jako SMTP_USER
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=lindafashioneshop@gmail.com
+SMTP_PASSWORD=
+EMAIL_FROM=LINDA FASHION <lindafashioneshop@gmail.com>
+
+# Zálohy
+ZALOHY_DNU=30
+ZALOHY_CAS=04:10
+
+# GoPay – zatím prázdné, doplní se v kroku C
+GOPAY_GOID=
+GOPAY_CLIENT_ID=
+GOPAY_CLIENT_SECRET=
+GOPAY_ENV=sandbox
+
+# Volitelné, až budou: Turnstile, analytika (NEXT_PUBLIC_* chce nové sestavení)
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+NEXT_PUBLIC_GA_ID=
+NEXT_PUBLIC_META_PIXEL_ID=
 ```
 
-**Nespouštěj další krok dřív, než doména ukazuje na server.** Caddy by
-certifikát nedostal a Let's Encrypt má limit na počet neúspěšných pokusů.
+- [ ] **Auto Deploy** zapnuté.
+- [ ] **Deploy.** První sestavení 5–10 minut, průběh v logu.
+
+**Pozor:** vývojový `.env` z počítače sem nekopírovat – míří na Mailpit, takže by e-shop
+„odesílal" e-maily, které nikdy neodejdou. A `NEXT_PUBLIC_*` a `APP_URL` se vpékají do
+stránky při sestavení: po jejich změně je potřeba **Redeploy**, restart nestačí.
+
+## B7. Kontrola, že web žije
+
+- [ ] `https://lindafashion.cz/api/health` odpoví v pořádku.
+- [ ] Zámek v adresním řádku, `http://` přesměruje na `https://`.
+- [ ] Přihlášení do `/admin` účtem z `ADMIN_EMAIL`.
+
+## B8. Naplnit obsah
+
+V Coolify → služba **worker** → **Terminal**:
+
+```bash
+node dist/scripts/vyplnit-udaje-firmy.js        # identifikace prodávající do nastavení
+node dist/scripts/vlozit-pravni-dokumenty.js    # obchodní podmínky a reklamační řád
+```
+
+Druhý příkaz je povinný: bez uloženého znění se objednávka nemá na co odkázat a nedá
+se doložit, s čím zákaznice souhlasila. **`prisma/seed.ts` na serveru nikdy nespouštět** –
+maže katalog.
+
+Majitelka v `/admin/nastaveni`:
+- [ ] ceny dopravy (prázdná cena = doprava se nenabízí; PPL jen se smlouvou)
+- [ ] doprava zdarma: nechat prázdné, dokud ji nechce nabízet
+- [ ] hmotnost jednoho kusu (pro Zásilkovnu)
+- [ ] adresa provozovny, otevírací doba, adresa pro vrácení, e-mail pro GDPR
+
+Pak produkty a fotky v `/admin/produkty`.
+
+## B9. Zkušební objednávka
+
+Projít jako zákaznice:
+- [ ] Košík → Údaje → Doprava a platba → Shrnutí → Objednat.
+- [ ] **Potvrzovací e-mail opravdu dorazí** (i do mobilu, ne do spamu).
+- [ ] Doklad se stáhne, má **správný účet a IBAN**, stav „Čeká na úhradu" a splatnost.
+- [ ] QR kód jde načíst v bankovní aplikaci (nemusí se platit).
+- [ ] Zásilkovna: zásilka se u objednávky založí a štítek vytiskne.
+- [ ] Objednávku v administraci zrušit – zboží se vrátí na sklad, doklad dostane „ZRUŠENO".
+- [ ] `/admin` – sekce „Vyžaduje pozornost" nehlásí nic kritického (zálohy se objeví
+      po první noci).
+
+Teprve potom pustit odkaz mezi lidi.
 
 ---
 
-## 8. Start
+# C. GoPay – až po schválení
 
-```bash
-docker compose --profile proxy up -d --build
-```
-
-Poprvé to trvá několik minut – staví se image. Pak:
-
-```bash
-docker compose ps        # všechno má běžet
-docker compose logs -f   # Ctrl+C ukončí sledování
-```
-
-Migrace databáze se spustí samy při startu webu, ruční krok není potřeba.
-Účet administrátorky se založí z `.env`, pokud v databázi žádný není.
+- [ ] V administraci GoPay **povolit notifikační adresu**
+      `https://lindafashion.cz/api/platba/gopay/notifikace`. Bez ní se objednávka po
+      zaplacení sama neoznačí jako zaplacená.
+- [ ] V Coolify doplnit testovací `GOPAY_GOID`, `GOPAY_CLIENT_ID`, `GOPAY_CLIENT_SECRET`,
+      `GOPAY_ENV=sandbox` → **Restart** (nové sestavení není potřeba).
+- [ ] Zkušební platba kartou v sandboxu – objednávka se sama přepne na zaplacenou,
+      doklad ukáže „Uhrazeno".
+- [ ] Ostré údaje a `GOPAY_ENV=production` (přesně takhle, cokoli jiného míří do sandboxu)
+      → Restart.
 
 ---
 
-## 9. Naplnit obsah
+# D. Smlouvy o zpracování (GDPR)
 
-Skripty jsou v produkčním image zkompilované, takže se pouští bez `ts-node`:
+Do [zpracovatele-a-smlouvy.md](zpracovatele-a-smlouvy.md) doplnit a u každého mít
+uzavřenou smlouvu podle čl. 28 GDPR (u velkých poskytovatelů bývá součástí podmínek):
 
-```bash
-# identifikace prodávajícího do Settings
-docker compose run --rm worker node dist/scripts/vyplnit-udaje-firmy.js
-
-# obchodní podmínky a reklamační řád do databáze
-docker compose run --rm worker node dist/scripts/vlozit-pravni-dokumenty.js
-```
-
-Druhý příkaz je důležitý. Dokud v tabulce žádné znění není, stránka sice
-podmínky zobrazí ze záložního textu v kódu, ale **objednávka se pak nemá na co
-odkázat** – a doložit, s čím zákaznice souhlasila, je smysl celé té tabulky.
-
-Zbytek se vyplňuje v `/admin/nastaveni`:
-
-- ceny dopravy (bez ceny se doprava vůbec nenabídne)
-- práh pro dopravu zdarma, nebo prázdné, když se nenabízí
-- hmotnost jednoho kusu (podklad pro zásilky Zásilkovny)
-- adresa pro vracené zboží, e-mail pro GDPR, zápis v rejstříku
+- [ ] OVHcloud (server – drží celou databázi)
+- [ ] GoPay
+- [ ] Zásilkovna (a Česká pošta / PPL, pokud se budou používat)
+- [ ] Google (Gmail – odchozí e-maily)
 
 ---
 
-## 10. Kontrola, že to opravdu běží
+# E. Běžný provoz
 
-Projdi to jako zákaznice, ne jen kouknutím na titulní stránku:
+**Nová verze webu:** `npm test` → commit → `git push` do `main`. Coolify si to samo
+stáhne, sestaví a nasadí (pár minut); migrace databáze proběhnou při startu webu.
+Průběh a chyby v Coolify → Deployments. Když sestavení selže, běží dál stará verze.
+Každý push do `main` jde rovnou k zákaznicím – rozpracované věci patří do jiné větve.
 
-- [ ] `https://tvojedomena.cz` má **zámek v adresním řádku** (Caddy si certifikát vyřídil sám)
-- [ ] `http://` přesměruje na `https://`
-- [ ] Přihlášení do `/admin` funguje
-- [ ] V `/admin` sekce **„Vyžaduje pozornost"** nehlásí nic kritického
-- [ ] Zkušební objednávka projde až na potvrzovací stránku
-- [ ] **Potvrzovací e-mail opravdu dorazí** do schránky
-- [ ] Faktura se z potvrzovací stránky stáhne
-- [ ] Zásilka u objednávky se založí a štítek se vytiskne
-- [ ] Po zkoušce objednávku zruš – vrátí zboží na sklad
+**Zálohy:** každou noc ve 04:10 UTC, drží se 30 dní; stav ukazuje `/admin`. Leží na
+témže serveru – proto i zálohy OVH (A2). Občas stáhnout k sobě, viz
+[zalohy-a-obnova.md](zalohy-a-obnova.md). **Jednou za čas zkusit obnovu** – záloha,
+ze které nikdo nikdy neobnovoval, je jen naděje.
 
-Teprve potom pusť odkaz mezi lidi.
+**Nezaplacené objednávky:** po 3 pracovních dnech je může majitelka zrušit v administraci
+(vrátí sklad, kód i poukaz a pošle zákaznici e-mail). Automaticky se neruší.
+
+**Nová verze Ubuntu (za pár let):** nejbezpečněji nový server s novým Ubuntu a Coolify,
+obnovit na něj zálohu, ověřit a pak přepnout IP v DNS. Starý server mezitím běží.
 
 ---
 
@@ -235,33 +359,22 @@ Teprve potom pusť odkaz mezi lidi.
 
 | Projev | Příčina |
 |---|---|
-| Caddy nedá HTTPS | doména ještě neukazuje na server, nebo je v `Caddyfile` stará |
-| Web hlásí 502 | kontejner `web` nenaběhl – `docker compose logs web` |
-| E-maily nechodí | v `.env` zůstal Mailpit, nebo prázdný `SMTP_HOST` |
-| Analytika se nenačítá | `NEXT_PUBLIC_*` se doplnily bez `--build` |
-| Fotky se nezpracují | neběží `worker` – `docker compose ps` |
-| Administrace hlásí chybějící údaje | neproběhl krok 9 |
-
-Logy konkrétní služby:
-
-```bash
-docker compose logs web
-docker compose logs worker
-docker compose logs caddy
-```
+| Nenaběhne HTTPS | doména ještě neukazuje na server (B4) |
+| Sestavení spadne na paměť | chybí swap (B2) |
+| Web hlásí 502 / Bad Gateway | služba `web` nenaběhla – log v Coolify |
+| E-maily nechodí | špatné `SMTP_*`, běžné heslo místo hesla aplikace, nebo `EMAIL_FROM` ≠ `SMTP_USER` |
+| Platba kartou se nenabízí | chybí některý z `GOPAY_*` |
+| Zaplacená objednávka se neoznačí | GoPay nemá povolenou notifikační adresu (C) |
+| Analytika se nenačítá | `NEXT_PUBLIC_*` doplněné bez Redeploy |
+| Fotky se nezpracují | neběží `worker` |
+| Zásilkovna nejde založit | `PACKETA_ESHOP` nesedí na „Označení" odesílatele |
+| Administrace hlásí chybějící údaje | neproběhl krok B8 |
 
 ---
 
-## Po spuštění
+## Bez Coolify
 
-Zálohy se rozjedou samy – každou noc ve 04:10 UTC. **Leží ale na tomtéž
-serveru**, takže chrání před smazáním dat, ne před ztrátou serveru. Jak je
-odvážet jinam a hlavně jak z nich obnovit, je v
-[`zalohy-a-obnova.md`](zalohy-a-obnova.md).
-
-Až dorazí klíče GoPay, doplní se do `.env` a stačí restart – platba kartou se
-zapne sama, bez přestavování image:
-
-```bash
-docker compose up -d
-```
+`docker-compose.yml` jde pustit i na holém serveru s Dockerem a vlastní Caddy:
+`.env` vedle compose, v `Caddyfile` skutečná doména, pak
+`docker compose --profile proxy up -d --build`. Aktualizace pak ručně (`git pull`
+a totéž znovu) – proto je výchozí cesta Coolify.
