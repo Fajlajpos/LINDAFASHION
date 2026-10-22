@@ -36,7 +36,7 @@ u kteréhokoli poskytovatele VPS stejný – liší se jen část B1.
 
 # A. S majitelkou
 
-## A1. Doména `lindafashion.cz`
+## A1. Doména `lindashop.cz`
 
 - [ ] U kteréhokoli českého registrátora (Wedos, Forpsi, Active24…) ověřit, že je volná.
 - [ ] Objednat. **Držitel:** Martina Ludvíková, sídlo, IČO 02688468, e-mail
@@ -85,7 +85,7 @@ Zdarma má Gmail limit kolem 500 zpráv denně, na butik dost.
 ## A5. GoPay
 
 - [ ] Zjistit stav registrace (podaná 11. 9. 2026).
-- [ ] Domluvit, že web poběží na `https://lindafashion.cz`. GoPay před schválením web
+- [ ] Domluvit, že web poběží na `https://lindashop.cz`. GoPay před schválením web
       prochází (obchodní podmínky, kontakty, ceny, doprava, reklamace), takže **finální
       schválení přijde až po spuštění** – do té doby e-shop nabízí jen převod.
 - [ ] Zeptat se, zda na webu chtějí logo GoPay nebo loga karet.
@@ -170,7 +170,7 @@ curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 - [ ] Server → **Docker Cleanup** zapnout (staré image po buildech jinak zaplní disk).
 - [ ] **Sources → + Add → GitHub App**, nainstalovat jen na repozitář
       `Fajlajpos/LINDAFASHION` (může zůstat soukromý).
-- [ ] Volitelně panel na vlastní doménu `https://coolify.lindafashion.cz`
+- [ ] Volitelně panel na vlastní doménu `https://coolify.lindashop.cz`
       (DNS v B4) a pak port 8000 zavřít: `ufw delete allow 8000`.
 
 ## B4. DNS
@@ -183,17 +183,19 @@ U registrátora:
 | A | `www` | IP serveru |
 | A | `coolify` | IP serveru (jen pro panel) |
 
-Kontrola: `nslookup lindafashion.cz` musí vrátit IP serveru. Obvykle minuty, výjimečně
+Kontrola: `nslookup lindashop.cz` musí vrátit IP serveru. Obvykle minuty, výjimečně
 hodiny. **Nasazovat až potom** – certifikát pro HTTPS se jinak nevydá.
 
 ## B5. Úpravy projektu pro Coolify – před prvním nasazením
 
 `docker-compose.yml` je psaný pro holý server s vlastní Caddy. Pro Coolify:
 
-- [ ] **Caddy nepouštět.** Coolify má vlastní proxy na 80/443. U nás je Caddy jen
-      v profilu `proxy`, takže se bez něj nespustí – stačí profil nezapínat.
-- [ ] **Zálohy na pevnou cestu** (např. `/srv/linda/zalohy`) místo `./zalohy`. Relativní
-      cesta míří do složky s kódem, kterou Coolify při nasazení přepisuje.
+- [x] **Caddy je v samostatném `docker-compose.caddy.yml`.** Coolify má vlastní proxy
+      na 80/443; hlavní compose ji proto vůbec neobsahuje.
+- [x] **Skript záloh je zapečený v obrazu** (`deploy/zalohy.Dockerfile`). Coolify soubory
+      z repozitáře k běžícím kontejnerům nepřipojuje.
+- [x] **Zálohy na pevnou cestu** přes `ZALOHY_HOST_DIR=/data/linda/zalohy` (proměnná
+      v Coolify, B6). Výchozí `./zalohy` míří do složky, kterou Coolify přepisuje.
 - [ ] **Pevné `container_name`** ověřit proti Coolify (při novém nasazení nesmí
       kolidovat se starým kontejnerem).
 - [ ] Ověřit, že proxy Coolify posílá skutečnou IP návštěvníka v `X-Forwarded-For` –
@@ -206,7 +208,7 @@ hodiny. **Nasazovat až potom** – certifikát pro HTTPS se jinak nevydá.
       → **+ New → Private Repository (with GitHub App)**.
 - [ ] Repozitář `LINDAFASHION`, větev `main`, **Build Pack: Docker Compose**,
       soubor `/docker-compose.yml`.
-- [ ] U služby **web** doména `https://lindafashion.cz:3000` (port říká, kde web uvnitř
+- [ ] U služby **web** doména `https://lindashop.cz:3000` (port říká, kde web uvnitř
       poslouchá; zákaznice ho v adrese neuvidí). Přesměrování `www` → bez `www`.
 - [ ] **Environment Variables** (Developer view, vložit najednou):
 
@@ -219,7 +221,7 @@ POSTGRES_DB=linda_fashion
 # Přihlášení – vygenerovat:
 #   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 AUTH_SECRET=
-APP_URL=https://lindafashion.cz
+APP_URL=https://lindashop.cz
 WEB_BIND=127.0.0.1
 
 # První administrátorka (založí se, jen když v databázi žádná není)
@@ -242,9 +244,10 @@ SMTP_USER=lindafashioneshop@gmail.com
 SMTP_PASSWORD=
 EMAIL_FROM=LINDA FASHION <lindafashioneshop@gmail.com>
 
-# Zálohy
+# Zálohy – ZALOHY_HOST_DIR je v Coolify povinná (jinak se zálohy smažou s nasazením)
 ZALOHY_DNU=30
 ZALOHY_CAS=04:10
+ZALOHY_HOST_DIR=/data/linda/zalohy
 
 # GoPay – zatím prázdné, doplní se v kroku C
 GOPAY_GOID=
@@ -268,7 +271,7 @@ stránky při sestavení: po jejich změně je potřeba **Redeploy**, restart ne
 
 ## B7. Kontrola, že web žije
 
-- [ ] `https://lindafashion.cz/api/health` odpoví v pořádku.
+- [ ] `https://lindashop.cz/api/health` odpoví v pořádku.
 - [ ] Zámek v adresním řádku, `http://` přesměruje na `https://`.
 - [ ] Přihlášení do `/admin` účtem z `ADMIN_EMAIL`.
 
@@ -312,7 +315,7 @@ Teprve potom pustit odkaz mezi lidi.
 # C. GoPay – až po schválení
 
 - [ ] V administraci GoPay **povolit notifikační adresu**
-      `https://lindafashion.cz/api/platba/gopay/notifikace`. Bez ní se objednávka po
+      `https://lindashop.cz/api/platba/gopay/notifikace`. Bez ní se objednávka po
       zaplacení sama neoznačí jako zaplacená.
 - [ ] V Coolify doplnit testovací `GOPAY_GOID`, `GOPAY_CLIENT_ID`, `GOPAY_CLIENT_SECRET`,
       `GOPAY_ENV=sandbox` → **Restart** (nové sestavení není potřeba).
@@ -376,5 +379,5 @@ obnovit na něj zálohu, ověřit a pak přepnout IP v DNS. Starý server mezit�
 
 `docker-compose.yml` jde pustit i na holém serveru s Dockerem a vlastní Caddy:
 `.env` vedle compose, v `Caddyfile` skutečná doména, pak
-`docker compose --profile proxy up -d --build`. Aktualizace pak ručně (`git pull`
+`docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build`. Aktualizace pak ručně (`git pull`
 a totéž znovu) – proto je výchozí cesta Coolify.

@@ -60,14 +60,17 @@ Do administrace se přihlásíš na `/prihlaseni` údaji z `ADMIN_EMAIL` / `ADMI
 > seznam a časté chyby – je v [`dokumenty/nasazeni.md`](dokumenty/nasazeni.md).
 > Tahle sekce popisuje jen mechaniku.
 
-Celý stack v Dockeru na VPS – `web` + `worker` + `postgres`, volitelně Caddy
-jako reverzní proxy s automatickým HTTPS.
+Celý stack v Dockeru na VPS – `web` + `worker` + `postgres` + noční zálohy.
+Výchozí cesta je **Coolify** (nasazuje po každém pushi do `main`, HTTPS vyřizuje
+jeho proxy) – postup v [`dokumenty/nasazeni.md`](dokumenty/nasazeni.md).
+
+Bez Coolify, na holém serveru s Caddy jako reverzní proxy:
 
 ```bash
 cp .env.example .env      # vyplnit produkčními hodnotami
 
-# s HTTPS (nejdřív přepiš doménu v Caddyfile) – doporučená varianta:
-docker compose --profile proxy up -d --build
+# s HTTPS (nejdřív přepiš doménu v Caddyfile):
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
 
 # bez proxy (web pak musí být vystavený napřímo, viz WEB_BIND níž):
 docker compose up -d --build

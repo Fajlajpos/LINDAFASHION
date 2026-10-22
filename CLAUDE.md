@@ -54,6 +54,12 @@ Consequences worth remembering:
   therefore **critical** on `/admin` — it used to be a mere recommendation only because dev
   had no backups. `.gitattributes` keeps `*.sh` in LF: the script is mounted straight from
   Windows, and a CRLF checkout (`core.autocrlf=true`) makes Alpine `sh` die on `set -eu`.
+  **Production runs on Coolify** (OVHcloud VPS, `lindashop.cz`), which neither mounts repository
+  files into running containers nor keeps the app directory across deploys. So the production
+  `zalohy` service has the script baked in (`deploy/zalohy.Dockerfile`, not a bind mount),
+  writes to `ZALOHY_HOST_DIR` (`/data/linda/zalohy` on the server — **mandatory** in Coolify,
+  or every deploy wipes the backups), and Caddy lives in `docker-compose.caddy.yml` for
+  installs without Coolify only — Coolify's own proxy holds 80/443.
 - API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
   400: a broken request body is the caller's fault, and it used to surface as a 500 that

@@ -1,7 +1,10 @@
-# Produkční stack (VPS): web + worker + postgres, volitelně Caddy jako reverzní proxy.
+# Produkční stack (VPS): web + worker + postgres + noční zálohy.
 #
-#   docker compose up -d --build
-#   docker compose --profile proxy up -d --build     # + automatické HTTPS přes Caddy
+# Nasazuje se přes Coolify (dokumenty/nasazeni.md): to si soubor stáhne
+# z GitHubu, sestaví a HTTPS vyřídí vlastní proxy.
+#
+# Bez Coolify, na holém serveru s vlastní Caddy jako reverzní proxy:
+#   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
 #
 # `web` a `worker` sdílí jeden image a jednu kódovou základnu (sekce 3 zadání),
 # liší se jen spouštěcím příkazem. Migrace se aplikují automaticky při startu `web`,
@@ -59,8 +62,9 @@ services:
       - uploads_data:/app/public/uploads
       - storage_data:/app/storage
       # Jen kvůli `stav.json`, ze kterého administrace pozná, že zálohy běží.
-      # Ke čtení – web do záloh nikdy nezapisuje.
-      - ./zalohy:/app/zalohy:ro
+      # Ke čtení – web do záloh nikdy nezapisuje. Cesta musí být stejná jako
+      # u služby `zalohy` níž, viz `ZALOHY_HOST_DIR`.
+      - ${ZALOHY_HOST_DIR:-./zalohy}:/app/zalohy:ro
     # Zdravý `web` znamená "migrace doběhly a server odpovídá" – worker se na to
     # níž váže, aby nestartoval do databáze bez tabulek.
     healthcheck:
@@ -116,9 +120,14 @@ services:
   # Databáze schválně nepublikuje port, takže záloha musí běžet uvnitř téhle
   # sítě. Odtud `--network` a jméno hostitele `postgres`.
   zalohy:
-    # Verze MUSÍ sedět se službou `postgres` výš. `pg_dump` starší než server
-    # odmítne dumpovat; `postgres:alpine` bez čísla by se jednou tiše posunul.
-    image: postgres:16-alpine
+    # `postgres:16-alpine` se skriptem uvnitř (deploy/zalohy.Dockerfile).
+    # Verze tam MUSÍ sedět se službou `postgres` výš – `pg_dump` starší než
+    # server odmítne dumpovat. Skript je zapečený, ne připojený z repozitáře:
+    # Coolify soubory z repozitáře k běžícím kontejnerům nepřipojuje.
+    build:
+      context: ./deploy
+      dockerfile: zalohy.Dockerfile
+    image: linda-zalohy:latest
     container_name: linda_zalohy
     restart: unless-stopped
     environment:
@@ -136,31 +145,17 @@ services:
       - storage_data:/zdroj/storage:ro
       # Výstup je bind mount, ne pojmenovaný volume: zálohy se musí dát ze
       # serveru odvézt jinam, a to je z volume zbytečná práce navíc.
-      - ./zalohy:/zalohy
-      - ./deploy/zaloha.sh:/zaloha.sh:ro
+      #
+      # `ZALOHY_HOST_DIR` = pevná cesta na serveru. V Coolify je POVINNÁ
+      # (`/data/linda/zalohy`): výchozí `./zalohy` by mířilo do složky, kterou
+      # Coolify při nasazení přepisuje, a s ní by zmizely i zálohy.
+      - ${ZALOHY_HOST_DIR:-./zalohy}:/zalohy
     depends_on:
       postgres:
         condition: service_healthy
     entrypoint: ['sh', '/zaloha.sh', '--smycka']
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: linda_caddy
-    restart: unless-stopped
-    profiles: ['proxy']
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-
 volumes:
   postgres_data:
   uploads_data: # hotové WebP varianty, servíruje je web
   storage_data: # dočasné originály čekající na zpracování workerem
-  caddy_data:
-  caddy_config:

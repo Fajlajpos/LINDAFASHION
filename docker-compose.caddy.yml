@@ -1,0 +1,29 @@
+# Caddy jako reverzní proxy s automatickým HTTPS – JEN pro nasazení bez Coolify.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+#
+# V Coolify se tenhle soubor nepoužívá: Coolify má vlastní proxy na portech
+# 80/443 a druhá proxy na stejných portech by nenaběhla. Proto je Caddy mimo
+# hlavní `docker-compose.yml`, ne jen v profilu – na profil se nedá spolehnout,
+# že ho každý nástroj respektuje.
+#
+# Před spuštěním přepiš v `Caddyfile` doménu na skutečnou.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: linda_caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:
