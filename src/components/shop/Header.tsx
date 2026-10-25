@@ -249,10 +249,12 @@ export const Header: React.FC<HeaderProps> = ({
                 LINDA FASHION
               </span>
               {/* Podtitul zůstává v DOM a jen se sbalí. Dřív se odmountoval,
-                  takže zmizel skokem uprostřed přechodu hlavičky. */}
+                  takže zmizel skokem uprostřed přechodu hlavičky.
+                  Na telefonu (pod `sm`) se nezobrazuje vůbec – v úzkém
+                  prostředním sloupci stačí samotné LINDA FASHION. */}
               <span
                 aria-hidden={isCompact}
-                className={`block overflow-hidden -mt-1 text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold transition-[max-height,opacity] duration-300 ease-out ${
+                className={`hidden sm:block overflow-hidden -mt-1 text-[9px] tracking-[0.35em] text-linda-sage uppercase font-sans font-semibold transition-[max-height,opacity] duration-300 ease-out ${
                   isCompact ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100'
                 }`}
               >
