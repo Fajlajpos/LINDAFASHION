@@ -396,7 +396,11 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
                 {fotka.jeHlavni ? 'Hlavní fotka' : 'Nastavit hlavní'}
               </button>
 
-              <div className="flex items-center justify-between gap-1">
+              {/* Čtyři tlačítka po 44 px potřebují 188 px, karta je ale na telefonu
+                  široká ~110 px a v mřížce o třech sloupcích ani na 1024 px nedosáhne.
+                  Do jedné řady se proto skládají až od `xl`, dřív 2 × 2 – jinak
+                  koš přetekl přes okraj karty. */}
+              <div className="grid grid-cols-2 justify-items-center gap-x-1 gap-y-2 xl:flex xl:items-center xl:justify-between xl:gap-1">
                 <button
                   type="button"
                   onClick={() => void presunout(index, -1)}
