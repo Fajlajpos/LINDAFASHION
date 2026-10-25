@@ -35,7 +35,7 @@ export const BestSellers = async () => {
           action={{ href: '/produkty', label: 'Zobrazit vše' }}
         />
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
           {produkty.map((produkt) => (
             <ProductCard key={produkt.id} {...produkt} />
           ))}

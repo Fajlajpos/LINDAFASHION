@@ -68,7 +68,7 @@ async function PodobneProdukty({ produkt }: { produkt: ProduktDetail }) {
 
   return (
     <SekcePodobnych>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
         {podobne.map((p) => (
           <ProductCard key={p.id} {...p} />
         ))}
@@ -127,7 +127,7 @@ export default async function DetailProduktPage({ params }: Props) {
       <Suspense
         fallback={
           <SekcePodobnych>
-            <KostraMrizky pocet={4} className="sm:grid-cols-2 lg:grid-cols-4" />
+            <KostraMrizky pocet={4} className="lg:grid-cols-4" />
           </SekcePodobnych>
         }
       >

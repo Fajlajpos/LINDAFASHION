@@ -47,7 +47,7 @@ export function KostraKarty() {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream shadow-neu">
       <Kostra className="aspect-[3/4] w-full rounded-none" />
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-3 sm:p-5">
         <Kostra className="h-3 w-1/3" />
         <Kostra className="mt-3 h-5 w-4/5" />
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-linda-sand/40 pt-3">
@@ -60,9 +60,10 @@ export function KostraKarty() {
 }
 
 /** Mřížka karet. `pocet` se řídí tím, kolik jich na stránce obvykle je. */
-export function KostraMrizky({ pocet = 6, className = 'sm:grid-cols-2 lg:grid-cols-3' }) {
+export function KostraMrizky({ pocet = 6, className = 'lg:grid-cols-3' }) {
+  // Dva sloupce už na telefonu, stejně jako skutečný výpis produktů.
   return (
-    <div className={`grid grid-cols-1 gap-6 ${className}`}>
+    <div className={`grid grid-cols-2 gap-3 sm:gap-6 ${className}`}>
       {Array.from({ length: pocet }, (_, i) => (
         <KostraKarty key={i} />
       ))}

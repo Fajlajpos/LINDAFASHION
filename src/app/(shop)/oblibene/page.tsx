@@ -52,7 +52,7 @@ export default function OblibenePage() {
         /* Stejná karta jako v katalogu: srdíčko na ní je už zamáčknuté a
            slouží k odebrání, takže tu nemusí být zvláštní tlačítko s košem.
            Do košíku se přidává až na detailu, kde je vidět velikost. */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
           {favorites.map((product) => (
             <ProductCard key={product.slug} {...product} />
           ))}

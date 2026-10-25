@@ -105,10 +105,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Badges */}
       {/* `pointer-events-none`: štítky leží nad odkazem přes celou kartu
           a kliknutí na ně má otevřít detail jako kdekoli jinde. */}
-      <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+      <div className="pointer-events-none absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1.5 items-start">
         {doporuceny && (
-          <span className="bg-linda-sage text-white text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-white/20">
-            <Sparkles className="w-3 h-3 text-linda-sand" aria-hidden="true" />
+          /* Na telefonu bez jiskřiček a s užším prostrkáním – v kartě široké
+             ~165 px jinak štítek zajel pod srdíčko vpravo nahoře. */
+          <span className="bg-linda-sage text-white text-[9px] sm:text-[10px] uppercase tracking-wide sm:tracking-wider font-semibold px-2 sm:px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-white/20">
+            <Sparkles className="hidden w-3 h-3 text-linda-sand sm:block" aria-hidden="true" />
             Nová kolekce
           </span>
         )}
@@ -195,7 +197,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               src={obrazekUrl}
               alt=""
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 1024px) 50vw, 33vw"
               className="object-cover group-hover:scale-105 transition-transform duration-500"
             />
             {/* Světelný spád přes nahranou fotografii – přidá se sám každému
@@ -238,12 +240,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </Link>
 
       {/* Product Content info */}
-      <div className="p-5 flex flex-col flex-1 justify-between">
+      {/* Na telefonu jsou karty ve dvou sloupcích (~165 px), proto menší
+          odsazení, menší název a bez značky a „Zobrazit detail" – klikací je
+          stejně celá karta. Od `sm` zpátky plná podoba. */}
+      <div className="p-3 sm:p-5 flex flex-col flex-1 justify-between">
         <div>
           {/* Category & Brand */}
-          <div className="flex items-center justify-between text-xs text-linda-cognac font-medium tracking-wide mb-1">
-            <span>{kategorieNazev || 'Dámská móda'}</span>
-            {znacka && <span className="text-linda-espresso/75 font-serif italic">{znacka}</span>}
+          <div className="flex items-center justify-between gap-2 text-xs text-linda-cognac font-medium tracking-wide mb-1">
+            <span className="truncate">{kategorieNazev || 'Dámská móda'}</span>
+            {znacka && <span className="hidden truncate text-linda-espresso/75 font-serif italic sm:inline">{znacka}</span>}
           </div>
 
           {/* Title */}
@@ -252,7 +257,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               ne jen na fotku, název a „Zobrazit detail". Je to pořád jeden
               odkaz s textem názvu, čtečka i Tab tedy narazí na kartu jednou.
               Srdíčko (`z-10`) leží nad ním a dál funguje samostatně. */}
-          <h3 className="font-serif text-xl text-linda-espresso font-medium line-clamp-2 leading-snug">
+          <h3 className="font-serif text-base sm:text-xl text-linda-espresso font-medium line-clamp-2 leading-snug">
             <Link
               href={`/produkt/${slug}`}
               className="rounded-sm hover:text-linda-cognac transition-colors after:absolute after:inset-0 after:rounded-2xl"
@@ -263,7 +268,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Pricing & CTA */}
-        <div className="mt-4 pt-3 border-t border-linda-sand/40 flex items-center justify-between gap-3">
+        <div className="mt-3 sm:mt-4 pt-3 border-t border-linda-sand/40 flex items-center justify-between gap-3">
           {/* Štítek „−20 %" je na fotce, u ceny by byl podruhé. Větu § 12a
               nese `CenaProduktu` – karta je oznámení slevy stejně jako detail. */}
           <div className="min-w-0">
@@ -284,7 +289,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               karta přes odkaz v názvu, druhý cíl by byl pro Tab navíc. */}
           <span
             aria-hidden="true"
-            className="shrink-0 flex items-center gap-1 min-h-touch text-xs font-medium text-linda-cognac group-hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors"
+            className="hidden shrink-0 sm:flex items-center gap-1 min-h-touch text-xs font-medium text-linda-cognac group-hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors"
           >
             Zobrazit detail
             <ArrowRight
