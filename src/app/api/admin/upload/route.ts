@@ -100,17 +100,17 @@ export async function POST(request: Request) {
       if (!skutecnyTyp || !POVOLENE_TYPY[skutecnyTyp]) {
         /*
          * Nejčastější případ není podvržený soubor, ale HEIC z iPhonu.
-         * Safari fotku běžně převede na JPEG samo (proto `accept` HEIC
-         * záměrně neuvádí), ale při výběru přes aplikaci Soubory pošle
-         * originál – a ten Sharp bez libheif ani neotevře. Hláška proto
-         * musí říct, co s tím, ne jen že to nejde.
+         * Administrace ho před odesláním převádí na JPEG (priprava-fotky.ts),
+         * jenže to umí jen prohlížeč, který HEIC dekóduje – Safari ano,
+         * Chrome na Windows ne. Sem tedy dorazí HEIC zkopírovaný z telefonu
+         * do počítače, a hláška musí říct, co s tím, ne jen že to nejde.
          */
         odmitnute.push({
           nazev: soubor.name,
           duvod:
             'Nepodporovaný formát. Nahrajte prosím JPEG, PNG, WebP nebo AVIF. ' +
-            'Fotíte-li iPhonem, vyberte fotku přes „Vyfotit“ nebo z Fotek – ' +
-            'přes aplikaci Soubory se posílá formát HEIC, který neumíme zpracovat.',
+            'Fotku z iPhonu (HEIC) nahrajte přímo z telefonu, ' +
+            'nebo ji před nahráním z počítače převeďte na JPEG.',
         });
         continue;
       }

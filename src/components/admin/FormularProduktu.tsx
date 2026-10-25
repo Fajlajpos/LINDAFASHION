@@ -19,6 +19,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
+import { pripravitFotky } from '@/lib/priprava-fotky';
 import { Vyber } from '@/components/ui/Vyber';
 import type { UlozenyVyrobce } from '@/app/api/admin/vyrobci/route';
 
@@ -356,7 +357,8 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
     setNahravam(true);
     setChyba(null);
 
-    const soubory = Array.from(vybrane);
+    // HEIC z iPhonu převede na JPEG a obří fotky zmenší – viz priprava-fotky.ts.
+    const soubory = await pripravitFotky(Array.from(vybrane));
     const data = new FormData();
     for (const soubor of soubory) data.append('fotky', soubor);
 

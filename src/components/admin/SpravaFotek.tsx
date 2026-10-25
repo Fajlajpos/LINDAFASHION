@@ -15,6 +15,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
+import { pripravitFotky } from '@/lib/priprava-fotky';
 
 export interface AdminFotka {
   id: string;
@@ -126,7 +127,8 @@ export function SpravaFotek({ productId, pocatecniFotky }: Props) {
 
     const data = new FormData();
     data.append('productId', productId);
-    for (const soubor of Array.from(vybrane)) data.append('fotky', soubor);
+    // HEIC z iPhonu převede na JPEG a obří fotky zmenší – viz priprava-fotky.ts.
+    for (const soubor of await pripravitFotky(Array.from(vybrane))) data.append('fotky', soubor);
 
     const vysledek = await poslatFormData<{ odmitnute: Array<{ nazev: string; duvod: string }> }>(
       '/api/admin/upload',
