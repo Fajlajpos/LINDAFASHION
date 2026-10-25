@@ -103,7 +103,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
        krémovým lemem kolem fotky – ne stínem, který leží vedle karty. */
     <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-linda-cream shadow-neu transition-all duration-300 hover:shadow-neuLg">
       {/* Badges */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+      {/* `pointer-events-none`: štítky leží nad odkazem přes celou kartu
+          a kliknutí na ně má otevřít detail jako kdekoli jinde. */}
+      <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
         {doporuceny && (
           <span className="bg-linda-sage text-white text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-white/20">
             <Sparkles className="w-3 h-3 text-linda-sand" aria-hidden="true" />
@@ -245,10 +247,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Title */}
+          {/* Odkaz z názvu se pseudoprvkem `after` roztáhne přes celou kartu,
+              takže na detail vede kliknutí kamkoli – i na cenu nebo kategorii,
+              ne jen na fotku, název a „Zobrazit detail". Je to pořád jeden
+              odkaz s textem názvu, čtečka i Tab tedy narazí na kartu jednou.
+              Srdíčko (`z-10`) leží nad ním a dál funguje samostatně. */}
           <h3 className="font-serif text-xl text-linda-espresso font-medium line-clamp-2 leading-snug">
             <Link
               href={`/produkt/${slug}`}
-              className="rounded-sm hover:text-linda-cognac transition-colors"
+              className="rounded-sm hover:text-linda-cognac transition-colors after:absolute after:inset-0 after:rounded-2xl"
             >
               {nazev}
             </Link>
@@ -273,16 +280,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               hoverovaným cílem je karta (zvětšuje se fotka i reliéf) a odkaz
               je jen její konec. Posun je 2 px – má naznačit směr, ne upoutat.
               `shrink-0` na ikoně, ať se v úzkém sloupci nezplacatí. */}
-          <Link
-            href={`/produkt/${slug}`}
-            className="shrink-0 flex items-center gap-1 min-h-touch text-xs font-medium text-linda-cognac hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors rounded-sm"
+          {/* Už jen vizuální pobídka, ne samostatný odkaz – klikací je celá
+              karta přes odkaz v názvu, druhý cíl by byl pro Tab navíc. */}
+          <span
+            aria-hidden="true"
+            className="shrink-0 flex items-center gap-1 min-h-touch text-xs font-medium text-linda-cognac group-hover:text-linda-espresso underline underline-offset-4 tracking-wide transition-colors"
           >
-            Zobrazit detail<span className="sr-only"> – {nazev}</span>
+            Zobrazit detail
             <ArrowRight
               className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-          </Link>
+          </span>
         </div>
       </div>
     </div>
