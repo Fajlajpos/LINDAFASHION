@@ -194,8 +194,8 @@ hodiny. **Nasazovat až potom** – certifikát pro HTTPS se jinak nevydá.
       na 80/443; hlavní compose ji proto vůbec neobsahuje.
 - [x] **Skript záloh je zapečený v obrazu** (`deploy/zalohy.Dockerfile`). Coolify soubory
       z repozitáře k běžícím kontejnerům nepřipojuje.
-- [x] **Zálohy na pevnou cestu** přes `ZALOHY_HOST_DIR=/data/linda/zalohy` (proměnná
-      v Coolify, B6). Výchozí `./zalohy` míří do složky, kterou Coolify přepisuje.
+- [x] **Zálohy** ukládá Coolify do `/data/coolify/applications/<uuid>/zalohy`. Složka
+      nasazení přežívá (ověřeno); smazala by se jen se smazáním celé aplikace v Coolify.
 - [ ] **Pevné `container_name`** ověřit proti Coolify (při novém nasazení nesmí
       kolidovat se starým kontejnerem).
 - [ ] Ověřit, že proxy Coolify posílá skutečnou IP návštěvníka v `X-Forwarded-For` –
@@ -244,10 +244,9 @@ SMTP_USER=lindafashioneshop@gmail.com
 SMTP_PASSWORD=
 EMAIL_FROM=LINDA FASHION <lindafashioneshop@gmail.com>
 
-# Zálohy – ZALOHY_HOST_DIR je v Coolify povinná (jinak se zálohy smažou s nasazením)
+# Zálohy
 ZALOHY_DNU=30
 ZALOHY_CAS=04:10
-ZALOHY_HOST_DIR=/data/linda/zalohy
 
 # GoPay – zatím prázdné, doplní se v kroku C
 GOPAY_GOID=

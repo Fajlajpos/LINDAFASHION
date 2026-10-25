@@ -3,7 +3,7 @@
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle, Lock, Mail, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { AuthField } from '@/components/ui/AuthField';
 import { poslatJson } from '@/lib/api-klient';
 
@@ -120,11 +120,6 @@ function PrihlaseniFormular() {
             }
           />
 
-          {/* Turnstile Spam Protection readiness */}
-          <p className="flex items-center gap-2 rounded-xl bg-linda-sandLight p-3 text-[10px] text-linda-espresso/75 shadow-neuInsetSm">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-linda-sage" aria-hidden="true" />
-            Ochrana proti botům (Cloudflare Turnstile aktivní)
-          </p>
 
           <button
             type="submit"

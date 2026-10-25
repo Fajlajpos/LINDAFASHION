@@ -146,9 +146,11 @@ services:
       # Výstup je bind mount, ne pojmenovaný volume: zálohy se musí dát ze
       # serveru odvézt jinam, a to je z volume zbytečná práce navíc.
       #
-      # `ZALOHY_HOST_DIR` = pevná cesta na serveru. V Coolify je POVINNÁ
-      # (`/data/linda/zalohy`): výchozí `./zalohy` by mířilo do složky, kterou
-      # Coolify při nasazení přepisuje, a s ní by zmizely i zálohy.
+      # `ZALOHY_HOST_DIR` je volitelná pevná cesta na serveru. Coolify ji při
+      # načtení compose nepoužije a relativní `./zalohy` přeloží na
+      # `/data/coolify/applications/<uuid>/zalohy` – ověřeno 2026-10-23: složka
+      # nasazení přežije (Coolify v ní přepisuje jen compose a `.env`), zmizela
+      # by jen se smazáním celé aplikace v Coolify.
       - ${ZALOHY_HOST_DIR:-./zalohy}:/zalohy
     depends_on:
       postgres:

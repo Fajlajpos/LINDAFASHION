@@ -56,9 +56,11 @@ Consequences worth remembering:
   Windows, and a CRLF checkout (`core.autocrlf=true`) makes Alpine `sh` die on `set -eu`.
   **Production runs on Coolify** (OVHcloud VPS, `lindashop.cz`), which neither mounts repository
   files into running containers nor keeps the app directory across deploys. So the production
-  `zalohy` service has the script baked in (`deploy/zalohy.Dockerfile`, not a bind mount),
-  writes to `ZALOHY_HOST_DIR` (`/data/linda/zalohy` on the server — **mandatory** in Coolify,
-  or every deploy wipes the backups), and Caddy lives in `docker-compose.caddy.yml` for
+  `zalohy` service has the script baked in (`deploy/zalohy.Dockerfile`, not a bind mount).
+  Coolify resolves `${ZALOHY_HOST_DIR:-./zalohy}` to its default when it loads the compose, so
+  backups live in `/data/coolify/applications/<uuid>/zalohy` — verified to survive redeploys
+  (Coolify rewrites only the compose and `.env` there); deleting the Coolify application would
+  delete them. Caddy lives in `docker-compose.caddy.yml` for
   installs without Coolify only — Coolify's own proxy holds 80/443.
 - API errors use the shape `{ chyba, pole? }` so forms can put the message next to the
   offending field — see [api.ts](src/lib/api.ts). `zpracovatChybu` maps `SyntaxError` to
