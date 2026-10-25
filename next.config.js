@@ -17,6 +17,16 @@ const nextConfig = {
     staleTimes: { dynamic: 30, static: 180 },
   },
 
+  /* Fotky nahrané za běhu. Produkční server zná jen soubory, které byly
+     v `public/` při startu, takže novější varianty vracely 404. `afterFiles`
+     se uplatní až tehdy, když statický soubor nenajde – starší fotky dál
+     obsluhuje Next přímo, nové vyřídí src/app/api/uploads/[soubor]/route.ts. */
+  async rewrites() {
+    return {
+      afterFiles: [{ source: '/uploads/:soubor', destination: '/api/uploads/:soubor' }],
+    };
+  },
+
   images: {
     // Fotky produktů se servírují lokálně z /public/uploads (same-origin),
     // takže tady stačí jen externí služby, které opravdu používáme.

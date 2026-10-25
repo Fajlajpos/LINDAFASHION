@@ -41,6 +41,13 @@ Consequences worth remembering:
   `CEKA` forever and the admin looks like a broken upload — that happened twice
   before the launcher existed, and cost a deleted photo. `SpravaFotek` now says so
   out loud after a minute of waiting instead of spinning a reassuring spinner.
+- **Production Next serves only the `public/` files that existed at startup**
+  (`publicFolderItems` in `next/dist/server/lib/router-utils/filesystem.js`, read once when
+  not in dev). Photos the worker writes to `public/uploads` later returned 404 until the next
+  redeploy — products saved fine and showed no pictures, while `next dev` rescans and hid it.
+  `next.config.js` therefore rewrites `/uploads/:soubor` (`afterFiles`) to
+  [api/uploads/[soubor]](<src/app/api/uploads/[soubor]/route.ts>), which reads the file from
+  disk. Anything else written into `public/` at runtime needs the same treatment.
 - **Backups run in dev too.** `docker-compose.dev.yml` carries the same `zalohy` service
   as production (same image, same [zaloha.sh](deploy/zaloha.sh), sources bind-mounted from
   `./public/uploads` and `./storage`), so `npm run dev` starts it. The loop does **not**
