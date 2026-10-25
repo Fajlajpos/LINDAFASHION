@@ -27,27 +27,30 @@ const PRAH_BAJTU = 3 * 1024 * 1024;
 
 const KVALITA_JPEG = 0.88;
 
-async function nacistObrazek(soubor: File): Promise<HTMLImageElement> {
-  const url = URL.createObjectURL(soubor);
-  try {
+/**
+ * `onload`, ne `decode()`: Safari na iPhonu u velkých fotek `decode()` občas
+ * odmítne, přestože se obrázek načte i vykreslí. URL se uvolňuje až po
+ * vykreslení do plátna – Safari smí dekódovaná data zahodit a při `drawImage`
+ * je načíst znovu, a z uvolněné URL by pak nakreslil prázdnou plochu.
+ */
+function nacistObrazek(url: string): Promise<HTMLImageElement> {
+  return new Promise((hotovo, chyba) => {
     const obrazek = new Image();
+    obrazek.onload = () => hotovo(obrazek);
+    obrazek.onerror = () => chyba(new Error('Obrázek se nepodařilo načíst.'));
     obrazek.src = url;
-    // `decode()` respektuje EXIF orientaci stejně jako vykreslení, takže
-    // fotka na výšku zůstane na výšku i po překreslení do plátna.
-    await obrazek.decode();
-    return obrazek;
-  } finally {
-    // Dekódovaný obrázek už URL nepotřebuje.
-    URL.revokeObjectURL(url);
-  }
+  });
 }
 
 export async function pripravitFotku(soubor: File): Promise<File> {
   const podporovany = PODPOROVANE_TYPY.includes(soubor.type);
   if (podporovany && soubor.size <= PRAH_BAJTU) return soubor;
 
+  const url = URL.createObjectURL(soubor);
   try {
-    const obrazek = await nacistObrazek(soubor);
+    // Vykreslení respektuje EXIF orientaci, takže fotka na výšku zůstane
+    // na výšku i po překreslení do plátna.
+    const obrazek = await nacistObrazek(url);
     const sirka = obrazek.naturalWidth;
     const vyska = obrazek.naturalHeight;
     if (!sirka || !vyska) return soubor;
@@ -78,6 +81,8 @@ export async function pripravitFotku(soubor: File): Promise<File> {
     return new File([blob], nazev, { type: 'image/jpeg', lastModified: soubor.lastModified });
   } catch {
     return soubor;
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 
