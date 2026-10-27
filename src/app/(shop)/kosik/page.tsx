@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { KosikObsah } from '@/components/shop/KosikObsah';
 import { jeNastaveno } from '@/lib/gopay';
-import { nacistNastaveni, popisDph } from '@/lib/nastaveni';
+import { nacistNastaveni, popisDodaciLhuty, popisDph } from '@/lib/nastaveni';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +43,7 @@ export default async function KosikPage() {
         prahDopravaZdarma={nastaveni.prahDopravaZdarma}
         popisDph={popisDph(nastaveni)}
         platebniProstredky={platebniProstredky}
+        dodaciLhuta={popisDodaciLhuty(nastaveni)}
       />
     </div>
   );

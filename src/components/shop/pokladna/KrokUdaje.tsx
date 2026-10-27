@@ -94,12 +94,13 @@ export function KrokUdaje() {
               label="Telefon"
               type="tel"
               inputMode="tel"
+              required
               autoComplete="tel"
               placeholder="+420 777 888 999"
               value={udaje.dodaciTelefon}
               onChange={zmenit('dodaciTelefon')}
               chyba={chyby.dodaciTelefon}
-              napoveda="Nepovinný – hodí se dopravci, kdyby zásilku nemohl doručit."
+              napoveda="Dopravce na něj pošle SMS o doručení nebo kód k vyzvednutí."
             />
           </div>
 

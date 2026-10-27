@@ -8,11 +8,23 @@ const psc = z
   .transform((v) => v.replace(/\s+/g, ''))
   .refine((v) => /^\d{5}$/.test(v), { message: 'PSČ má mít pět číslic.' });
 
+/*
+ * Telefon je povinný. Zásilkovna posílá kód k vyzvednutí SMSkou, kurýr před
+ * doručením volá a Packeta API zásilku bez čísla umí odmítnout („chybí
+ * telefon") – objednávka bez něj pak uvízla u obsluhy, která musela zákaznici
+ * shánět e-mailem. Údaj je nutný ke splnění smlouvy (čl. 6 odst. 1 písm. b
+ * GDPR), souhlas k němu nepotřebujeme.
+ *
+ * Kontrola počítá jen číslice (9–15, s volitelným `+` nebo `00` na začátku),
+ * mezery, pomlčky a závorky nechává být – lidé čísla píšou všelijak.
+ */
 const telefon = z
-  .string()
-  .optional()
-  .nullable()
-  .transform((v) => (v?.trim() ? v.trim().replace(/\s+/g, ' ') : null));
+  .string({ required_error: 'Vyplňte telefon.', invalid_type_error: 'Vyplňte telefon.' })
+  .transform((v) => v.trim().replace(/\s+/g, ' '))
+  .refine((v) => v.length > 0, { message: 'Vyplňte telefon.' })
+  .refine((v) => /^(\+|00)?[\d ()-]+$/.test(v) && /^\d{9,15}$/.test(v.replace(/\D/g, '')), {
+    message: 'Telefon má mít 9 číslic, případně s předvolbou (+420 777 888 999).',
+  });
 
 export const polozkaObjednavkySchema = z.object({
   variantId: z.string().min(1),

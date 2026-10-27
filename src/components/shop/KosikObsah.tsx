@@ -32,6 +32,11 @@ interface Props {
    * procesu" (čl. 8 odst. 3 směrnice 2011/83/EU), tedy už v košíku.
    */
   platebniProstredky: string[];
+  /**
+   * „Zboží skladem odesíláme do 1 pracovního dne…" z `popisDodaciLhuty` –
+   * úvodní stránka lhůtu slibuje, v košíku chyběla až do kroku Doprava.
+   */
+  dodaciLhuta: string;
 }
 
 /**
@@ -44,7 +49,7 @@ interface Props {
  * Kódy se ověřují proti stejnému endpointu jako v pokladně a přenášejí se
  * tam přes `sessionStorage`, aby je nebylo nutné zadávat dvakrát.
  */
-export function KosikObsah({ prahDopravaZdarma, popisDph, platebniProstredky }: Props) {
+export function KosikObsah({ prahDopravaZdarma, popisDph, platebniProstredky, dodaciLhuta }: Props) {
   const {
     cart,
     removeFromCart,
@@ -419,7 +424,9 @@ export function KosikObsah({ prahDopravaZdarma, popisDph, platebniProstredky }: 
           <ul className="space-y-1.5 text-[11px] text-linda-espresso/75">
             <li className="flex items-start gap-2">
               <Truck className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
-              Doručujeme v rámci České republiky.
+              <span>
+                {dodaciLhuta} Doručujeme v rámci České republiky.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <Wallet className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />

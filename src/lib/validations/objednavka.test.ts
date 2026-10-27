@@ -8,6 +8,7 @@ const zaklad = {
   dodaciUlice: 'Vodičkova 45',
   dodaciMesto: 'Praha 1',
   dodaciPsc: '110 00',
+  dodaciTelefon: '+420 777 888 999',
   zpusobDopravy: 'ppl',
   zpusobPlatby: 'bankovni_prevod',
   souhlasPodminky: true,
@@ -126,10 +127,30 @@ describe('udajeSchema', () => {
     expect(pole).toContain('dodaciPsc');
   });
 
-  it('telefon a poznámka jsou nepovinné', () => {
-    expect(
-      udajeSchema.safeParse({ ...zaklad, dodaciTelefon: null, poznamka: null }).success
-    ).toBe(true);
+  it('poznámka je nepovinná', () => {
+    expect(udajeSchema.safeParse({ ...zaklad, poznamka: null }).success).toBe(true);
+  });
+
+  it('telefon je povinný – dopravce na něj posílá SMS', () => {
+    for (const dodaciTelefon of [null, undefined, '', '   ']) {
+      const v = udajeSchema.safeParse({ ...zaklad, dodaciTelefon });
+      expect(v.success).toBe(false);
+      if (!v.success) expect(v.error.issues[0].message).toBe('Vyplňte telefon.');
+    }
+  });
+
+  it('telefon přijme běžné zápisy a srovná mezery', () => {
+    for (const dodaciTelefon of ['777888999', '+420 777 888 999', '00420777888999', '777-888-999']) {
+      expect(udajeSchema.safeParse({ ...zaklad, dodaciTelefon }).success).toBe(true);
+    }
+    const v = udajeSchema.parse({ ...zaklad, dodaciTelefon: '  +420   777 888  999 ' });
+    expect(v.dodaciTelefon).toBe('+420 777 888 999');
+  });
+
+  it('telefon odmítne příliš krátké číslo i písmena', () => {
+    for (const dodaciTelefon of ['12345', 'zavolejte mi', '777 888 99x']) {
+      expect(udajeSchema.safeParse({ ...zaklad, dodaciTelefon }).success).toBe(false);
+    }
   });
 });
 
