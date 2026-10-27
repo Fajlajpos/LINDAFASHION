@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import {
@@ -92,6 +92,24 @@ export function DetailProduktu({
     };
   }, [prubvodceOtevren]);
 
+  const pasFotek = useRef<HTMLDivElement>(null);
+
+  /* Náhled ukazuje fotku, na které pás právě stojí – ať se k ní zákaznice
+     dostala náhledem, nebo přejetím prstu. */
+  const priPosunuPasu = () => {
+    const pas = pasFotek.current;
+    if (!pas || pas.clientWidth === 0) return;
+    setAktivniFotka(Math.round(pas.scrollLeft / pas.clientWidth));
+  };
+
+  const zobrazitFotku = (index: number) => {
+    const pas = pasFotek.current;
+    if (!pas) return;
+    const bezPohybu = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    pas.scrollTo({ left: index * pas.clientWidth, behavior: bezPohybu ? 'auto' : 'smooth' });
+    setAktivniFotka(index);
+  };
+
   const varianta = produkt.varianty.find((v) => v.id === vybranaId) ?? vychoziVarianta;
   const jeOblibeny = isFavorite(produkt.slug);
   const maFotky = produkt.fotky.length > 0;
@@ -125,19 +143,39 @@ export function DetailProduktu({
 
   return (
     <>
-      <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12">
+      {/* Galerie dřív brala 7/12 šířky a na monitoru měla fotka na výšku přes
+          900 px – stránka se dala číst jen po kusech. Teď 5/12 a údaje vedle
+          ní mají omezenou šířku řádku. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-12">
         {/* Galerie */}
-        <div className="space-y-4 lg:col-span-7">
+        <div className="space-y-4 lg:col-span-5">
           <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-linda-sandLight shadow-neuInset">
             {maFotky ? (
-              <Image
-                src={produkt.fotky[aktivniFotka].url}
-                alt={produkt.fotky[aktivniFotka].alt ?? produkt.nazev}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 58vw"
-                className="object-cover"
-              />
+              /* Všechny fotky jsou v pásu vedle sebe a načítají se hned
+                 s detailem. Dřív se při přepnutí měnil `src` jediného obrázku,
+                 takže se každá další fotka teprve začala stahovat a na
+                 telefonu se na ni čekalo. Pás jde zároveň přejet prstem. */
+              <div
+                ref={pasFotek}
+                onScroll={priPosunuPasu}
+                className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="Fotografie produktu"
+                role="region"
+              >
+                {produkt.fotky.map((fotka, index) => (
+                  <div key={fotka.id} className="relative h-full w-full shrink-0 snap-center">
+                    <Image
+                      src={fotka.url}
+                      alt={fotka.alt ?? `${produkt.nazev} – fotografie ${index + 1}`}
+                      fill
+                      priority={index === 0}
+                      loading={index === 0 ? undefined : 'eager'}
+                      sizes="(max-width: 1024px) 100vw, 40vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             ) : (
               /* Fotka zatím chybí – místo ní značková výplň, ne rozbitý
                  obrázek. Zadání zakazuje AI-generované náhražky. */
@@ -163,7 +201,7 @@ export function DetailProduktu({
                 <li key={fotka.id}>
                   <button
                     type="button"
-                    onClick={() => setAktivniFotka(index)}
+                    onClick={() => zobrazitFotku(index)}
                     aria-label={`Zobrazit fotografii ${index + 1} z ${produkt.fotky.length}`}
                     aria-current={index === aktivniFotka ? 'true' : undefined}
                     className={`relative aspect-square w-full cursor-pointer overflow-hidden rounded-xl transition-all duration-200 ${
@@ -189,14 +227,14 @@ export function DetailProduktu({
         </div>
 
         {/* Údaje a akce */}
-        <div className="space-y-8 lg:col-span-5">
+        <div className="space-y-8 lg:col-span-7 lg:max-w-xl">
           <div>
             {produkt.znacka && (
               <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-linda-cognac">
                 {produkt.znacka}
               </span>
             )}
-            <h1 className="font-serif text-3xl leading-tight text-linda-espresso sm:text-4xl">
+            <h1 className="font-serif text-3xl leading-tight text-linda-espresso sm:text-4xl lg:text-[2rem]">
               {produkt.nazev}
             </h1>
 
