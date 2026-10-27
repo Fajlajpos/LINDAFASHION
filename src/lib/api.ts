@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { adresaWebu } from './adresa-webu';
 
 export interface ApiChyba {
   chyba: string;
@@ -96,7 +97,7 @@ export function jeStejnyPuvod(request: Request): boolean {
   // nepoužívá (session je vlastní JWT v HttpOnly cookie) a v `.env.example`
   // ta proměnná není. Byl to pozůstatek, který jen naznačoval nastavení,
   // jež nikde neexistuje.
-  const povolene = [process.env.APP_URL].filter(Boolean) as string[];
+  const povolene = process.env.APP_URL ? [adresaWebu()] : [];
   const host = request.headers.get('host');
   if (host) {
     povolene.push(`http://${host}`, `https://${host}`);

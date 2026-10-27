@@ -20,6 +20,7 @@
 // Relativně, ne přes `@/` – soubor se kompiluje do buildu workeru.
 import { NAZEV_ZPUSOBU_VYRIZENI, type ZpusobVyrizeni } from '../../lib/objednavka-popisky';
 import { popisSplatnosti } from '../../lib/lhuty';
+import { adresaWebu } from '../../lib/adresa-webu';
 
 const BARVY = {
   paper: '#F6F3EC',
@@ -49,9 +50,6 @@ function e(hodnota: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
-function adresaWebu(): string {
-  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
-}
 
 /**
  * Odkaz na detail objednávky.

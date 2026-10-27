@@ -155,6 +155,10 @@ Consequences worth remembering:
   so without the build arg they pointed at the fallback `lindafashion.cz` whatever the
   real domain was. Never hardcode the domain — read `ZAKLADNI_URL` from
   [strukturovana-data.ts](src/lib/strukturovana-data.ts).
+  **Every read of `APP_URL` goes through `adresaWebu()`** ([adresa-webu.ts](src/lib/adresa-webu.ts)),
+  which adds a missing `https://` and strips slashes and quotes. Typed into Coolify without the
+  scheme, the raw value made `new URL()` in the root layout throw `Invalid URL` and every deploy
+  failed at `RUN npm run build`, with nothing in the visible log pointing at the variable.
 - **`/oblibene` is not behind login.** The whole feature is `localStorage` first — the heart
   on a card works logged out and the header shows the count to everyone — so gating the page
   meant a visitor collected favourites, saw "Oblíbené (3)" and got bounced to a login form

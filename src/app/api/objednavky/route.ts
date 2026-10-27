@@ -10,6 +10,7 @@ import { zalozitPlatbu } from '@/lib/gopay';
 import { czkNaHalere } from '@/lib/penize';
 import { nacistNastaveni, popisDodaciLhuty } from '@/lib/nastaveni';
 import { obsahEmailuObjednavky } from '@/lib/email-objednavky';
+import { adresaWebu } from '@/lib/adresa-webu';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
 
     if (vysledek.data.zpusobPlatby === 'gopay' && vysledek.data.kUhradeKc > 0) {
       try {
-        const zaklad = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+        const zaklad = adresaWebu();
 
         const platba = await zalozitPlatbu({
           cisloObjednavky: vysledek.data.cisloObjednavky,

@@ -15,6 +15,7 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import { halereNaCzk, type Halere } from './penize';
 import { popisSplatnosti } from './lhuty';
+import { adresaWebu } from './adresa-webu';
 
 export interface PolozkaFaktury {
   nazev: string;
@@ -130,7 +131,7 @@ function castka(halere: Halere): string {
  * odkazy e-maily i strukturovaná data.
  */
 function adresaOdstoupeni(): string {
-  const zaklad = (process.env.APP_URL || 'https://lindafashion.cz').replace(/\/+$/, '');
+  const zaklad = adresaWebu('https://lindafashion.cz');
   return `${zaklad.replace(/^https?:\/\//, '')}/odstoupeni`;
 }
 

@@ -10,8 +10,9 @@
 import type { ProduktDetail } from './katalog';
 import type { NastaveniWebu } from './nastaveni';
 import { odkazNaMapu, oteviraciDobaProSchema, rozlozitAdresu } from './prodejna';
+import { adresaWebu } from './adresa-webu';
 
-export const ZAKLADNI_URL = process.env.APP_URL || 'https://lindafashion.cz';
+export const ZAKLADNI_URL = adresaWebu('https://lindafashion.cz');
 
 function absolutni(cesta: string): string {
   return cesta.startsWith('http') ? cesta : `${ZAKLADNI_URL}${cesta}`;

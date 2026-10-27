@@ -6,6 +6,7 @@ import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { zmenaEmailuSchema } from '@/lib/validations/ucet';
 import { PLATNOST_HODIN, zalozitZmenuEmailu } from '@/lib/zmena-emailu';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { adresaWebu } from '@/lib/adresa-webu';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     const token = await zalozitZmenuEmailu(ucet.id, vstup.novyEmail);
-    const zaklad = process.env.APP_URL || 'http://localhost:3000';
+    const zaklad = adresaWebu();
     const odkaz = `${zaklad}/zmena-emailu?t=${encodeURIComponent(token)}`;
 
     // Potvrzení na **novou** adresu – tím se prokáže, že k ní má přístup.

@@ -27,6 +27,7 @@
 import { db } from './db';
 import { FRONTY, publishJob } from './queue';
 import { zaznamenatSouhlas } from './souhlasy';
+import { adresaWebu } from './adresa-webu';
 
 export type ZdrojPrihlaseni = 'hero' | 'paticka' | 'registrace' | 'ucet';
 
@@ -80,7 +81,7 @@ export async function prihlasitKOdberu(
    * kdokoliv, kdo zná cizí adresu, jí umí naklikat e-maily do schránky.
    */
   if (!odberatel.potvrzeno) {
-    const zaklad = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const zaklad = adresaWebu();
 
     await publishJob(FRONTY.ODESLAT_EMAIL, {
       typ: 'newsletter-potvrzeni',

@@ -4,11 +4,12 @@ import { zpracovatChybu } from '@/lib/api';
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { jeNastaveno } from '@/lib/gopay';
 import { vyhodnotitPlatbu } from '@/lib/platba';
+import { adresaWebu } from '@/lib/adresa-webu';
 
 export const dynamic = 'force-dynamic';
 
 function zaklad(): string {
-  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  return adresaWebu();
 }
 
 /**

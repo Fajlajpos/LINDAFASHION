@@ -4,6 +4,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { zalozitReset } from '@/lib/reset-hesla';
 import { FRONTY, publishJob } from '@/lib/queue';
+import { adresaWebu } from '@/lib/adresa-webu';
 
 const schema = z.object({
   email: z.string().min(1, 'Vyplňte prosím e-mail.').email('Tohle nevypadá jako platný e-mail.'),
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
 
     if (user && user.anonymizovanoAt === null) {
       const token = await zalozitReset(user.id);
-      const odkaz = `${process.env.APP_URL || 'http://localhost:3000'}/obnova-hesla?token=${token}`;
+      const odkaz = `${adresaWebu()}/obnova-hesla?token=${token}`;
 
       await publishJob(FRONTY.ODESLAT_EMAIL, {
         typ: 'obnova-hesla',
