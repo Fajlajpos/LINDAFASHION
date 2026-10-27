@@ -73,9 +73,12 @@ export function RegistraceFormular({ captchaSiteKey }: { captchaSiteKey: string 
     <div className="flex min-h-[80vh] items-center justify-center bg-linda-cream px-4 py-12">
       <div className="w-full max-w-md space-y-6 rounded-3xl bg-linda-cream p-8 shadow-neuLg sm:p-10">
         <div className="space-y-2 text-center">
-          <span className="block font-serif text-2xl font-medium uppercase tracking-[0.15em] text-linda-espresso">
+          <Link
+            href="/"
+            className="inline-block cursor-pointer font-serif text-2xl font-medium uppercase tracking-[0.15em] text-linda-espresso transition-colors duration-200 hover:text-linda-cognac"
+          >
             LINDA FASHION
-          </span>
+          </Link>
           <h1 className="font-serif text-3xl text-linda-espresso">Nová registrace</h1>
           <p className="text-xs text-linda-espresso/70">
             Vytvořte si osobní profil pro pohodlnější nákupy a ukládání oblíbených

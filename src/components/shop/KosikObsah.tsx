@@ -336,7 +336,6 @@ export function KosikObsah({ prahDopravaZdarma, popisDph, platebniProstredky, do
             chyba={chybaSlevy}
             uplatneno={sleva && `Kód ${sleva.kod} · sleva ${sleva.procentoSlevy} %`}
             zrusit={() => setSleva(null)}
-            tmave
           />
 
           <PoleKodu
@@ -495,7 +494,6 @@ const PoleKodu: React.FC<{
   chyba: string | null;
   uplatneno: string | null | false;
   zrusit: () => void;
-  tmave?: boolean;
 }> = ({
   id,
   popisek,
@@ -508,7 +506,6 @@ const PoleKodu: React.FC<{
   chyba,
   uplatneno,
   zrusit,
-  tmave,
 }) => (
   <div className="space-y-2 rounded-2xl bg-linda-cream p-4 shadow-neu">
     <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-linda-espresso">
@@ -557,9 +554,7 @@ const PoleKodu: React.FC<{
             onClick={odeslat}
             disabled={overuje}
             aria-busy={overuje}
-            className={`flex min-h-touch shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white shadow-neuDark transition-all duration-200 active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60 ${
-              tmave ? 'bg-linda-espresso hover:bg-linda-cognac' : 'bg-linda-cognac hover:bg-linda-cognacHover'
-            }`}
+            className="flex min-h-touch shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-xs font-semibold bg-linda-cognac text-white shadow-neuDark transition-all duration-200 hover:bg-linda-cognacHover active:shadow-neuSm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {/* Spinner se přidává vedle popisku, nenahrazuje ho – jinak
                 tlačítko během ověřování poskočí na jinou šířku. */}

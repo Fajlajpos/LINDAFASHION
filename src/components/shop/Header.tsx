@@ -310,7 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
                      změně počtu znovu naskočí – přidání do oblíbených se dělo
                      o stránku níž a jinak by o něm lišta mlčela. */
                   key={favoritesCount}
-                  className="animate-popIn absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-linda-sage text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
+                  className="animate-popIn absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-linda-cognac text-white text-[10px] leading-none rounded-full flex items-center justify-center font-bold"
                 >
                   {formatBadge(favoritesCount)}
                 </span>
