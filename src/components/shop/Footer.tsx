@@ -303,30 +303,33 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
         </div>
 
-        {/* Spodní lišta */}
-        <div className="mt-5 flex flex-col items-center gap-3 border-t border-linda-cream/10 pt-3 text-center text-[11px] text-linda-cream/60 sm:flex-row sm:justify-between sm:text-left">
-          <div className="flex items-center gap-2">
-            {site.map(({ href, label, Ikona }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${label} – LINDA FASHION`}
-                /* Nadzvednutí o 2 px. Na tmavé patičce nese reliéf hlavně
-                   černý stín, takže samotná změna stínu je při najetí sotva
-                   znát – posun ji doplní o pohyb, který oko zaregistruje. */
-                className="group flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white/[0.04] text-linda-sand shadow-neuOnDark transition-all duration-200 hover:-translate-y-0.5 hover:bg-linda-cognac hover:text-white active:translate-y-0 active:shadow-neuOnDarkInset"
-              >
-                <Ikona
-                  className="h-4 w-4 transition-transform duration-200 ease-out group-hover:scale-110"
-                  aria-hidden="true"
-                />
-              </a>
-            ))}
+        {/* Spodní lišta – vše na střed pod sebou, na každé šířce stejně
+            (majitel, 2026-10). Dřív se od `sm` rozjela do stran. */}
+        <div className="mt-5 flex flex-col items-center gap-3 border-t border-linda-cream/10 pt-3 text-center text-[11px] text-linda-cream/60">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              {site.map(({ href, label, Ikona }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${label} – LINDA FASHION`}
+                  /* Nadzvednutí o 2 px. Na tmavé patičce nese reliéf hlavně
+                     černý stín, takže samotná změna stínu je při najetí sotva
+                     znát – posun ji doplní o pohyb, který oko zaregistruje. */
+                  className="group flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white/[0.04] text-linda-sand shadow-neuOnDark transition-all duration-200 hover:-translate-y-0.5 hover:bg-linda-cognac hover:text-white active:translate-y-0 active:shadow-neuOnDarkInset"
+                >
+                  <Ikona
+                    className="h-4 w-4 transition-transform duration-200 ease-out group-hover:scale-110"
+                    aria-hidden="true"
+                  />
+                </a>
+              ))}
+            </div>
             {/* Nevyplněný údaj se neuvede – vymyslet si ho by bylo horší.
                 Dokud majitelka nevyplní název, zůstane jen značka obchodu. */}
-            <p className="ml-1 text-left">
+            <p>
               &copy; {new Date().getFullYear()} {nazevFirmy || 'LINDA FASHION'}
               {icoFirmy && <>, IČO {icoFirmy}</>}
               {zapisVRejstriku && (
@@ -353,6 +356,8 @@ export const Footer: React.FC<FooterProps> = ({
               ))}
             </ul>
           )}
+
+          <p className="text-[11px] uppercase tracking-[0.25em] text-linda-cream/60">Made by Fajlajp</p>
         </div>
       </div>
     </footer>

@@ -258,6 +258,11 @@ export default async function GDPRPage() {
               čl. 28 GDPR, na základě smlouvy o zpracování osobních údajů.
             </li>
             <li>
+              <strong>Poskytovatel služby pro rozesílání newsletteru</strong> – jen e-mail těch,
+              kdo se k odběru přihlásili a přihlášení potvrdili. Jako zpracovatel podle čl. 28
+              GDPR, na základě smlouvy o zpracování osobních údajů.
+            </li>
+            <li>
               <strong>Analytické a marketingové nástroje</strong> – jen pokud k tomu dáte souhlas
               v{' '}
               <Link
