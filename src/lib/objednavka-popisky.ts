@@ -28,6 +28,33 @@ export const NAZEV_DOPRAVY: Record<string, string> = {
   ceska_posta: 'Česká pošta',
 };
 
+/**
+ * Odkaz na sledování zásilky u dopravce, nebo `null`, když ho neznáme.
+ *
+ * Číslo zásilky se zákaznici dřív ukazovalo jen jako text a e-mail jí radil
+ * „najdete na webu dopravce" – u České pošty a PPL, kde číslo majitelka
+ * přepisuje ručně, tak zákaznice musela sama hledat, kde se zásilky sledují.
+ * Jeden zdroj pro e-mail, účet i administraci, ať se adresy nerozejdou.
+ *
+ * Bez relativních importů a `next/*` – používá ho i worker (šablony e-mailů).
+ */
+export function odkazNaSledovani(zpusobDopravy: string | null | undefined, cisloZasilky: string | null | undefined): string | null {
+  const cislo = cisloZasilky?.trim();
+  if (!cislo) return null;
+  const c = encodeURIComponent(cislo);
+
+  switch (zpusobDopravy) {
+    case 'zasilkovna':
+      return `https://tracking.packeta.com/cs/?id=${c}`;
+    case 'ceska_posta':
+      return `https://www.postaonline.cz/trackandsign/-/zasilka/cislo?parcelNumbers=${c}`;
+    case 'ppl':
+      return `https://www.ppl.cz/vyhledat-zasilku?shipmentId=${c}`;
+    default:
+      return null;
+  }
+}
+
 export const NAZEV_PLATBY: Record<string, string> = {
   bankovni_prevod: 'Bankovní převod',
   gopay: 'Platba kartou (GoPay)',

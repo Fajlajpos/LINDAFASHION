@@ -16,7 +16,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { nacist, poslatJson } from '@/lib/api-klient';
-import { NAZEV_DOPRAVY, STAV_OBJEDNAVKY, STAV_PLATBY, formatDatum } from '@/lib/objednavka-popisky';
+import { NAZEV_DOPRAVY, STAV_OBJEDNAVKY, STAV_PLATBY, formatDatum, odkazNaSledovani } from '@/lib/objednavka-popisky';
 import { Hlaska } from '@/components/ui/PoleFormulare';
 import { UdajeKarta } from '@/components/shop/ucet/UdajeKarta';
 import { AdresyKarta } from '@/components/shop/ucet/AdresyKarta';
@@ -243,7 +243,19 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
                         {o.cisloZasilky && (
                           <span className="ml-1 inline-flex items-center gap-1 font-medium text-linda-espresso">
                             <Truck className="h-3 w-3 text-linda-cognac" aria-hidden="true" />
-                            {o.cisloZasilky}
+                            {odkazNaSledovani(o.zpusobDopravy, o.cisloZasilky) ? (
+                              <a
+                                href={odkazNaSledovani(o.zpusobDopravy, o.cisloZasilky) ?? '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`Sledovat zásilku ${o.cisloZasilky} u dopravce`}
+                                className="inline-flex min-h-touch cursor-pointer items-center text-linda-cognac underline underline-offset-2"
+                              >
+                                {o.cisloZasilky}
+                              </a>
+                            ) : (
+                              o.cisloZasilky
+                            )}
                           </span>
                         )}
                       </p>

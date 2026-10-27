@@ -18,7 +18,7 @@
  */
 
 // Relativně, ne přes `@/` – soubor se kompiluje do buildu workeru.
-import { NAZEV_ZPUSOBU_VYRIZENI, type ZpusobVyrizeni } from '../../lib/objednavka-popisky';
+import { NAZEV_ZPUSOBU_VYRIZENI, odkazNaSledovani, type ZpusobVyrizeni } from '../../lib/objednavka-popisky';
 import { popisSplatnosti } from '../../lib/lhuty';
 import { adresaWebu } from '../../lib/adresa-webu';
 
@@ -689,6 +689,8 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
       const stav = String(data.stav ?? '');
       const zasilka = data.cisloZasilky ? String(data.cisloZasilky) : null;
       const odkaz = odkazNaObjednavku(tokenZDat(data));
+      // Starší úlohy ve frontě dopravce nenesou – pak zůstane jen číslo.
+      const sledovani = odkazNaSledovani(textNeboNull(data.zpusobDopravy), zasilka);
 
       const radky: Array<[string, string]> = [['Číslo objednávky', cislo]];
       if (zasilka) radky.push(['Číslo zásilky', zasilka]);
@@ -700,9 +702,11 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           odstavec('Dobrý den,') +
           odstavec(`vaše objednávka <strong>${e(cislo)}</strong> ${e(POPIS_STAVU[stav] ?? 'změnila stav')}.`) +
           panel(radky) +
-          (zasilka
-            ? odstavec('Podle čísla zásilky si zásilku najdete na webu dopravce.')
-            : '') +
+          (sledovani
+            ? tlacitko('Sledovat zásilku', sledovani)
+            : zasilka
+              ? odstavec('Podle čísla zásilky si zásilku najdete na webu dopravce.')
+              : '') +
           tlacitko('Zobrazit objednávku', odkaz)
         ),
         text: [
@@ -710,6 +714,7 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
           '',
           `vaše objednávka ${cislo} ${POPIS_STAVU[stav] ?? 'změnila stav'}.`,
           zasilka ? `Číslo zásilky: ${zasilka}` : '',
+          sledovani ? `Sledování zásilky: ${sledovani}` : '',
           '',
           `Detail objednávky: ${odkaz}`,
         ]

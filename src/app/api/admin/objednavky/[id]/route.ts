@@ -162,6 +162,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           verejnyToken: objednavka.verejnyToken,
           stav: vstup.stav,
           cisloZasilky: vstup.cisloZasilky,
+          // Podle dopravce šablona sestaví odkaz na sledování zásilky.
+          zpusobDopravy: objednavka.zpusobDopravy,
         },
       });
     }

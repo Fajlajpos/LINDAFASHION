@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDatum, formatDatumCas } from './objednavka-popisky';
+import { formatDatum, formatDatumCas, odkazNaSledovani } from './objednavka-popisky';
 
 /**
  * Data se ukazují v české zóně, ať běží proces kdekoli.
@@ -34,5 +34,21 @@ describe('formatDatumCas', () => {
     const vysledek = formatDatumCas(PULNOC_NA_PRELOMU);
     expect(vysledek).toContain('1. 10. 2026');
     expect(vysledek).toContain('00:30');
+  });
+});
+
+describe('odkazNaSledovani', () => {
+  it('sestaví odkaz podle dopravce a číslo zakóduje', () => {
+    expect(odkazNaSledovani('zasilkovna', 'Z 123')).toBe('https://tracking.packeta.com/cs/?id=Z%20123');
+    expect(odkazNaSledovani('ceska_posta', 'DR1234567890C')).toBe(
+      'https://www.postaonline.cz/trackandsign/-/zasilka/cislo?parcelNumbers=DR1234567890C'
+    );
+    expect(odkazNaSledovani('ppl', '40123')).toBe('https://www.ppl.cz/vyhledat-zasilku?shipmentId=40123');
+  });
+
+  it('bez čísla nebo u neznámého dopravce nic nevymýšlí', () => {
+    expect(odkazNaSledovani('ceska_posta', '  ')).toBeNull();
+    expect(odkazNaSledovani('ceska_posta', null)).toBeNull();
+    expect(odkazNaSledovani('neznamy', '123')).toBeNull();
   });
 });

@@ -584,3 +584,28 @@ describe('sestavitEmail', () => {
     }
   });
 });
+
+describe('změna stavu – sledování zásilky', () => {
+  it('u České pošty dá odkaz na sledování, ne jen číslo', () => {
+    const email = sestavitEmail('zmena-stavu-objednavky', {
+      cisloObjednavky: '2026-00042',
+      stav: 'EXPEDOVANA',
+      cisloZasilky: 'DR1234567890C',
+      zpusobDopravy: 'ceska_posta',
+      verejnyToken: 'tok',
+    })!;
+    expect(email.html).toContain('postaonline.cz/trackandsign');
+    expect(email.html).toContain('Sledovat zásilku');
+    expect(email.text).toContain('Sledování zásilky: https://www.postaonline.cz');
+  });
+
+  it('starší úloha bez dopravce zůstane u věty o webu dopravce', () => {
+    const email = sestavitEmail('zmena-stavu-objednavky', {
+      cisloObjednavky: '2026-00042',
+      stav: 'EXPEDOVANA',
+      cisloZasilky: 'DR1234567890C',
+    })!;
+    expect(email.html).toContain('na webu dopravce');
+    expect(email.html).not.toContain('Sledovat zásilku');
+  });
+});

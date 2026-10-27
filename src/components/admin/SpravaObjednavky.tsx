@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle, ExternalLink, Loader2, Package, Printer, Save
 import { poslatJson } from '@/lib/api-klient';
 import {
   NAZEV_ZPUSOBU_VYRIZENI,
+  odkazNaSledovani,
   STAV_OBJEDNAVKY,
   STAV_PLATBY,
   ZPUSOBY_VYRIZENI,
@@ -209,7 +210,7 @@ export function SpravaObjednavky({
                 </a>
 
                 <a
-                  href={`https://tracking.packeta.com/cs/?id=${encodeURIComponent(cisloZasilky ?? '')}`}
+                  href={odkazNaSledovani('zasilkovna', cisloZasilky) ?? '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-cognac shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
@@ -316,6 +317,19 @@ export function SpravaObjednavky({
             placeholder="Zadejte při expedici – zákaznice ho uvidí u sebe v účtu"
             className={POLE}
           />
+          {/* U Zásilkovny je odkaz výš u založené zásilky; tady pro ruční čísla
+              ostatních dopravců (Česká pošta, PPL). */}
+          {zpusobDopravy !== 'zasilkovna' && odkazNaSledovani(zpusobDopravy, cisloZasilky) && (
+            <a
+              href={odkazNaSledovani(zpusobDopravy, cisloZasilky) ?? '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex min-h-touch cursor-pointer items-center gap-1.5 text-xs font-semibold text-linda-cognac underline-offset-2 hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              Sledovat zásilku u dopravce
+            </a>
+          )}
         </div>
 
         <button
