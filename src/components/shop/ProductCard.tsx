@@ -155,14 +155,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             zemePuvodu,
           });
         }}
-        /* Srdíčko leží na fotce; u chybějícího snímku by na krému splynulo,
-           proto ho drží reliéf místo sotva znatelného `shadow-sm`.
-           Uložený stav = zamáčknuté tlačítko, stejně jako na detailu:
-           nese ho tvar i výplň srdíčka, ne jenom barva. */
-        className={`absolute right-2 top-2 z-10 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full backdrop-blur-md transition-all duration-200 ${
+        /* Srdíčko leží na fotce. Plně bílé (majitel, 2026-10): poloprůhledný
+           krém přes fotku zešedl. Stín `neuFloat`, protože bílý odlesk
+           ostatních `neu*` by nad fotkou kreslil mléčnou svatozář.
+           Uložený stav = zamáčknuté tlačítko, stejně jako na detailu – bílé
+           zůstává i zamáčknuté; šedý byl jen dřívější `sandLight`. Stav nese
+           tvar i výplň srdíčka, ne jenom barva. */
+        className={`absolute right-2 top-2 z-10 flex min-h-touch min-w-touch cursor-pointer items-center justify-center rounded-full bg-white transition-all duration-200 ${
           jeOblibeny
-            ? 'bg-linda-sandLight/90 text-linda-cognac shadow-neuInsetSm'
-            : 'bg-linda-cream/80 text-linda-espresso shadow-neuSm hover:bg-white hover:text-linda-cognac active:shadow-neuInsetSm'
+            ? 'text-linda-cognac shadow-neuInsetSm'
+            : 'text-linda-espresso shadow-neuFloat hover:text-linda-cognac active:shadow-neuInsetSm'
         }`}
         aria-pressed={jeOblibeny}
         aria-label={

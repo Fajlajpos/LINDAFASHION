@@ -16,8 +16,8 @@ export default function OblibenePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-10">
       {/* Header */}
       <div className="space-y-2 border-b border-linda-sand pb-6">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-linda-sage">
-          <Heart className="h-4 w-4 fill-linda-sage" aria-hidden="true" />
+        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-linda-cognac">
+          <Heart className="h-4 w-4 fill-linda-cognac" aria-hidden="true" />
           Váš osobní výběr
         </div>
         <h1 className="font-serif text-4xl text-linda-espresso sm:text-5xl">Oblíbené kousky</h1>
