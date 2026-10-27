@@ -2,7 +2,8 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { CartItemType } from './types';
-import { nacist, poslatJson } from './api-klient';
+import { nacist, poslatJson, type Vysledek } from './api-klient';
+import { nacistUlozeny, priNavratuNaStranku, ulozit } from './ucet-uloziste';
 import { zapomenoutKody } from './ulozene-kody';
 import { zapomenoutKoncept } from './pokladna-uloziste';
 
@@ -10,9 +11,10 @@ import { zapomenoutKoncept } from './pokladna-uloziste';
  * Košík.
  *
  * Nepřihlášená zákaznice ho má jen v prohlížeči (localStorage), jak je běžné.
- * Jakmile je přihlášená, obsah se navíc ukládá u účtu – přežije odhlášení
- * i přechod na jiné zařízení, a při přihlášení se oba košíky **sloučí**
- * (sekce 5 zadání).
+ * Jakmile je přihlášená, zdrojem pravdy je košík u účtu – přežije odhlášení
+ * i přechod na jiné zařízení. Košík hosta se s ním při přihlášení **jednou
+ * sloučí** (sekce 5 zadání); prohlížeč pak drží jen kopii účtu, která se
+ * obnovuje při každém návratu na stránku (viz ucet-uloziste.ts).
  *
  * Server je při přihlášení zdrojem pravdy o dostupnosti: co mezitím zmizelo
  * z nabídky nebo se vyprodalo, z košíku odejde a zákaznice se to dozví hned,
@@ -70,6 +72,12 @@ interface OdpovedKosiku {
   odebrano?: OdebranaPolozka[];
 }
 
+const jePolozka = (p: unknown): p is CartItemType =>
+  typeof p === 'object' &&
+  p !== null &&
+  typeof (p as CartItemType).variantId === 'string' &&
+  typeof (p as CartItemType).mnozstvi === 'number';
+
 export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boolean }> = ({
   children,
   prihlasen = false,
@@ -82,21 +90,46 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
      renderu s prázdným polem a smaže uložený košík dřív, než se stihne
      projevit ten načtený. */
   const [nacteno, setNacteno] = useState(false);
+  /** `true` = košík v prohlížeči je kopie účtu a nikdy se neslučuje (viz ucet-uloziste.ts). */
+  const [ucet, setUcet] = useState(false);
+
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+  const ucetRef = useRef(ucet);
+  ucetRef.current = ucet;
+
+  /* Pořadové číslo dotazu: použije se jen odpověď nejnovějšího. Tři rychlá
+     plus pošlou tři PATCHe a starší odpovědi by jinak množství vracely zpět;
+     obnovení po návratu na stránku by zase přepsalo právě přidaný kousek. */
+  const posledniDotaz = useRef(0);
+
+  const synchronizovat = useCallback(async (dotaz: () => Promise<Vysledek<OdpovedKosiku>>) => {
+    const cislo = ++posledniDotaz.current;
+    const vysledek = await dotaz();
+    if (cislo !== posledniDotaz.current) return vysledek;
+
+    if (vysledek.ok) {
+      setCart(vysledek.data.polozky);
+      if (vysledek.data.odebrano?.length) setOdebranePolozky(vysledek.data.odebrano);
+      setUcet(vysledek.data.prihlasen);
+    }
+    // Nedostupný server není důvod zákaznici vyprázdnit košík.
+    setSynchronizuje(false);
+    return vysledek;
+  }, []);
 
   // Načtení z prohlížeče.
   useEffect(() => {
-    const ulozene = localStorage.getItem(KLIC);
-
-    if (ulozene) {
-      try {
-        const data: unknown = JSON.parse(ulozene);
-        if (Array.isArray(data)) setCart(data as CartItemType[]);
-      } catch (e) {
-        console.error('Chyba načtení košíku z localStorage:', e);
-      }
+    const ulozeny = nacistUlozeny(KLIC, jePolozka);
+    // Kopie účtu bez přihlášení (odhlášení, vypršelé přihlášení) se nenačte –
+    // byl by to cizí košík pro toho, kdo je teď u prohlížeče.
+    if (!ulozeny.ucet || prihlasen) {
+      setCart(ulozeny.polozky);
+      setUcet(ulozeny.ucet);
     }
-
     setNacteno(true);
+    // Čte se jednou; změny přihlášení řeší efekt níž.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Zápis do prohlížeče – i přihlášená zákaznice ho má, aby košík byl
@@ -108,117 +141,107 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
   // návštěvnice sama řekla (§ 89 odst. 3 zák. č. 127/2005 Sb.) – a o košík
   // si řekne až prvním „Přidat do košíku".
   useEffect(() => {
-    if (!nacteno) return;
-    if (cart.length === 0) localStorage.removeItem(KLIC);
-    else localStorage.setItem(KLIC, JSON.stringify(cart));
-  }, [cart, nacteno]);
+    if (nacteno) ulozit(KLIC, cart, ucet);
+  }, [cart, ucet, nacteno]);
 
-  /** Sloučení s košíkem u účtu. Běží jednou po přihlášení. */
-  const sloucitSeServerem = useCallback(async (mistni: CartItemType[]) => {
-    const vysledek = await poslatJson<OdpovedKosiku>('/api/kosik', {
-      polozky: mistni.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
-    });
-
-    if (!vysledek.ok) {
-      setSynchronizuje(false);
-      return;
-    }
-
-    setCart(vysledek.data.polozky);
-    setOdebranePolozky(vysledek.data.odebrano ?? []);
-    setSynchronizuje(false);
-  }, []);
-
-  /**
-   * Přepočet košíku, který je jen v prohlížeči.
-   *
-   * Bez tohohle si nepřihlášená zákaznice nesla ceny a skladovost z chvíle
-   * vložení – klidně týden starou – a o vyprodání se dozvěděla až v pokladně.
-   */
-  const overitUServeru = useCallback(async (mistni: CartItemType[]) => {
-    if (mistni.length === 0) {
-      setSynchronizuje(false);
-      return;
-    }
-
-    const vysledek = await poslatJson<OdpovedKosiku>('/api/kosik/overit', {
-      polozky: mistni.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
-    });
-
-    if (!vysledek.ok) {
-      // Nedostupný server není důvod zákaznici vyprázdnit košík.
-      setSynchronizuje(false);
-      return;
-    }
-
-    setCart(vysledek.data.polozky);
-    setOdebranePolozky(vysledek.data.odebrano ?? []);
-    setSynchronizuje(false);
-  }, []);
-
-  const uzSlouceno = useRef(false);
   const uzOvereno = useRef(false);
 
   useEffect(() => {
     if (!nacteno) return;
 
     if (!prihlasen) {
-      // Odhlášení: košík zůstává v prohlížeči, jen zapomeneme, že už proběhlo
-      // sloučení – po dalším přihlášení se má provést znovu.
-      uzSlouceno.current = false;
+      // Odhlášení: kopie účtu z prohlížeče zmizí, jinak by košík zůstal
+      // dalšímu, kdo k počítači sedne.
+      if (ucetRef.current) {
+        posledniDotaz.current++;
+        setCart([]);
+        setUcet(false);
+        setSynchronizuje(false);
+        return;
+      }
 
+      /*
+       * Přepočet košíku, který je jen v prohlížeči. Bez tohohle si
+       * nepřihlášená zákaznice nesla ceny a skladovost z chvíle vložení –
+       * klidně týden starou – a o vyprodání se dozvěděla až v pokladně.
+       */
       if (uzOvereno.current) return;
       uzOvereno.current = true;
-      setSynchronizuje(true);
 
-      void overitUServeru(cart);
+      const mistni = cartRef.current;
+      if (mistni.length === 0) {
+        setSynchronizuje(false);
+        return;
+      }
+      setSynchronizuje(true);
+      void synchronizovat(() =>
+        poslatJson<OdpovedKosiku>('/api/kosik/overit', {
+          polozky: mistni.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
+        })
+      );
       return;
     }
 
-    if (uzSlouceno.current) return;
-    uzSlouceno.current = true;
+    // Přihlášení: košík hosta se **jednou** sloučí s účtem. Kopie účtu se jen
+    // obnoví – slučovat ji by vracelo, co zákaznice na jiném zařízení odebrala.
+    const hosta = !ucetRef.current && cartRef.current.length > 0;
     setSynchronizuje(true);
+    void synchronizovat(() =>
+      hosta
+        ? poslatJson<OdpovedKosiku>('/api/kosik', {
+            polozky: cartRef.current.map((p) => ({ variantId: p.variantId, mnozstvi: p.mnozstvi })),
+          })
+        : nacist<OdpovedKosiku>('/api/kosik')
+    );
+  }, [prihlasen, nacteno, synchronizovat]);
 
-    void sloucitSeServerem(cart);
-    // `cart` schválně není v závislostech – sloučení i ověření se má spustit
-    // jednou po načtení, ne při každé změně košíku.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prihlasen, nacteno, sloucitSeServerem, overitUServeru]);
+  // Návrat na stránku = obnovit košík z účtu (změny z jiného zařízení).
+  useEffect(() => {
+    if (!prihlasen) return;
+    return priNavratuNaStranku(() => {
+      if (ucetRef.current) void synchronizovat(() => nacist<OdpovedKosiku>('/api/kosik'));
+    });
+  }, [prihlasen, synchronizovat]);
 
-  /** Změna množství na serveru; u nepřihlášené zákaznice se neděje nic. */
-  const synchronizovatPolozku = useCallback(
-    (variantId: string, mnozstvi: number) => {
-      if (!prihlasen) return;
-
-      void poslatJson('/api/kosik', { variantId, mnozstvi }, 'PATCH');
-    },
-    [prihlasen]
-  );
-
-  const addToCart = (item: CartItemType) => {
-    setCart((prev) => {
-      const stavajici = prev.find((i) => i.variantId === item.variantId);
-
-      // Nikdy víc, než kolik je skladem – jinak by objednávka spadla až
-      // v pokladně.
-      const noveMnozstvi = Math.min(
-        (stavajici?.mnozstvi ?? 0) + item.mnozstvi,
-        item.skladem || Number.MAX_SAFE_INTEGER
-      );
-
-      synchronizovatPolozku(item.variantId, noveMnozstvi);
-
-      if (stavajici) {
-        return prev.map((i) => (i.variantId === item.variantId ? { ...i, mnozstvi: noveMnozstvi } : i));
-      }
-
-      return [...prev, { ...item, mnozstvi: noveMnozstvi }];
+  /** Změna množství u účtu (0 = odebrat); u nepřihlášené zákaznice se neděje nic. */
+  const synchronizovatPolozku = (variantId: string, mnozstvi: number) => {
+    if (!prihlasen) return;
+    void synchronizovat(() =>
+      poslatJson<OdpovedKosiku>('/api/kosik', { variantId, mnozstvi }, 'PATCH')
+    ).then((v) => {
+      if (!v.ok) void synchronizovat(() => nacist<OdpovedKosiku>('/api/kosik'));
     });
   };
 
+  /* Množství se počítá z `cartRef`, ne uvnitř `setCart(prev => …)`: updater
+     má být čistý – React ho ve vývoji volá dvakrát a síťový dotaz uvnitř
+     odcházel dvakrát. */
+  const nastavitKosik = (dalsi: CartItemType[]) => {
+    cartRef.current = dalsi;
+    setCart(dalsi);
+  };
+
+  const addToCart = (item: CartItemType) => {
+    const stavajici = cartRef.current.find((i) => i.variantId === item.variantId);
+
+    // Nikdy víc, než kolik je skladem – jinak by objednávka spadla až
+    // v pokladně.
+    const noveMnozstvi = Math.min(
+      (stavajici?.mnozstvi ?? 0) + item.mnozstvi,
+      item.skladem || Number.MAX_SAFE_INTEGER
+    );
+
+    nastavitKosik(
+      stavajici
+        ? cartRef.current.map((i) => (i.variantId === item.variantId ? { ...i, mnozstvi: noveMnozstvi } : i))
+        : [...cartRef.current, { ...item, mnozstvi: noveMnozstvi }]
+    );
+    synchronizovatPolozku(item.variantId, noveMnozstvi);
+  };
+
   const removeFromCart = (variantId: string) => {
+    nastavitKosik(cartRef.current.filter((i) => i.variantId !== variantId));
     synchronizovatPolozku(variantId, 0);
-    setCart((prev) => prev.filter((i) => i.variantId !== variantId));
   };
 
   const updateQuantity = (variantId: string, mnozstvi: number) => {
@@ -227,24 +250,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode; prihlasen?: boo
       return;
     }
 
-    setCart((prev) =>
-      prev.map((i) => {
-        if (i.variantId !== variantId) return i;
+    const polozka = cartRef.current.find((i) => i.variantId === variantId);
+    if (!polozka) return;
 
-        const omezene = Math.min(mnozstvi, i.skladem || Number.MAX_SAFE_INTEGER);
-        synchronizovatPolozku(variantId, omezene);
-        return { ...i, mnozstvi: omezene };
-      })
-    );
+    const omezene = Math.min(mnozstvi, polozka.skladem || Number.MAX_SAFE_INTEGER);
+    nastavitKosik(cartRef.current.map((i) => (i.variantId === variantId ? { ...i, mnozstvi: omezene } : i)));
+    synchronizovatPolozku(variantId, omezene);
   };
 
   const clearCart = () => {
-    setCart([]);
+    nastavitKosik([]);
     // S košíkem padají i uplatněné kódy a rozpracovaná pokladna – patřily
     // k tomuhle nákupu.
     zapomenoutKody();
     zapomenoutKoncept();
-    if (prihlasen) void poslatJson('/api/kosik', undefined, 'DELETE');
+    if (prihlasen) {
+      // Odpověď dotazu, který právě běží, už nesmí košík vrátit.
+      posledniDotaz.current++;
+      void poslatJson('/api/kosik', undefined, 'DELETE');
+    }
   };
 
   const totalCartValue = cart.reduce(

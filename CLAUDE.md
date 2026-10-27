@@ -159,6 +159,14 @@ Consequences worth remembering:
   which adds a missing `https://` and strips slashes and quotes. Typed into Coolify without the
   scheme, the raw value made `new URL()` in the root layout throw `Invalid URL` and every deploy
   failed at `RUN npm run build`, with nothing in the visible log pointing at the variable.
+- **Cart and favourites: for a signed-in customer the account is the source of truth.**
+  `localStorage` holds either a guest list (bare array) or a copy of the account
+  (`{ ucet: true, polozky }`, [ucet-uloziste.ts](src/lib/ucet-uloziste.ts)), and only the guest
+  list is ever merged — once, on login. Every page load used to POST the browser's list for
+  "merging", so a phone resurrected items removed on the PC, pushed lowered quantities back up
+  (merge takes the max) and refilled the cart after an order. Both contexts refresh from the
+  server on `focus`/`visibilitychange`, apply only the newest response (sequence number), and
+  drop the account copy on logout so the next person at the computer does not inherit it.
 - **`/oblibene` is not behind login.** The whole feature is `localStorage` first — the heart
   on a card works logged out and the header shows the count to everyone — so gating the page
   meant a visitor collected favourites, saw "Oblíbené (3)" and got bounced to a login form
