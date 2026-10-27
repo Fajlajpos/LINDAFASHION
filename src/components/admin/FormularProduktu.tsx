@@ -683,37 +683,23 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="znacka" className="mb-1 block font-semibold text-linda-espresso">
-                Značka / designér
-              </label>
-              <input
-                id="znacka"
-                type="text"
-                disabled={odesilam}
-                value={form.znacka}
-                onChange={(e) => setForm({ ...form, znacka: e.target.value })}
-                placeholder="Např. Milano Elegance"
-                className={POLE}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="sku" className="mb-1 block font-semibold text-linda-espresso">
-                SKU (skladové číslo)
-              </label>
-              <input
-                id="sku"
-                type="text"
-                disabled={odesilam}
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                placeholder="LF-SAT-001"
-                className={POLE}
-              />
-              {chybaPole('sku')}
-            </div>
+          {/* Pole SKU je pryč (majitel, 2026-10): obchod nevede sklad s čísly
+              a zákon ho nevyžaduje – identifikaci podle GPSR nesou EAN, šarže
+              a země původu níž. Hodnotu dřív uložených produktů formulář dál
+              drží ve stavu a posílá zpět, takže se úpravou nesmaže. */}
+          <div>
+            <label htmlFor="znacka" className="mb-1 block font-semibold text-linda-espresso">
+              Značka / designér
+            </label>
+            <input
+              id="znacka"
+              type="text"
+              disabled={odesilam}
+              value={form.znacka}
+              onChange={(e) => setForm({ ...form, znacka: e.target.value })}
+              placeholder="Např. Milano Elegance"
+              className={POLE}
+            />
           </div>
 
           <div>
