@@ -29,7 +29,7 @@ export default function OblibenePage() {
       {/* Content */}
       {favorites.length === 0 ? (
         <div className="mx-auto max-w-xl space-y-6 rounded-3xl bg-linda-cream p-12 text-center shadow-neu">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-linda-sageLight text-linda-sage shadow-neuInset">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-linda-sandLight text-linda-cognac shadow-neuInset">
             <Heart className="h-8 w-8" aria-hidden="true" />
           </div>
           <div className="space-y-2">
