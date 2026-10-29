@@ -594,7 +594,7 @@ export default function AdminNastaveniPage() {
               type="number"
               min="1"
               max="30000"
-              step="10"
+              step="1"
               disabled={ukladam}
               value={n.hmotnostBalikuGramu}
               onChange={(e) => setN({ ...n, hmotnostBalikuGramu: Number(e.target.value) })}
