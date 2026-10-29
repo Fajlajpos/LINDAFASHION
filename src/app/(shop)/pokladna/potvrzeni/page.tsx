@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { CheckCircle, Download, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
+import { CheckCircle, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
+import { UlozitQrKod } from '@/components/shop/UlozitQrKod';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { popisSplatnosti } from '@/lib/lhuty';
@@ -145,14 +146,7 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
                   Naskenujte v bankovní aplikaci
                 </p>
                 {qrPng && (
-                  <a
-                    href={qrPng}
-                    download={`qr-platba-${objednavka.cisloObjednavky}.png`}
-                    className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
-                  >
-                    <Download className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
-                    Uložit QR kód
-                  </a>
+                  <UlozitQrKod png={qrPng} nazevSouboru={`qr-platba-${objednavka.cisloObjednavky}.png`} />
                 )}
               </div>
             ) : (
