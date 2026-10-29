@@ -9,8 +9,14 @@ const volitelnyText = (max: number) =>
     .nullable()
     .transform((v) => (v?.trim() ? v.trim() : null));
 
+/*
+ * Prázdno a null MUSÍ stát v unii před číslem. `z.coerce.number()` z nich
+ * udělá 0 a uspěje, takže v opačném pořadí se „nevyplněno" ukládalo jako
+ * nula: prázdný práh znamenal dopravu zdarma od 0 Kč a prázdná cena dopravce
+ * jeho nabídku za 0 Kč – přesně opak toho, co admin u pole slibuje.
+ */
 const volitelnaCena = z
-  .union([z.coerce.number().min(0).max(100000), z.literal(''), z.null()])
+  .union([z.literal(''), z.null(), z.coerce.number().min(0).max(100000)])
   .optional()
   .transform((v) => (v === '' || v === null || v === undefined ? null : Number(v)));
 

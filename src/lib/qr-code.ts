@@ -36,3 +36,16 @@ export function generateQrPaymentString(params: {
 export async function qrPlatbaSvg(spdString: string): Promise<string> {
   return QRCode.toString(spdString, { type: 'svg', errorCorrectionLevel: 'M', margin: 0 });
 }
+
+/**
+ * Tentýž QR kód jako PNG (`data:` adresa) ke stažení.
+ *
+ * Zákaznice si kód ukládá, aby ho v bankovní aplikaci načetla z galerie –
+ * telefon, na kterém QR zrovna vidí, ho sám sebou vyfotit neumí. SVG do
+ * galerie nejde uložit, proto PNG. Bílý okraj (`margin: 4`) tu na rozdíl od
+ * stránky být musí: uložený obrázek nemá kolem sebe nic, co by ho kreslilo,
+ * a bez tiché zóny ho čtečky z galerie často nenajdou.
+ */
+export async function qrPlatbaPng(spdString: string): Promise<string> {
+  return QRCode.toDataURL(spdString, { errorCorrectionLevel: 'M', margin: 4, width: 600 });
+}

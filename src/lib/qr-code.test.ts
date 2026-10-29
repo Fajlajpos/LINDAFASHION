@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateQrPaymentString, qrPlatbaSvg } from './qr-code';
+import { generateQrPaymentString, qrPlatbaPng, qrPlatbaSvg } from './qr-code';
 
 describe('generateQrPaymentString', () => {
   it('skládá SPD 1.0 bez diakritiky a s VS jen z číslic', () => {
@@ -32,5 +32,15 @@ describe('qrPlatbaSvg', () => {
 
   it('je deterministický', async () => {
     expect(await qrPlatbaSvg(spd)).toBe(await qrPlatbaSvg(spd));
+  });
+});
+
+describe('qrPlatbaPng', () => {
+  it('vrátí PNG jako data: adresu – SVG si telefon do galerie neuloží', async () => {
+    const png = await qrPlatbaPng(
+      generateQrPaymentString({ iban: 'CZ6508000000192000145399', amount: 500, variableSymbol: '202600001' })
+    );
+
+    expect(png.startsWith('data:image/png;base64,')).toBe(true);
   });
 });

@@ -266,7 +266,8 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
                         </span>
 
                         <a
-                          href={`/api/faktura/${o.verejnyToken}`}
+                          href={`/api/faktura/${o.verejnyToken}?stahnout=1`}
+                          download
                           className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm"
                         >
                           <FileText className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />

@@ -22,10 +22,10 @@ export const dynamic = 'force-dynamic';
 /** Číslo objednávky má tvar `2026-00042`; jiné do názvu souboru nepustíme. */
 const CISLO_OBJEDNAVKY = /^\d{4}-\d{5,}$/;
 
-export async function GET(_request: Request, { params }: { params: { token: string } }) {
+export async function GET(request: Request, { params }: { params: { token: string } }) {
   try {
     // Token je náhodný, ale hádat ho hrubou silou nemá být zadarmo.
-    const limit = zkontrolovatLimit(`faktura:${klientskaIp(_request)}`, 60, 10 * 60 * 1000);
+    const limit = zkontrolovatLimit(`faktura:${klientskaIp(request)}`, 60, 10 * 60 * 1000);
     if (!limit.povoleno) {
       return odpovedChyba('Příliš mnoho požadavků. Zkuste to prosím za chvíli.', 429);
     }
@@ -61,7 +61,12 @@ export async function GET(_request: Request, { params }: { params: { token: stri
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Length': String(pdf.length),
-        'Content-Disposition': `inline; filename="doklad-${objednavka.cisloObjednavky}.pdf"`,
+        // `?stahnout=1` (tlačítka u zákaznice): telefon PDF jen otevře
+        // a uložit ho pak neumí, `attachment` ho rovnou stáhne. Admin
+        // doklad dál otevírá v prohlížeči.
+        'Content-Disposition': `${
+          new URL(request.url).searchParams.has('stahnout') ? 'attachment' : 'inline'
+        }; filename="doklad-${objednavka.cisloObjednavky}.pdf"`,
         // Doklad obsahuje osobní údaje – nesmí zůstat v žádné sdílené cache.
         'Cache-Control': 'private, no-store',
       },

@@ -3,11 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { CheckCircle, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
+import { CheckCircle, Download, FileText, Package, QrCode, Truck, Undo2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { popisSplatnosti } from '@/lib/lhuty';
-import { generateQrPaymentString, qrPlatbaSvg } from '@/lib/qr-code';
+import { generateQrPaymentString, qrPlatbaPng, qrPlatbaSvg } from '@/lib/qr-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,18 +75,17 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
 
   // SVG se vyrobí tady na serveru a do stránky jde jako `data:` adresa –
   // prohlížeč zákaznice si kvůli QR nesahá na žádný cizí server.
-  const qrUrl = zobrazitQr
-    ? `data:image/svg+xml;utf8,${encodeURIComponent(
-        await qrPlatbaSvg(
-          generateQrPaymentString({
-            iban,
-            amount: kUhrade,
-            variableSymbol: variabilniSymbol,
-            message: `Objednavka ${objednavka.cisloObjednavky}`,
-          })
-        )
-      )}`
+  const spd = zobrazitQr
+    ? generateQrPaymentString({
+        iban,
+        amount: kUhrade,
+        variableSymbol: variabilniSymbol,
+        message: `Objednavka ${objednavka.cisloObjednavky}`,
+      })
     : null;
+  const qrUrl = spd ? `data:image/svg+xml;utf8,${encodeURIComponent(await qrPlatbaSvg(spd))}` : null;
+  // Ke stažení PNG – SVG si telefon do galerie neuloží.
+  const qrPng = spd ? await qrPlatbaPng(spd) : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-16 sm:px-6">
@@ -145,6 +144,16 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
                 <p className="text-center text-[11px] text-linda-espresso/70">
                   Naskenujte v bankovní aplikaci
                 </p>
+                {qrPng && (
+                  <a
+                    href={qrPng}
+                    download={`qr-platba-${objednavka.cisloObjednavky}.png`}
+                    className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-5 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
+                  >
+                    <Download className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+                    Uložit QR kód
+                  </a>
+                )}
               </div>
             ) : (
               <p className="rounded-xl bg-linda-sandLight p-4 text-[11px] text-linda-espresso/75 shadow-neuInsetSm">
@@ -260,7 +269,8 @@ export default async function PotvrzeniPage({ searchParams }: Props) {
         {/* Doklad vzniká ve workeru na pozadí – odkaz vrátí 404 jen v těch
             pár vteřinách, než se PDF stihne vygenerovat. */}
         <a
-          href={`/api/faktura/${objednavka.verejnyToken}`}
+          href={`/api/faktura/${objednavka.verejnyToken}?stahnout=1`}
+          download
           className="flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm"
         >
           <FileText className="h-4 w-4 text-linda-cognac" aria-hidden="true" />

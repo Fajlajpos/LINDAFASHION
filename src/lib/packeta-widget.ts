@@ -93,16 +93,28 @@ function nacistKnihovnu(): Promise<void> {
   return nacitani;
 }
 
-/** Jednořádkový popis pobočky. */
-function popisBodu(bod: BodWidgetu): string {
-  if (bod.formatedValue?.trim()) return bod.formatedValue.trim();
-
+/**
+ * Jednořádkový popis pobočky.
+ *
+ * Z-BOXy mají ulici už v názvu („Z-BOX Cheb, Riegerova 2386/56"), takže
+ * název + ulice + město – a stejně tak hotový `formatedValue` Zásilkovny –
+ * vypíše ulici dvakrát. Opakované části se proto vynechají.
+ */
+export function popisBodu(bod: Pick<BodWidgetu, 'formatedValue' | 'name' | 'street' | 'city'>): string {
   // Záloha pro případ, že knihovna hotový popis nepošle.
-  const casti = [bod.name, bod.street, bod.city].filter(
-    (cast): cast is string => Boolean(cast?.trim()),
-  );
+  const zdroj = bod.formatedValue?.trim() || [bod.name, bod.street, bod.city].join(',');
 
-  return casti.join(', ');
+  const videne = new Set<string>();
+  return zdroj
+    .split(',')
+    .map((cast) => cast.trim())
+    .filter((cast) => {
+      const klic = cast.toLocaleLowerCase('cs-CZ');
+      if (!cast || videne.has(klic)) return false;
+      videne.add(klic);
+      return true;
+    })
+    .join(', ');
 }
 
 /**
