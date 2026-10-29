@@ -207,6 +207,10 @@ export async function GET() {
         createdAt: o.createdAt,
         // Storno je možné jen dokud objednávka leží ve stavu NOVA (sekce 5).
         lzeStornovat: o.stav === 'NOVA',
+        // Stejná podmínka jako blok „Zaplaťte převodem" na potvrzovací
+        // stránce – účet na ni odkazuje, kdyby ji zákaznice zavřela.
+        cekaNaPrevod:
+          o.zpusobPlatby === 'bankovni_prevod' && o.stavPlatby !== 'ZAPLACENO' && o.stav !== 'ZRUSENA',
         // Reklamovat či vrátit jde, až když zboží odešlo – a dokud objednávka
         // pořád platí. Endpoint si to ověřuje znovu, tohle řídí jen tlačítko.
         lzeReklamovat: o.stav === 'EXPEDOVANA' || o.stav === 'DORUCENA',
