@@ -271,7 +271,7 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
                           className="flex min-h-touch cursor-pointer items-center gap-1.5 rounded-full bg-linda-cream px-4 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:text-linda-cognac hover:shadow-neu active:shadow-neuInsetSm"
                         >
                           <FileText className="h-3.5 w-3.5 text-linda-cognac" aria-hidden="true" />
-                          Doklad
+                          Stáhnout doklad
                         </a>
 
                         {/* Vrácení a reklamace řeší vlastní záložka – tady je jen zkratka. */}
