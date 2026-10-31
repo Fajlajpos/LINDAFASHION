@@ -41,7 +41,7 @@ import type { KratkaLhuta } from '@/lib/nastaveni';
  * šířka zdroje – nikde není ostřejší) a stěna s textem pod ni.
  */
 export const HeroSplit: React.FC<{ lhutaOdeslani: KratkaLhuta | null }> = ({ lhutaOdeslani }) => (
-  <section aria-label="Nová kolekce" className="relative w-full bg-linda-cream">
+  <section aria-label="Úvod" className="relative w-full bg-linda-cream">
     {/* Výšku určuje `min-height`, nikdy `height` s `max-height`.
         Ta dvojice tu byla a byla to past: text ve sloupci je vysoký 736 px,
         takže na nižším okně přerostl strop, řádka mřížky se roztáhla za spodní
@@ -119,11 +119,6 @@ export const HeroSplit: React.FC<{ lhutaOdeslani: KratkaLhuta | null }> = ({ lhu
             střed a karta kategorií se zespoda zanořuje 64 px do sekce –
             bez toho přesahu by na ni řádek s nákupními jistotami dosedl. */}
         <div className="w-full px-4 pb-28 pt-14 sm:px-6 sm:pt-16 lg:ml-auto lg:max-w-[40rem] lg:px-8 lg:pb-32 lg:pt-16">
-          <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-linda-espresso/70">
-            <span aria-hidden="true" className="h-px w-8 bg-linda-cognac" />
-            Nová kolekce
-          </p>
-
           {/* Cormorant je displejové písmo, ve 48 px působí krotce. Teprve
               tahle velikost dělá hierarchii, ve které hero vede nad nadpisy
               sekcí (36 px).
@@ -132,7 +127,7 @@ export const HeroSplit: React.FC<{ lhutaOdeslani: KratkaLhuta | null }> = ({ lhu
               mobilu z posledního řádku osamocené „den“ – u nadpisu téhle
               velikosti je každý zlom vidět, takže si ho řídíme sami. Tři řádky
               se ve 44 px vejdou i na 320px displej. */}
-          <h1 className="mt-7 font-serif text-[2.75rem] leading-[0.98] tracking-[-0.01em] text-linda-espresso sm:text-6xl lg:text-[4.5rem]">
+          <h1 className="font-serif text-[2.75rem] leading-[0.98] tracking-[-0.01em] text-linda-espresso sm:text-6xl lg:text-[4.5rem]">
             Nadčasová
             <br />
             elegance
