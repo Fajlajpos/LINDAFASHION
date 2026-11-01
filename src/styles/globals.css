@@ -180,12 +180,19 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   }
 }
 
-/* Odkaz pro přeskočení navigace – viditelný až při fokusu klávesnicí */
+/* Odkaz pro přeskočení navigace – viditelný až při fokusu klávesnicí.
+
+   Posun nad horní okraj nestačí: telefon při swipu nahoru stránku „pruží“
+   (overscroll) a na okamžik ukáže i to, co leží nad ní – odkaz pak probleskl
+   nad hlavičkou. Proto je mimo fokus i průhledný. `visibility: hidden` ne:
+   takový prvek nejde fokusovat a odkaz by přestal fungovat úplně. */
 .skip-link {
   position: absolute;
   left: 50%;
   top: 0.5rem;
   transform: translate(-50%, -150%);
+  opacity: 0;
+  pointer-events: none;
   z-index: 100;
   padding: 0.75rem 1.25rem;
   border-radius: 9999px;
@@ -193,11 +200,13 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   color: var(--color-cream);
   font-size: 0.8125rem;
   font-weight: 500;
-  transition: transform 200ms ease-out;
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
 }
 
 .skip-link:focus-visible {
   transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ---------------------------------------------------------------------------
