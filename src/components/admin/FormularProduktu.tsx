@@ -21,6 +21,7 @@ import {
 import { nacist, poslatFormData, poslatJson } from '@/lib/api-klient';
 import { pripravitFotky } from '@/lib/priprava-fotky';
 import { Vyber } from '@/components/ui/Vyber';
+import { DNY_NOVINKY } from '@/lib/novinka';
 import type { UlozenyVyrobce } from '@/app/api/admin/vyrobci/route';
 
 /**
@@ -1432,7 +1433,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             onChange={(e) => setForm({ ...form, doporuceny: e.target.checked })}
             className="h-4 w-4 cursor-pointer accent-linda-cognac"
           />
-          <span className="text-linda-espresso/85">Doporučený produkt (zvýrazní se na úvodní stránce)</span>
+          <span className="text-linda-espresso/85">Doporučený produkt (zvýrazní se na úvodní stránce a v katalogu půjde napřed). Štítek „Nová kolekce“ dostane každý nový produkt sám na {DNY_NOVINKY} dní.</span>
         </label>
       </div>
 

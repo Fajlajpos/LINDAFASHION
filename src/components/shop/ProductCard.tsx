@@ -49,7 +49,8 @@ export interface ProductCardProps {
   znacka?: string | null;
   kategorieNazev?: string | null;
   obrazekUrl?: string | null;
-  doporuceny?: boolean;
+  /** Štítek „Nová kolekce" – po `DNY_NOVINKY` od přidání, viz `novinka.ts`. */
+  jeNovinka?: boolean;
   jeDarkovyPoukaz?: boolean;
 
   /** `Product.zemePuvodu` – z ní se skládá štítek „Vyrobeno v …". */
@@ -65,7 +66,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   znacka,
   kategorieNazev,
   obrazekUrl,
-  doporuceny,
+  jeNovinka,
   jeDarkovyPoukaz,
   zemePuvodu,
 }) => {
@@ -106,7 +107,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* `pointer-events-none`: štítky leží nad odkazem přes celou kartu
           a kliknutí na ně má otevřít detail jako kdekoli jinde. */}
       <div className="pointer-events-none absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1.5 items-start">
-        {doporuceny && (
+        {jeNovinka && (
           /* Na telefonu bez jiskřiček a s užším prostrkáním – v kartě široké
              ~165 px jinak štítek zajel pod srdíčko vpravo nahoře. */
           <span className="bg-linda-sage text-white text-[9px] sm:text-[10px] uppercase tracking-wide sm:tracking-wider font-semibold px-2 sm:px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 border border-white/20">
@@ -125,7 +126,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             Dárkový poukaz
           </span>
         ) : (
-          !doporuceny &&
+          !jeNovinka &&
           !sleva &&
           stitekPuvodu && (
             <span className="bg-linda-sageLight text-linda-sage text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md border border-linda-sage/25">

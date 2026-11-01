@@ -9,6 +9,7 @@ import { cache } from 'react';
 import { Prisma } from '@prisma/client';
 import { db } from './db';
 import { normalizovat, podminkaHledani, rozlozitDotaz } from './vyhledavani';
+import { jeNovinka } from './novinka';
 
 export type Razeni = 'nejnovejsi' | 'cena-vzestupne' | 'cena-sestupne' | 'nazev';
 
@@ -46,6 +47,8 @@ export interface ProduktVypis {
   obrazekUrl: string | null;
   obrazekAlt: string | null;
   doporuceny: boolean;
+  /** Štítek „Nová kolekce" – odvozený z data přidání, viz `novinka.ts`. */
+  jeNovinka: boolean;
   jeDarkovyPoukaz: boolean;
   zemePuvodu: string | null;
   sklademCelkem: number;
@@ -82,6 +85,7 @@ function naVypis(p: {
   doporuceny: boolean;
   jeDarkovyPoukaz: boolean;
   zemePuvodu: string | null;
+  createdAt: Date;
   category: { nazev: string; slug: string };
   variants: { velikost: string; skladem: number }[];
   images: { urlMedium: string | null; altText: string | null }[];
@@ -101,6 +105,8 @@ function naVypis(p: {
     obrazekUrl: p.images[0]?.urlMedium ?? null,
     obrazekAlt: p.images[0]?.altText ?? null,
     doporuceny: p.doporuceny,
+    // Poukaz má vlastní štítek a „kolekcí" není.
+    jeNovinka: !p.jeDarkovyPoukaz && jeNovinka(p.createdAt),
     jeDarkovyPoukaz: p.jeDarkovyPoukaz,
     zemePuvodu: p.zemePuvodu,
     sklademCelkem: p.variants.reduce((s, v) => s + v.skladem, 0),
@@ -119,6 +125,7 @@ const VYBER_VYPIS = {
   doporuceny: true,
   jeDarkovyPoukaz: true,
   zemePuvodu: true,
+  createdAt: true,
   category: { select: { nazev: true, slug: true } },
   variants: { select: { velikost: true, skladem: true } },
   images: {
