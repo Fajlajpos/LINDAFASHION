@@ -36,7 +36,7 @@ nebo potvrzení o akceptaci podmínek.
 | # | Služba | Role | Co zpracovává | Stav | Doklad |
 |---|---|---|---|---|---|
 | 1 | Poskytovatel serveru / VPS | zpracovatel | Vše, co je v databázi a v logu | ☐ nevyřešeno | |
-| 2 | Poskytovatel SMTP (odesílání e-mailů) | zpracovatel | E-mail, jméno, obsah transakčních zpráv | ☐ nevyřešeno | |
+| 2 | Poskytovatel SMTP (odesílání e-mailů) | zpracovatel | E-mail, jméno, obsah transakčních zpráv | ☐ nevyřešeno — **dnes běží přes bezplatný Gmail, který smlouvu o zpracování (čl. 28) nenabízí**; data mohou být v USA. Řešení: Google Workspace (má Cloud Data Processing Addendum a DPF) nebo česká firemní pošta s DPA. Zásady (`/ochrana-osobnich-udaju`) se podle `SMTP_HOST` přepínají samy – u Gmailu jmenují Google a předání do USA | |
 | 3 | GoPay (platební brána) | samostatný správce | Platební údaje, částka, identifikátor objednávky | ☐ nevyřešeno | |
 | 4 | Zásilkovna / PPL / Česká pošta | samostatný správce | Jméno, adresa, telefon, e-mail | ☐ nevyřešeno | |
 | 5 | Google (GA4) | zpracovatel / společný správce | Identifikátory a chování na webu | ☐ nevyřešeno | |

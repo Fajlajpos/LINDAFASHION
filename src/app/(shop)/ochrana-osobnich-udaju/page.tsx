@@ -5,6 +5,21 @@ import { Mail, ShieldCheck } from 'lucide-react';
 import { nacistNastaveni } from '@/lib/nastaveni';
 import { RETENCE } from '@/lib/retence';
 import { jeAnalytikaNastavena, jeMarketingNastaven } from '@/lib/souhlas-cookies';
+import { jeCaptchaZapnuta } from '@/lib/captcha';
+
+/**
+ * Odcházejí e-maily přes Google (Gmail / Google Workspace)?
+ *
+ * Zásady dřív tvrdily, že údaje zůstávají v EU – jenže e-maily jdou přes
+ * Gmail, tedy přes Google, který je může mít i v USA. Text se proto řídí
+ * skutečným `SMTP_HOST`: po přechodu na jinou poštu se přepne sám a nic
+ * se nemusí pamatovat. Stejné pravidlo jako u GA4 a Pixelu – popisuje se
+ * to, co běží.
+ */
+function emailPresGoogle(): boolean {
+  const host = process.env.SMTP_HOST?.trim().toLowerCase() ?? '';
+  return /(^|\.)(gmail|googlemail|google)\.com$/.test(host);
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -103,6 +118,8 @@ export default async function GDPRPage() {
      platí obecný kontakt. Nevymýšlí se – bez obojího se ukáže odkaz na
      kontaktní formulář, který funguje vždy. */
   const kontaktProPrava = nastaveni.emailProGdpr ?? nastaveni.emailFirmy;
+  const google = emailPresGoogle();
+  const captcha = jeCaptchaZapnuta();
 
   const spravce = [
     nastaveni.nazevFirmy,
@@ -229,6 +246,16 @@ export default async function GDPRPage() {
               titul="souhlas – čl. 6 odst. 1 písm. a)"
               doba={`${mesice(RETENCE.hlidaniVyrizenoDnu)} po odeslání upozornění, nejdéle ${mesice(RETENCE.hlidaniNevyrizenoDnu)}`}
             />
+            {/* Limity pokusů (`rate-limit.ts`) drží IP a přihlašovací e-mail jen
+                v paměti serveru a nejdelší okno je hodina – proto „zhruba hodinu“. */}
+            <Ucel
+              ucel="Bezpečnost webu (ochrana proti zkoušení hesel a spamu)"
+              udaje={`IP adresa a e-mail zadaný při přihlášení, počet pokusů o přihlášení a odeslání formulářů${
+                captcha ? '; u formulářů technické údaje o prohlížeči pro ověření, že je odesílá člověk' : ''
+              }`}
+              titul="oprávněný zájem – čl. 6 odst. 1 písm. f): chránit váš účet a web před zneužitím"
+              doba="jen v paměti serveru, zhruba hodinu; nikam se neukládá"
+            />
             <Ucel
               ucel="Cookies a měření návštěvnosti"
               udaje="identifikátor souhlasu, údaje z analytických a marketingových nástrojů"
@@ -254,13 +281,32 @@ export default async function GDPRPage() {
               k nám vůbec nedostane, zpracovává ho přímo brána.
             </li>
             <li>
-              <strong>Poskytovatel serveru a e-mailové služby</strong> – jako zpracovatelé podle
-              čl. 28 GDPR, na základě smlouvy o zpracování osobních údajů.
+              <strong>Poskytovatel serveru</strong> – jako zpracovatel podle čl. 28 GDPR.
             </li>
             <li>
-              <strong>Poskytovatel služby pro rozesílání newsletteru</strong> – jen e-mail těch,
-              kdo se k odběru přihlásili a přihlášení potvrdili. Jako zpracovatel podle čl. 28
-              GDPR, na základě smlouvy o zpracování osobních údajů.
+              <strong>Poskytovatel e-mailové služby</strong>
+              {google ? (
+                <>
+                  {' '}
+                  – e-maily (potvrzení objednávek, odkazy k účtu, odpovědi) odesíláme přes službu
+                  Gmail společnosti Google Ireland Limited, Gordon House, Barrow Street, Dublin 4,
+                  Irsko. Údaje ze zpráv (e-mail, jméno, obsah) mohou být předány společnosti Google
+                  LLC do USA.
+                </>
+              ) : (
+                <> – odesílá potvrzení objednávek a další zprávy, jako zpracovatel podle čl. 28 GDPR.</>
+              )}
+            </li>
+            {captcha && (
+              <li>
+                <strong>Cloudflare, Inc.</strong> – služba Turnstile ověřuje u formulářů, že je
+                odesílá člověk. Načte se až ve chvíli, kdy do formuláře kliknete, a zpracovává IP
+                adresu a technické údaje o prohlížeči. Údaje mohou být předány do USA.
+              </li>
+            )}
+            <li>
+              <strong>Newsletter</strong> – k rozesílání novinek zatím nepoužíváme žádnou externí
+              službu. Než ji začneme používat, uvedeme ji zde.
             </li>
             <li>
               <strong>Analytické a marketingové nástroje</strong> – jen pokud k tomu dáte souhlas
@@ -279,14 +325,29 @@ export default async function GDPRPage() {
             </li>
           </ul>
 
-          <p>
-            Údaje zpracováváme v Evropské unii. Pokud by některý nástroj přenášel data do třetí
-            země, děje se tak na základě standardních smluvních doložek podle čl. 46 GDPR, nebo
-            rozhodnutí o odpovídající ochraně.
-          </p>
+          {/* „Údaje zpracováváme v EU“ platí jen bez Gmailu a Turnstile – jinak by
+              věta tvrdila něco, co odstavec výš vyvrací. */}
+          {google || captcha ? (
+            <p>
+              Údaje zpracováváme především v Evropské unii. Do USA mohou odcházet jen u služeb
+              výslovně uvedených výše
+              {google && captcha
+                ? ' (e-mailová služba Google a Cloudflare Turnstile)'
+                : google
+                  ? ' (e-mailová služba Google)'
+                  : ' (Cloudflare Turnstile)'}
+              ; tyto společnosti jsou certifikované v rámci EU-US Data Privacy Framework, pro
+              který Evropská komise 10. 7. 2023 rozhodla o odpovídající ochraně (čl. 45 GDPR).
+            </p>
+          ) : (
+            <p>
+              Údaje zpracováváme v Evropské unii. Pokud by některý nástroj přenášel data do třetí
+              země, děje se tak na základě standardních smluvních doložek podle čl. 46 GDPR, nebo
+              rozhodnutí o odpovídající ochraně.
+            </p>
+          )}
 
-          {/* Obecná věta výš stačí, dokud žádný takový nástroj neběží. S GA4 nebo
-              Pixelem se předání do USA děje doopravdy a musí být pojmenované. */}
+          {/* S GA4 nebo Pixelem se předání do USA děje doopravdy a musí být pojmenované. */}
           {(jeAnalytikaNastavena() || jeMarketingNastaven()) && (
             <p>
               S vaším souhlasem s cookies mohou být údaje předány do USA –{' '}
@@ -333,7 +394,11 @@ export default async function GDPRPage() {
             </li>
             <li>
               <strong>Přenositelnost</strong> (čl. 20) – dostat údaje ve strojově čitelném formátu
-              a předat je jinému správci. Export ve formátu JSON najdete v mém účtu.
+              a předat je jinému správci. Export ve formátu JSON najdete v mém účtu. Údaje, které
+              vedeme jen podle e-mailové adresy (souhlasy, odběr novinek, hlídání dostupnosti
+              a zprávy z kontaktního formuláře), v něm budou, až adresu u účtu ověříte odkazem
+              z e-mailu – jinak by si je mohl stáhnout kdokoli, kdo si účet na vaši adresu založí.
+              Případně nám o ně napište.
             </li>
             <li>
               <strong>Námitka</strong> (čl. 21) – vznést námitku proti zpracování z oprávněného
