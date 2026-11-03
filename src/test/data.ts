@@ -171,6 +171,9 @@ export function vstupObjednavky(
     dodaciUlice: 'Vodičkova 45',
     dodaciMesto: 'Praha 1',
     dodaciPsc: '110 00',
+    // Telefon je od commitu f884140 povinný; bez něj schéma vstup odmítlo
+    // a padaly všechny integrační testy objednávky ještě před první asercí.
+    dodaciTelefon: '+420 777 123 456',
     zpusobDopravy: 'ppl',
     zpusobPlatby: 'bankovni_prevod',
     souhlasPodminky: true,

@@ -25,6 +25,7 @@ export default async function MujUcetPage() {
           jmeno: uzivatel.jmeno,
           telefon: uzivatel.telefon,
           newsletterSouhlas: uzivatel.newsletterSouhlas,
+          emailOveren: uzivatel.emailOveren,
         }}
       />
     </div>

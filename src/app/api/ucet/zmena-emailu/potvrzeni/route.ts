@@ -90,6 +90,8 @@ export async function POST(request: Request) {
         email: zmena.novyEmail,
         tokenVerze: { increment: 1 },
         newsletterSouhlas: false,
+        // Kliknutím z nové schránky právě prokázala, že adresa je její.
+        emailOverenoAt: new Date(),
       },
     });
 

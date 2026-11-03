@@ -53,7 +53,19 @@ export async function POST(request: Request) {
 
     const hash = await hashPassword(vstup.heslo);
 
-    await db.$transaction([
+    const provedeno = await db.$transaction(async (tx) => {
+      /*
+       * Token je jednorázový. Značka „použito“ se nastavuje **podmíněně**
+       * (`pouzitoAt: null` ve `where`) a kontroluje se počet – dřív to byl
+       * prostý `update` a dva souběžné požadavky se stejným odkazem prošly
+       * kontrolou výš oba a oba nastavily heslo. Stejná úvaha jako u storna.
+       */
+      const oznaceno = await tx.passwordReset.updateMany({
+        where: { id: reset.id, pouzitoAt: null },
+        data: { pouzitoAt: new Date() },
+      });
+      if (oznaceno.count !== 1) return false;
+
       /*
        * Nové heslo a zneplatnění dosavadních relací patří do jedné transakce.
        * Dřív se `tokenVerze` zvyšovala až samostatným dotazem za ní – kdyby
@@ -61,17 +73,27 @@ export async function POST(request: Request) {
        * by běžela dál až do vypršení tokenu, tedy 30 dní. Právě tomu má
        * zvýšení verze zabránit.
        */
-      db.user.update({
+      await tx.user.update({
         where: { id: reset.userId },
         data: { passwordHash: hash, tokenVerze: { increment: 1 } },
-      }),
-      // Token je jednorázový – označíme ho za použitý ve stejné transakci,
-      // aby ho nešlo uplatnit dvakrát.
-      db.passwordReset.update({
-        where: { id: reset.id },
-        data: { pouzitoAt: new Date() },
-      }),
-    ]);
+      });
+
+      // Odkaz přišel do schránky účtu, takže reset zároveň dokazuje, že adresa
+      // je její. Dřívější datum ověření se nepřepisuje.
+      await tx.user.updateMany({
+        where: { id: reset.userId, emailOverenoAt: null },
+        data: { emailOverenoAt: new Date() },
+      });
+
+      return true;
+    });
+
+    if (!provedeno) {
+      return odpovedChyba(
+        'Odkaz pro obnovu hesla už byl použitý. Požádejte prosím o nový.',
+        410
+      );
+    }
 
     // Rovnou přihlásíme – zákaznice právě prokázala přístup k e-mailu i heslu.
     const user = await db.user.findUnique({

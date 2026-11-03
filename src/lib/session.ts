@@ -32,7 +32,12 @@ export interface SessionPayload {
   tv: number;
 }
 
-function tajnyKlic(): Uint8Array {
+/**
+ * Klíč pro podpis. Exportovaný kvůli ověřovacímu odkazu e-mailu
+ * (`overeni-emailu.ts`) – ten nese vlastní claim `ucel`, takže se s session
+ * tokenem zaměnit nedá ani jedním směrem.
+ */
+export function tajnyKlic(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
 
   if (!secret || secret.length < 32) {

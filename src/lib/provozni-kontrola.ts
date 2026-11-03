@@ -75,6 +75,26 @@ export function provozniVarovani(
    * třicetidenní lhůta na vyřízení reklamace (§ 19 odst. 3 zák. o ochraně
    * spotřebitele) běží bez ohledu na to, jestli se o ní ví.
    */
+  /*
+   * `docker-compose.yml` má pro databázi záložní heslo `lindapassword`, když
+   * `POSTGRES_PASSWORD` chybí. Port databáze ven otevřený není, ale heslo
+   * z veřejného repozitáře je pořád heslo, které zná každý. Compose se kvůli
+   * tomu měnit nedá – produkce, která na výchozím hesle už běží, by bez
+   * proměnné nenaběhla. Proto se to hlásí tady, jen v produkci.
+   */
+  if (process.env.NODE_ENV === 'production' && (process.env.DATABASE_URL ?? '').includes(':lindapassword@')) {
+    varovani.push({
+      klic: 'heslo-databaze',
+      nadpis: 'Databáze má výchozí heslo z repozitáře',
+      dopad:
+        'Heslo k databázi je `lindapassword`, které stojí ve veřejném kódu. Nastavte v Coolify ' +
+        'dlouhé náhodné POSTGRES_PASSWORD. U databáze, která už běží, ho změňte i v samotném ' +
+        'Postgresu (ALTER USER), jinak se web po nasazení nepřipojí.',
+      zavaznost: 'kriticke',
+      odkaz: null,
+    });
+  }
+
   if (!nastaveni.emailFirmy) {
     varovani.push({
       klic: 'email-firmy',

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NastaveniWebu } from './nastaveni';
 import { jeEmailNastaveny, provozniVarovani } from './provozni-kontrola';
 import type { StavZaloh } from './zalohy';
@@ -131,6 +131,31 @@ describe('provozniVarovani', () => {
     for (const v of provozniVarovani(VYPLNENO)) {
       expect(v.odkaz === null, v.klic).toBe(v.klic === 'smtp');
     }
+  });
+});
+
+describe('provozniVarovani – heslo databáze', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const klice = () => provozniVarovani(VYPLNENO).map((v) => v.klic);
+
+  it('v produkci s výchozím heslem z repozitáře hlásí kritické varování', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DATABASE_URL', 'postgresql://linda:lindapassword@postgres:5432/linda_fashion');
+
+    expect(klice()).toContain('heslo-databaze');
+  });
+
+  it('s vlastním heslem ani ve vývoji nehlásí nic', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DATABASE_URL', 'postgresql://linda:Xk9-dlouhe-nahodne@postgres:5432/linda_fashion');
+    expect(klice()).not.toContain('heslo-databaze');
+
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('DATABASE_URL', 'postgresql://linda:lindapassword@localhost:5432/linda_fashion');
+    expect(klice()).not.toContain('heslo-databaze');
   });
 });
 

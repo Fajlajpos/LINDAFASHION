@@ -216,6 +216,57 @@ Consequences worth remembering:
   OpenSSL 1.1 engine, which current Alpine no longer ships. `openssl` is installed in the
   image so Prisma can detect the version instead of guessing.
 
+## Security — rules from the 2026-11 audit
+
+- **Registration does not prove the e-mail, so e-mail-keyed data waits for `User.emailOverenoAt`.**
+  Anyone could register someone else's address; `/api/ucet/export` then handed out that
+  person's contact-form messages, consents, newsletter and stock watches, and `/api/ucet/smazat`
+  deleted them (including double opt-in evidence). Both now touch those tables only when
+  `OverenyUzivatel.emailOveren`. The account itself works unverified — the verification is
+  soft. It is set by the link from the `overeni-emailu` e-mail (stateless JWT in
+  [overeni-emailu.ts](src/lib/overeni-emailu.ts), claim `ucel`, bound to the address it was sent
+  to; confirmed by **POST** from `/overeni-emailu`, outside `/muj-ucet`), by a completed password
+  reset, by a confirmed e-mail change and for the `.env` bootstrap admin. **Never by the
+  newsletter confirmation**: the victim clicking a link she did not ask for would verify the
+  attacker's account. Old accounts stay `null` — no backfill. Any new table keyed by e-mail
+  instead of `userId` gets the same gate.
+- **Public tokens are `@default(uuid())`, never `cuid()`.** cuid v1 is time + counter +
+  fingerprint with ~41 random bits from `Math.random`; `Order.verejnyToken` opens name, address
+  and invoice without login. Rows created before 2026-11 keep their cuid — they are in sent
+  e-mails. Secrets generated in code use `crypto.randomBytes`.
+- **Redirect targets from the URL go through `bezpecnyCil`** ([bezpecny-cil.ts](src/lib/bezpecny-cil.ts)).
+  `startsWith('/') && !startsWith('//')` let `/\evil.com` through — the browser reads `\` as `/`.
+- **Analytics never receive a one-time key.** `AnalytickeSkripty` sends GA4 `page_location`
+  through `ocistitAdresu` ([ocistit-adresu.ts](src/lib/ocistit-adresu.ts), params `t`, `token`);
+  Meta Pixel runs with `autoConfig` off and `disablePushState`, and `PageView` is skipped on any
+  URL carrying a key. GA4's automatic events can still read `location`, so the GA4 property must
+  have *Redact data* for `t, token` ([nasazeni.md](dokumenty/nasazeni.md)). A new keyed link uses
+  `t` or `token`, or gets added to the list.
+- **Security headers live in `next.config.js`**, not in the `Caddyfile` — Coolify does not use
+  it, so production sent none (admin was frameable). HSTS deliberately without
+  `includeSubDomains`; CSP carries only `frame-ancestors`/`base-uri`/`object-src` — a full CSP
+  would break inline Next scripts, GA4, Pixel, Turnstile and the Packeta map.
+- **Single-use tokens are spent with the check inside the UPDATE** — the password reset used a
+  plain `update`, so two concurrent requests with one link both set a password. Same rule as
+  storno and vouchers.
+- **Login is limited per IP *and* per account** (30/h, generous on purpose so an attacker cannot
+  lock the owner out; a password reset logs in regardless). The GoPay return redirects to an
+  order only when `t` matches the payment's order — the payment `id` alone handed out the token.
+- **Dependencies.** Next 14 is end of life: 14.2.35 is the last patch and several advisories are
+  fixed only in 15.5+/16 (mostly DoS; the Windows-only RCE does not apply to the Linux server).
+  The two image-optimizer RCEs live in libvips/libheif/librsvg inside `sharp`, and the official
+  workaround is **`sharp` ≥ 0.35.5 as the only copy in the tree** (`npm ls sharp`) — never
+  downgrade it. Real fix: migrate to Next 15/16 (async `params`/`cookies()`, React 19) as its own
+  project. `zod` stays on 3 (v4 is breaking everywhere; its advisory needs an unbounded array and
+  every `z.array()` here has `.max()` — keep it that way), `pg-boss` on 9 (the `uuid` advisory
+  needs v3/v5/v6 with `buf`, unused).
+- `/admin` shows a critical warning when production `DATABASE_URL` still carries the compose
+  fallback password `lindapassword`. Compose keeps the fallback: removing it would stop a
+  production that already runs on it.
+- Known, not fixed: registration answers „účet existuje" (409), so it reveals registered
+  addresses. Hiding it means registration can no longer log in directly — a UX change for the
+  owner to decide.
+
 ## Design system — existing tokens win
 
 The brand is already defined. The skill **advises**; it does not redecide the brand.

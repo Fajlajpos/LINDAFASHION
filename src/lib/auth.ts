@@ -49,6 +49,11 @@ export interface OverenyUzivatel {
   telefon: string | null;
   role: 'CUSTOMER' | 'ADMIN';
   newsletterSouhlas: boolean;
+  /**
+   * Prokázala přístup ke schránce? Bez toho se nesmí číst ani mazat data
+   * vedená jen podle e-mailu – viz `User.emailOverenoAt`.
+   */
+  emailOveren: boolean;
 }
 
 /**
@@ -72,14 +77,15 @@ export async function overitUzivatele(): Promise<OverenyUzivatel | null> {
       newsletterSouhlas: true,
       tokenVerze: true,
       anonymizovanoAt: true,
+      emailOverenoAt: true,
     },
   });
 
   if (!user || user.anonymizovanoAt !== null) return null;
   if (user.tokenVerze !== session.tv) return null;
 
-  const { tokenVerze: _tv, anonymizovanoAt: _a, ...verejne } = user;
-  return verejne;
+  const { tokenVerze: _tv, anonymizovanoAt: _a, emailOverenoAt, ...verejne } = user;
+  return { ...verejne, emailOveren: emailOverenoAt !== null };
 }
 
 /** Zkratka pro `overitUzivatele()` – ponecháno kvůli čitelnosti volání. */

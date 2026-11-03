@@ -268,6 +268,13 @@ NEXT_PUBLIC_META_PIXEL_ID=
 „odesílal" e-maily, které nikdy neodejdou. A `NEXT_PUBLIC_*` a `APP_URL` se vpékají do
 stránky při sestavení: po jejich změně je potřeba **Redeploy**, restart nestačí.
 
+**Když vyplníte `NEXT_PUBLIC_GA_ID`**, zapněte v Google Analytics skrývání jednorázových klíčů
+z adres: *Správce → Datové streamy → (web) → Rozšířené měření / Redact data → Query parameters*
+a zadejte **`t, token`**. Stránky jako potvrzení objednávky nesou v adrese klíč, který bez
+přihlášení otevírá jméno, adresu a fakturu. Kód je očišťuje sám (`ocistitAdresu`), ale
+automatické události GA4 si adresu mohou vzít z prohlížeče napřímo – tohle je pojistka na
+straně Googlu. Meta Pixel to nepotřebuje, ten na takových stránkách neodesílá nic.
+
 ## B7. Kontrola, že web žije
 
 - [ ] `https://lindashop.cz/api/health` odpoví v pořádku.

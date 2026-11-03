@@ -418,6 +418,45 @@ export function sestavitEmail(typ: string, data: Data = {}): VyslednyEmail | nul
     }
 
     /*
+     * Ověření adresy po registraci. Účet funguje i bez něj; ověření jen
+     * odemkne údaje vedené výhradně podle e-mailu (export, smazání účtu).
+     * Text proto nestraší a netlačí – nic nepropadne, když na odkaz neklikne.
+     */
+    case 'overeni-emailu': {
+      const odkaz = String(data.odkaz ?? '');
+      const dnu = Number(data.platnostDnu ?? 7);
+      const oslovení = data.jmeno ? `Dobrý den, ${e(data.jmeno)},` : 'Dobrý den,';
+
+      return {
+        html: obalka(
+          'Ověření e-mailové adresy',
+          odstavec(oslovení) +
+          odstavec(
+            'děkujeme za registraci v LINDA FASHION. Potvrďte prosím tlačítkem níž, že tahle ' +
+              `adresa patří vám – odkaz platí <strong>${dnu} dní</strong>.`
+          ) +
+          tlacitko('Ověřit e-mail', odkaz) +
+          odstavec(
+            `Kdyby tlačítko nefungovalo, zkopírujte si do prohlížeče tuhle adresu:<br><span style="word-break:break-all;font-size:13px;color:#6B5B4F;">${e(odkaz)}</span>`
+          ) +
+          odstavec(
+            '<strong>Účet jste nezakládali?</strong> Pak tenhle e-mail smažte. Bez ověření se ' +
+              'k údajům, které u nás k této adrese vedeme, nikdo nedostane.'
+          )
+        ),
+        text: [
+          'Dobrý den,',
+          '',
+          'děkujeme za registraci v LINDA FASHION. Potvrďte prosím, že tahle adresa patří vám.',
+          `Odkaz platí ${dnu} dní:`,
+          odkaz,
+          '',
+          'Pokud jste účet nezakládali, e-mail smažte.',
+        ].join('\n'),
+      };
+    }
+
+    /*
      * Upozornění na **starou** adresu. Poslední pojistka: kdyby se někdo
      * k účtu dostal a zkusil ho přesměrovat na sebe, majitelka se to dozví
      * do schránky, ke které pořád má přístup.

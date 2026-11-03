@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, CheckCircle, Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { AuthField } from '@/components/ui/AuthField';
 import { poslatJson } from '@/lib/api-klient';
+import { bezpecnyCil } from '@/lib/bezpecny-cil';
 
 function PrihlaseniFormular() {
   const router = useRouter();
@@ -40,10 +41,10 @@ function PrihlaseniFormular() {
       return;
     }
 
-    // `dalsi` je vždy jen cesta v rámci webu (nastavuje ho middleware),
-    // ale pro jistotu odmítáme absolutní URL – ať z toho nejde udělat
-    // otevřené přesměrování na cizí web.
-    const cil = dalsi?.startsWith('/') && !dalsi.startsWith('//') ? dalsi : vysledek.data.presmerovat;
+    // `dalsi` nastavuje middleware, ale do adresy ho může napsat kdokoli –
+    // `bezpecnyCil` pustí jen cestu, která zůstane na našem webu (včetně
+    // triku se zpětným lomítkem `/\evil.com`).
+    const cil = bezpecnyCil(dalsi, vysledek.data.presmerovat);
 
     router.push(cil);
     router.refresh();

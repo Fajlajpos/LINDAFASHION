@@ -219,6 +219,20 @@ describe('sestavitEmail', () => {
    * stačilo by převzít starou schránku a změnu potvrdit z ní, čímž by celé
    * dvojité ověření ztratilo smysl.
    */
+  it('ověření e-mailu nese odkaz i dobu platnosti a jméno escapuje', () => {
+    const email = sestavitEmail('overeni-emailu', {
+      odkaz: 'https://obchod.cz/overeni-emailu?t=tok456',
+      jmeno: '<b>Jana</b>',
+      platnostDnu: 7,
+    });
+
+    expect(email).not.toBeNull();
+    expect(email!.html).toContain('overeni-emailu?t=tok456');
+    expect(email!.html).toContain('7 dní');
+    expect(email!.html).not.toContain('<b>Jana</b>');
+    expect(email!.text).toContain('overeni-emailu?t=tok456');
+  });
+
   it('potvrzení změny e-mailu nese odkaz, upozornění na starou adresu ne', () => {
     const potvrzeni = sestavitEmail('zmena-emailu-potvrzeni', {
       odkaz: 'https://obchod.cz/muj-ucet/zmena-emailu?t=tok123',

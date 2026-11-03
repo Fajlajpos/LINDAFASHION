@@ -47,7 +47,10 @@ export type TypEmailu =
   // Změna přihlašovacího e-mailu (čl. 16 GDPR): potvrzení jde na novou
   // adresu, upozornění na starou.
   | 'zmena-emailu-potvrzeni'
-  | 'zmena-emailu-upozorneni';
+  | 'zmena-emailu-upozorneni'
+  // Ověření adresy po registraci – bez něj export ani smazání účtu nesahají
+  // na data vedená jen podle e-mailu (viz `User.emailOverenoAt`).
+  | 'overeni-emailu';
 
 export interface UlohaEmail {
   typ: TypEmailu;

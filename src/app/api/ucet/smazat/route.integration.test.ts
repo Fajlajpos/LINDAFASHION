@@ -22,7 +22,9 @@ import { otisk, overitTokenZmeny, zalozitZmenuEmailu } from '@/lib/zmena-emailu'
  * v transakci zůstane a co ne.
  */
 
-const stav = vi.hoisted(() => ({ prihlasenyUzivatel: null as { id: string; email: string } | null }));
+const stav = vi.hoisted(() => ({
+  prihlasenyUzivatel: null as { id: string; email: string; emailOveren: boolean } | null,
+}));
 
 /*
  * `overitUzivatele` i `odhlasit` sahají na `next/headers`, které mimo
@@ -46,17 +48,28 @@ function pozadavek(heslo = HESLO): Request {
   });
 }
 
-async function zalozitZakaznici() {
+async function zalozitZakaznici(emailOveren = true) {
   const uzivatel = await db.user.create({
     data: {
       email: 'jana.novakova@example.com',
       passwordHash: await hashPassword(HESLO),
       jmeno: 'Jana Nováková',
+      emailOverenoAt: emailOveren ? new Date() : null,
     },
   });
 
-  stav.prihlasenyUzivatel = { id: uzivatel.id, email: uzivatel.email };
+  stav.prihlasenyUzivatel = { id: uzivatel.id, email: uzivatel.email, emailOveren };
   return uzivatel;
+}
+
+/** Data vedená jen podle e-mailu – to, o co se tu hraje. */
+async function zalozitDataPodleEmailu(email: string) {
+  await db.contactMessage.create({
+    data: { jmeno: 'Jana', email, predmet: 'Dotaz', zprava: 'Soukromá zpráva' },
+  });
+  await db.newsletterSubscriber.create({
+    data: { email, potvrzeno: true, potvrzenoAt: new Date(), ipPrihlaseni: '10.0.0.1' },
+  });
 }
 
 describe('POST /api/ucet/smazat', () => {
@@ -90,6 +103,37 @@ describe('POST /api/ucet/smazat', () => {
     const po = await db.user.findUniqueOrThrow({ where: { id: uzivatel.id } });
     expect(po.anonymizovanoAt).not.toBeNull();
     expect(po.email).not.toBe('jana.novakova@example.com');
+  });
+
+  it('u ověřeného e-mailu smaže i zprávy a odběr vedené podle adresy', async () => {
+    const uzivatel = await zalozitZakaznici(true);
+    await zalozitDataPodleEmailu(uzivatel.email);
+
+    const odpoved = await POST(pozadavek());
+    expect(odpoved.status).toBe(200);
+
+    expect(await db.contactMessage.count({ where: { email: uzivatel.email } })).toBe(0);
+    expect(await db.newsletterSubscriber.count({ where: { email: uzivatel.email } })).toBe(0);
+  });
+
+  it('účet na neověřený (třeba cizí) e-mail nesmaže zprávy ani doklad o odběru', async () => {
+    /*
+     * Registrace adresu nekontroluje. Bez téhle podmínky stačilo založit účet
+     * na cizí e-mail a smazáním účtu vzít s sebou cizí zprávy i doklad o cizím
+     * double opt-inu, který čl. 7 odst. 1 GDPR po správci chce.
+     */
+    const uzivatel = await zalozitZakaznici(false);
+    await zalozitDataPodleEmailu(uzivatel.email);
+
+    const odpoved = await POST(pozadavek());
+    expect(odpoved.status).toBe(200);
+
+    expect(await db.contactMessage.count({ where: { email: 'jana.novakova@example.com' } })).toBe(1);
+    expect(await db.newsletterSubscriber.count({ where: { email: 'jana.novakova@example.com' } })).toBe(1);
+
+    // Účet sám se anonymizuje tak jako tak.
+    const po = await db.user.findUniqueOrThrow({ where: { id: uzivatel.id } });
+    expect(po.anonymizovanoAt).not.toBeNull();
   });
 
   it('token k anonymizovanému účtu neplatí, i kdyby řádek přežil', async () => {

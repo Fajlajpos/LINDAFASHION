@@ -33,6 +33,19 @@ model User {
   // anonymizuje – tohle je značka, že se tak stalo.
   anonymizovanoAt DateTime?
 
+  /// Kdy majitelka účtu prokázala přístup ke schránce (odkaz z ověřovacího
+  /// e-mailu, dokončený reset hesla, potvrzená změna e-mailu).
+  ///
+  /// Registrace adresu neověřuje, takže kdokoli mohl založit účet na cizí
+  /// e-mail – a export (čl. 15/20) i smazání účtu pak sahaly na data vedená
+  /// jen podle e-mailu: zprávy z kontaktního formuláře, souhlasy, odběr,
+  /// hlídání skladu. Ta se proto čtou a mažou jen u ověřeného účtu.
+  ///
+  /// Starší účty mají `null` a nic se zpětně nedoplňuje – vymyšlený důkaz
+  /// je horší než přiznaná mezera. Potvrzení newsletteru účet **neověřuje**:
+  /// kliknutím na odkaz, o který nežádala, by oběť ověřila účet útočníka.
+  emailOverenoAt DateTime?
+
   createdAt   DateTime        @default(now())
   addresses   Address[]
   orders      Order[]
@@ -369,7 +382,13 @@ model Order {
   /// Náhodný klíč pro odkazy, které musí fungovat i bez přihlášení
   /// (potvrzení objednávky, stažení faktury). Číslo objednávky se k tomu
   /// použít nedá – jde po sobě, takže by šlo cizí objednávky procházet.
-  verejnyToken    String      @unique @default(cuid())
+  ///
+  /// `uuid()`, ne `cuid()`: cuid v1 je čas + počítadlo + otisk stroje
+  /// a náhodná část z `Math.random` má jen ~41 bitů. Na klíč, který otevírá
+  /// jméno, adresu a fakturu, je to málo. UUID v4 z Prismy je 122 bitů
+  /// z kryptografického generátoru. Starší objednávky si cuid nechávají –
+  /// leží v odeslaných e-mailech a přegenerovat je by rozbilo odkazy.
+  verejnyToken    String      @unique @default(uuid())
   stav            OrderStatus @default(NOVA)
 
   /// Rozpis objednávky tak, jak platil v okamžiku nákupu.
@@ -707,7 +726,8 @@ model NewsletterSubscriber {
   /// Klíč do odhlašovacího odkazu (a později do potvrzení double opt-inu).
   /// E-mail se do odkazu dát nesmí: kdokoliv by pak odhlásil kohokoliv,
   /// komu uhodne adresu. Token je náhodný a váže se na jediný záznam.
-  token String @unique @default(cuid())
+  /// `uuid()`, ne `cuid()` – viz `Order.verejnyToken`.
+  token String @unique @default(uuid())
 
   createdAt DateTime @default(now())
 }
@@ -765,7 +785,8 @@ model Reklamace {
   /// registrace nemá `userId`, takže vazba na osobu vede přes e-mail
   /// a přístup k detailu přes token, ne přes přihlášení.
   email String?
-  token String  @unique @default(cuid())
+  /// `uuid()`, ne `cuid()` – viz `Order.verejnyToken`.
+  token String  @unique @default(uuid())
 
   /// § 1830a o. z. (účinný od 19. 6. 2026) žádá automatické potvrzení
   /// odstoupení s datem a časem přijetí. Značka, že odešlo – aby opakované

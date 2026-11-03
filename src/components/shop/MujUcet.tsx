@@ -8,6 +8,7 @@ import {
   FileText,
   Loader2,
   LogOut,
+  MailCheck,
   MapPin,
   Package,
   QrCode,
@@ -52,6 +53,7 @@ export interface UzivatelUctu {
   jmeno: string | null;
   telefon: string | null;
   newsletterSouhlas: boolean;
+  emailOveren: boolean;
 }
 
 const ZALOZKY = [
@@ -131,6 +133,8 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
           Odhlásit se
         </button>
       </div>
+
+      {!uzivatel.emailOveren && <OvereniEmailuKarta email={uzivatel.email} />}
 
       {/*
         Přepínač sekcí. Vybraná záložka je zapuštěná, ostatní vyvýšené –
@@ -348,7 +352,7 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
           className="animate-fadeIn space-y-6"
         >
           <UdajeKarta profil={uzivatel} />
-          <ExportUdaju />
+          <ExportUdaju emailOveren={uzivatel.emailOveren} />
           <SmazaniUctu />
         </div>
       )}
@@ -378,7 +382,7 @@ export function MujUcet({ uzivatel }: { uzivatel: UzivatelUctu }) {
  * Odkaz je obyčejné `<a download>` na endpoint, ne fetch do paměti: prohlížeč
  * si se stahováním poradí sám a soubor nemusí projít Reactem.
  */
-function ExportUdaju() {
+function ExportUdaju({ emailOveren }: { emailOveren: boolean }) {
   return (
     <section className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8">
       <h2 className="flex items-center gap-2 font-serif text-xl text-linda-espresso">
@@ -392,6 +396,13 @@ function ExportUdaju() {
         ho můžete nechat, otevřít nebo předat jinému obchodu.
       </p>
 
+      {!emailOveren && (
+        <p className="text-xs leading-relaxed text-linda-espresso/85">
+          Souhlasy, odběr novinek, hlídané velikosti a zprávy z formuláře vedeme jen podle e-mailu,
+          takže je do souboru přidáme, až adresu ověříte (odkaz najdete nahoře na stránce).
+        </p>
+      )}
+
       <a
         href="/api/ucet/export"
         download
@@ -400,6 +411,79 @@ function ExportUdaju() {
         <Download className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
         Stáhnout moje údaje (JSON)
       </a>
+    </section>
+  );
+}
+
+/**
+ * Výzva k ověření e-mailu.
+ *
+ * Účet funguje i bez ověření – karta jen vysvětluje, co ověření odemkne,
+ * a umí poslat odkaz znovu. Raised `cream` karta jako ostatní sekce účtu;
+ * stav „odesláno“ i chyba se hlásí přes `aria-live`, ne jen barvou.
+ */
+function OvereniEmailuKarta({ email }: { email: string }) {
+  const [odesila, setOdesila] = useState(false);
+  const [zprava, setZprava] = useState<string | null>(null);
+  const [chyba, setChyba] = useState<string | null>(null);
+
+  const poslat = async () => {
+    if (odesila) return;
+
+    setOdesila(true);
+    setChyba(null);
+    setZprava(null);
+
+    const vysledek = await poslatJson<{ zprava: string }>('/api/ucet/overeni-emailu', undefined);
+
+    if (vysledek.ok) setZprava(vysledek.data.zprava);
+    else setChyba(vysledek.chyba);
+
+    setOdesila(false);
+  };
+
+  return (
+    <section
+      aria-labelledby="overeni-emailu-nadpis"
+      className="space-y-3 rounded-2xl bg-linda-cream p-6 shadow-neu sm:p-8"
+    >
+      <h2
+        id="overeni-emailu-nadpis"
+        className="flex items-center gap-2 font-serif text-xl text-linda-espresso"
+      >
+        <MailCheck className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+        Ověřte prosím svůj e-mail
+      </h2>
+
+      <p className="text-xs leading-relaxed text-linda-espresso/85">
+        Na <strong className="font-semibold">{email}</strong> jsme poslali odkaz k ověření. Účet
+        funguje i bez něj, ověřená adresa ale chrání údaje, které u nás vedeme jen podle e-mailu –
+        souhlasy, odběr novinek a zprávy z kontaktního formuláře.
+      </p>
+
+      <div aria-live="polite">
+        {zprava && <p className="text-xs font-medium text-linda-espresso">{zprava}</p>}
+        {chyba && (
+          <p role="alert" className="text-xs font-medium text-red-800">
+            {chyba}
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void poslat()}
+        disabled={odesila}
+        aria-busy={odesila}
+        className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-full bg-linda-cream px-6 text-xs font-semibold text-linda-espresso shadow-neuSm transition-all duration-200 hover:shadow-neu active:shadow-neuInsetSm disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {odesila ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <MailCheck className="h-4 w-4 text-linda-cognac" aria-hidden="true" />
+        )}
+        Poslat odkaz znovu
+      </button>
     </section>
   );
 }

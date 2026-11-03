@@ -5,6 +5,7 @@ import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/ap
 import { klientskaIp, zkontrolovatLimit } from '@/lib/rate-limit';
 import { prihlasitKOdberu } from '@/lib/newsletter';
 import { overitCaptchu } from '@/lib/captcha';
+import { poslatOvereniEmailu } from '@/lib/overeni-emailu-odeslat';
 
 /** Sekce 10: 5 registrací za hodinu z jedné IP – brzda na spam boty. */
 const MAX_REGISTRACI = 5;
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
         userAgent: request.headers.get('user-agent'),
       });
     }
+
+    /*
+     * Ověření adresy. Účet funguje hned, ale data vedená jen podle e-mailu
+     * (zprávy, souhlasy, hlídání skladu) se v exportu ukážou a při smazání
+     * účtu smažou až po ověření – jinak by stačilo zaregistrovat se na cizí
+     * adresu a číst cizí zprávy. Viz `User.emailOverenoAt`.
+     */
+    await poslatOvereniEmailu(user);
 
     await prihlasit(user);
 

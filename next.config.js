@@ -29,15 +29,45 @@ const nextConfig = {
 
   images: {
     // Fotky produktů se servírují lokálně z /public/uploads (same-origin),
-    // takže tady stačí jen externí služby, které opravdu používáme.
-    // Dřív tu byl hostname: '**', což je otevřená proxy na libovolný web.
-    remotePatterns: [
+    // takže žádný cizí původ optimalizátor obrázků nepotřebuje.
+    // Dřív tu byl hostname: '**', což je otevřená proxy na libovolný web,
+    // a pak `api.qrserver.com` – QR platba se ale už generuje na serveru
+    // (qr-code.ts), takže výjimka jen zbytečně rozšiřovala, odkud si
+    // optimalizátor smí obrázky stahovat.
+    remotePatterns: [],
+  },
+
+  /*
+   * Bezpečnostní hlavičky. Dřív žily jen v `Caddyfile` – jenže produkce běží
+   * na Coolify s vlastní proxy a Caddyfile se tam nepoužívá, takže web je
+   * neposílal vůbec: administrace šla vložit do cizího iframu (clickjacking)
+   * a prohlížeč nevynucoval HTTPS.
+   *
+   * Plná Content-Security-Policy schválně **není**: inline skripty Nextu,
+   * GA4, Pixel, Turnstile a mapa Zásilkovny by se s ní rozbily a odladit ji
+   * bez prohlížeče u každé z nich nejde. CSP tu nese jen direktivy, které nic
+   * z toho nepoužívá. `Permissions-Policy` na geolokaci chybí taky – widget
+   * Zásilkovny v iframu ji smí chtít kvůli „výdejní místa poblíž“.
+   */
+  async headers() {
+    return [
       {
-        protocol: 'https',
-        hostname: 'api.qrserver.com',
-        pathname: '/v1/create-qr-code/**',
+        source: '/:path*',
+        headers: [
+          // Bez `includeSubDomains`: to by zavázalo i subdomény, o kterých web
+          // nic neví (panel serveru, pošta) – kdyby některá jela jen po HTTP,
+          // prohlížeč by ji přestal otevírat.
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+          },
+        ],
       },
-    ],
+    ];
   },
 };
 

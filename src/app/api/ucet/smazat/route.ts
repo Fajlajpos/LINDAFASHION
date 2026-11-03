@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { odhlasit, overitUzivatele } from '@/lib/auth';
 import { verifyPassword } from '@/lib/hesla';
 import { odpovedChyba, odpovedOk, jeStejnyPuvod, zpracovatChybu } from '@/lib/api';
+import { zkontrolovatLimit } from '@/lib/rate-limit';
 
 const schema = z.object({
   // Heslo požadujeme i u přihlášené zákaznice – smazání účtu je nevratné
@@ -26,6 +27,12 @@ export async function POST(request: Request) {
 
     const uzivatel = await overitUzivatele();
     if (!uzivatel) return odpovedChyba('Nejste přihlášeni.', 401);
+
+    // Brzda na hádání hesla u odemčeného prohlížeče – stejná jako u změny hesla.
+    const limit = zkontrolovatLimit(`smazat-ucet:${uzivatel.id}`, 10, 15 * 60 * 1000);
+    if (!limit.povoleno) {
+      return odpovedChyba('Příliš mnoho pokusů. Zkuste to prosím za chvíli.', 429);
+    }
 
     const { heslo } = schema.parse(await request.json());
 
@@ -106,17 +113,25 @@ export async function POST(request: Request) {
         },
       }),
 
-      // Odběr newsletteru vedený mimo účet.
-      db.newsletterSubscriber.deleteMany({ where: { email: uzivatel.email } }),
-
       /*
        * Hlídání dostupnosti a zprávy z kontaktního formuláře se klíčují
        * e-mailem, ne `userId` – anonymizace účtu je proto míjela a adresa
        * zákaznice v databázi zůstávala. Ani jedno není účetní doklad, takže
        * na jejich uchování není po žádosti o výmaz žádný právní důvod.
+       *
+       * **Jen u ověřeného e-mailu.** Registrace adresu nekontroluje, takže
+       * bez ověření by kdokoli založil účet na cizí e-mail, smazal ho a vzal
+       * s sebou cizí zprávy i doklad o cizím double opt-inu. Neověřené řádky
+       * zůstávají a v čas je odklidí retence.
        */
-      db.stockNotification.deleteMany({ where: { email: uzivatel.email } }),
-      db.contactMessage.deleteMany({ where: { email: uzivatel.email } }),
+      ...(uzivatel.emailOveren
+        ? [
+            // Odběr newsletteru vedený mimo účet.
+            db.newsletterSubscriber.deleteMany({ where: { email: uzivatel.email } }),
+            db.stockNotification.deleteMany({ where: { email: uzivatel.email } }),
+            db.contactMessage.deleteMany({ where: { email: uzivatel.email } }),
+          ]
+        : []),
     ]);
 
     /*

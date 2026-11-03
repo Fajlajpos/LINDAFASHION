@@ -7,6 +7,10 @@ import { klientskaIp, vynulovatLimit, zkontrolovatLimit } from '@/lib/rate-limit
 const MAX_POKUSU = 10;
 const OKNO_MS = 15 * 60 * 1000;
 
+/** Limit na jeden účet bez ohledu na IP – proti hádání z mnoha adres. */
+const MAX_POKUSU_NA_UCET = 30;
+const OKNO_UCTU_MS = 60 * 60 * 1000;
+
 export async function POST(request: Request) {
   try {
     if (!jeStejnyPuvod(request)) {
@@ -22,6 +26,23 @@ export async function POST(request: Request) {
     }
 
     const vstup = prihlaseniSchema.parse(await request.json());
+
+    /*
+     * Druhý limit podle účtu. Limit podle IP zastaví jeden počítač, ale ne
+     * hádání hesla k jednomu účtu z mnoha adres. Hodnota je schválně volná:
+     * přísnější by útočníkovi dovolila zákaznici z účtu zamknout. Reset hesla
+     * přihlásí i během zablokování, takže majitelka účtu se dovnitř dostane.
+     */
+    const klicUctu = `prihlaseni-ucet:${vstup.email.toLowerCase().trim()}`;
+    const limitUctu = zkontrolovatLimit(klicUctu, MAX_POKUSU_NA_UCET, OKNO_UCTU_MS);
+    if (!limitUctu.povoleno) {
+      return odpovedChyba(
+        'K tomuto účtu přišlo příliš mnoho pokusů o přihlášení. Zkuste to prosím později, ' +
+          'nebo si nastavte nové heslo přes „Zapomenuté heslo“.',
+        429
+      );
+    }
+
     const user = await overitPrihlaseni(vstup.email, vstup.heslo);
 
     if (!user) {
@@ -31,6 +52,7 @@ export async function POST(request: Request) {
     }
 
     vynulovatLimit(`prihlaseni:${klientskaIp(request)}`);
+    vynulovatLimit(klicUctu);
 
     await prihlasit(user);
 

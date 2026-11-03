@@ -57,8 +57,19 @@ export async function GET(request: Request) {
     let cilovyToken: string | null = null;
 
     try {
+      // Stav platby se vyhodnotí vždy – tím se objednávka označí jako
+      // zaplacená, i když se návrat nepovede dokončit.
       const vysledek = await vyhodnotitPlatbu(platbaId);
-      if (vysledek.stav !== 'neznama') cilovyToken = vysledek.verejnyToken;
+
+      /*
+       * Ale k objednávce se přesměruje, jen když `t` z adresy patří k té
+       * platbě. Dřív stačilo samotné `id`: kdo zkoušel čísla plateb (u GoPay
+       * jdou zhruba po sobě), dostal přesměrování s klíčem k cizí objednávce,
+       * tedy ke jménu, adrese a faktuře. Naše `navratovaUrl` `t` nese vždy.
+       */
+      if (vysledek.stav !== 'neznama' && token && token === vysledek.verejnyToken) {
+        cilovyToken = vysledek.verejnyToken;
+      }
     } catch (err) {
       /*
        * Výpadek brány nesmí zákaznici nechat na chybové stránce – objednávka

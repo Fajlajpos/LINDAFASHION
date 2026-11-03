@@ -31,6 +31,10 @@ export async function zalozitAdminaPokudChybi(): Promise<void> {
       passwordHash: await hashPassword(heslo),
       role: 'ADMIN',
       jmeno: 'Administrátorka',
+      // Adresu zadala majitelka sama do `.env` na serveru – to je silnější
+      // důkaz, než by dal odkaz v e-mailu. U povýšení existujícího účtu
+      // (větev `update`) se to neplatí: tam ji nikdo nepotvrdil.
+      emailOverenoAt: new Date(),
     },
   });
 

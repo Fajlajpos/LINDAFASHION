@@ -49,6 +49,8 @@ export async function GET(request: Request) {
       );
     }
 
+    const overeno = uzivatel.emailOveren;
+
     const [ucet, objednavky, adresy, oblibene, souhlasy, newsletter, hlidani, zpravy] =
       await Promise.all([
         db.user.findUnique({
@@ -138,39 +140,53 @@ export async function GET(request: Request) {
          * exportu by znamenalo vyrobit přesně tu vazbu, které se to id
          * schválně vyhýbá.
          */
-        db.souhlasZaznam.findMany({
-          where: { subjekt: uzivatel.email },
-          orderBy: { createdAt: 'asc' },
-          select: { typ: true, udeleno: true, verze: true, podrobnosti: true, createdAt: true },
-        }),
+        /*
+         * Všechno odsud dolů je vedené **jen podle e-mailu** – a ten u
+         * neověřeného účtu nic nedokazuje: registrace adresu nekontroluje,
+         * takže by stačilo založit účet na cizí e-mail a stáhnout si cizí
+         * zprávy z kontaktního formuláře. Proto jen u ověřeného účtu.
+         */
+        overeno
+          ? db.souhlasZaznam.findMany({
+              where: { subjekt: uzivatel.email },
+              orderBy: { createdAt: 'asc' },
+              select: { typ: true, udeleno: true, verze: true, podrobnosti: true, createdAt: true },
+            })
+          : Promise.resolve([]),
 
-        db.newsletterSubscriber.findMany({
-          where: { email: uzivatel.email },
-          select: {
-            potvrzeno: true,
-            createdAt: true,
-            potvrzenoAt: true,
-            odhlasenAt: true,
-            zdroj: true,
-          },
-        }),
+        overeno
+          ? db.newsletterSubscriber.findMany({
+              where: { email: uzivatel.email },
+              select: {
+                potvrzeno: true,
+                createdAt: true,
+                potvrzenoAt: true,
+                odhlasenAt: true,
+                zdroj: true,
+              },
+            })
+          : Promise.resolve([]),
 
-        db.stockNotification.findMany({
-          where: { email: uzivatel.email },
-          select: {
-            createdAt: true,
-            vyrizeno: true,
-            variant: {
-              select: { velikost: true, product: { select: { nazev: true } } },
-            },
-          },
-        }),
+        overeno
+          ? db.stockNotification.findMany({
+              where: { email: uzivatel.email },
+              select: {
+                createdAt: true,
+                vyrizeno: true,
+                variant: {
+                  select: { velikost: true, product: { select: { nazev: true } } },
+                },
+              },
+            })
+          : Promise.resolve([]),
 
-        db.contactMessage.findMany({
-          where: { email: uzivatel.email },
-          orderBy: { createdAt: 'desc' },
-          select: { predmet: true, zprava: true, createdAt: true, vyrizeno: true },
-        }),
+        overeno
+          ? db.contactMessage.findMany({
+              where: { email: uzivatel.email },
+              orderBy: { createdAt: 'desc' },
+              select: { predmet: true, zprava: true, createdAt: true, vyrizeno: true },
+            })
+          : Promise.resolve([]),
       ]);
 
     if (!ucet) return odpovedChyba('Účet nebyl nalezen.', 404);
@@ -213,6 +229,14 @@ export async function GET(request: Request) {
         vyrizeno: h.vyrizeno,
       })),
       zpravyZFormulare: zpravy,
+      ...(overeno
+        ? {}
+        : {
+            poznamka:
+              'Souhlasy, odběr novinek, hlídání dostupnosti a zprávy z kontaktního formuláře ' +
+              'vedeme jen podle e-mailové adresy. Do exportu je zařadíme, až adresu ověříte ' +
+              'odkazem z e-mailu (v účtu si ho můžete poslat znovu).',
+          }),
     };
 
     const nazevSouboru = `linda-fashion-udaje-${new Date().toISOString().slice(0, 10)}.json`;
