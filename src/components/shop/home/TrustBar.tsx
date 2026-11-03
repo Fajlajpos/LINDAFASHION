@@ -82,10 +82,10 @@ export const TrustBar: React.FC<{
             >
               {/* Terč je vystouplý, protože panel kolem něj je teď prohlubeň –
                   dvě úrovně proti sobě, ne dvě stejné pod sebou. Barva je
-                  `sage`: olivová z palety se jinde na stránce neobjevuje,
-                  ačkoli patří do brandu, a klidné informace jsou její role. */}
+                  `espresso`, stejná jako nadpis vedle ní – olivová `sage`
+                  byla zamítnuta (2026-11). */}
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linda-sandLight shadow-neuSm">
-                <Ikona className="h-5 w-5 text-linda-sage" aria-hidden="true" />
+                <Ikona className="h-5 w-5 text-linda-espresso" aria-hidden="true" />
               </span>
               <div>
                 <p className="text-sm font-semibold text-linda-espresso">{vyhoda.title}</p>
