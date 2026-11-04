@@ -74,7 +74,7 @@ export const CategoryBar: React.FC<{ kategorie: KategorieNavigace[] }> = ({ kate
 
               <Link
                 href={href}
-                className={`group relative flex h-[88px] w-[148px] items-center overflow-hidden rounded-2xl px-4 transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm sm:h-24 sm:w-[184px] sm:px-6 ${naSirku ? 'lg:w-full' : ''}`}
+                className={`group relative flex h-[88px] w-[168px] items-center overflow-hidden rounded-2xl px-4 transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm sm:h-24 sm:w-[208px] sm:px-6 ${naSirku ? 'lg:w-full' : ''}`}
               >
                 <CategoryGlyph
                   name={slug === null ? 'vse' : glyfKategorie(nazev)}
@@ -85,14 +85,29 @@ export const CategoryBar: React.FC<{ kategorie: KategorieNavigace[] }> = ({ kate
                   }`}
                 />
 
+                {/* `pr-14` drží text mimo siluetu: ta přečnívá do pole zprava
+                    o ~56 px za jeho vnitřní okraj, takže delší název („Halenky
+                    a košile") se zalomí pod sebe, místo aby ilustraci přepsal.
+                    Kvůli tomu jsou pole o 20–24 px širší než dřív. */}
                 <span
-                  className={`relative font-serif text-lg leading-tight tracking-wide transition-colors duration-200 sm:text-xl ${
+                  className={`relative min-w-0 pr-14 font-serif text-lg leading-tight tracking-wide transition-colors duration-200 sm:text-xl ${
                     zvyraznit
                       ? 'text-linda-cognac group-hover:text-linda-cognacHover'
                       : 'text-linda-espresso group-hover:text-linda-cognac'
                   }`}
                 >
-                  {nazev}
+                  {/* Lomítko bez mezer („Halenky/Košile") je pro prohlížeč jedno
+                      slovo – `<wbr />` za ním dovolí zalomit právě tam. */}
+                  {nazev.split('/').map((cast, j) => (
+                    <React.Fragment key={j}>
+                      {j > 0 && (
+                        <>
+                          /<wbr />
+                        </>
+                      )}
+                      {cast}
+                    </React.Fragment>
+                  ))}
                 </span>
               </Link>
             </li>
