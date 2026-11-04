@@ -36,11 +36,10 @@ export interface HomeTrustItem {
 /**
  * Promo bannery pod dlaždicemi kategorií.
  *
- * Banner s poukazem vedl na `/produkty/darkove-poukazy`, kategorii, která
- * v databázi nebyla – končil na „Stránka nebyla nalezena". Teď míří přímo
- * na zveřejněný poukaz, a dokud žádný není, banner se nevykreslí.
+ * Banner s poukazem je vidět vždy; kam vede, rozhoduje `odkazNaPoukaz`
+ * v katalog.ts (poukaz → kategorie → kontakt), aby nikdy nekončil na 404.
  */
-export function promoBannery(odkazNaPoukaz: string | null): HomePromo[] {
+export function promoBannery(odkazNaPoukaz: string): HomePromo[] {
   return [
     {
       eyebrow: 'Nová kolekce',
@@ -50,18 +49,14 @@ export function promoBannery(odkazNaPoukaz: string | null): HomePromo[] {
       glyph: 'saty',
       alt: '',
     },
-    ...(odkazNaPoukaz
-      ? [
-          {
-            eyebrow: 'Tip na dárek',
-            titleLines: ['Dárkový poukaz', 'potěší vždy'] as [string, string],
-            cta: { label: 'Vybrat poukaz', href: odkazNaPoukaz },
-            obrazek: null,
-            glyph: 'poukazy' as const,
-            alt: '',
-          },
-        ]
-      : []),
+    {
+      eyebrow: 'Tip na dárek',
+      titleLines: ['Dárkový poukaz', 'potěší vždy'],
+      cta: { label: 'Vybrat poukaz', href: odkazNaPoukaz },
+      obrazek: null,
+      glyph: 'poukazy',
+      alt: '',
+    },
   ];
 }
 

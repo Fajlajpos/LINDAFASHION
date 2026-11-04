@@ -577,14 +577,27 @@ export async function nacistNavigaci(): Promise<KategorieNavigace[]> {
     .map(({ nazev, slug }) => ({ nazev, slug }));
 }
 
-/** Odkaz na první aktivní dárkový poukaz – pro banner na úvodní stránce. */
-export async function odkazNaPoukaz(): Promise<string | null> {
-  const poukaz = await db.product.findFirst({
-    where: { ...VEREJNE, jeDarkovyPoukaz: true },
-    orderBy: { createdAt: 'asc' },
-    select: { slug: true },
-  });
-  return poukaz ? `/produkt/${poukaz.slug}` : null;
+/**
+ * Kam vede banner „Dárkový poukaz" na úvodní stránce.
+ *
+ * Banner je vidět vždycky (majitel webu, 2026-11), takže musí vést někam,
+ * kde stránka existuje: na zveřejněný poukaz, jinak na kategorii
+ * `darkove-poukazy`, a když není ani ta, na kontakt – poukaz se dá koupit
+ * i v prodejně. Dřív vedl natvrdo na kategorii, která v databázi nebyla,
+ * a končil na „Stránka nebyla nalezena".
+ */
+export async function odkazNaPoukaz(): Promise<string> {
+  const [poukaz, kategorie] = await Promise.all([
+    db.product.findFirst({
+      where: { ...VEREJNE, jeDarkovyPoukaz: true },
+      orderBy: { createdAt: 'asc' },
+      select: { slug: true },
+    }),
+    db.category.findUnique({ where: { slug: 'darkove-poukazy' }, select: { slug: true } }),
+  ]);
+  if (poukaz) return `/produkt/${poukaz.slug}`;
+  if (kategorie) return `/produkty/${kategorie.slug}`;
+  return '/kontakt';
 }
 
 export const nacistKategorii = cache(async (slug: string) => {
