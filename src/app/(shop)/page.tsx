@@ -13,6 +13,8 @@ import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 import { odkazNaMapu, rozlozitAdresu } from '@/lib/prodejna';
 import { najitFotku } from '@/lib/fotky';
 import { ProdejnaSekce } from '@/components/shop/home/ProdejnaSekce';
+import { nacistNavigaci, odkazNaPoukaz } from '@/lib/katalog';
+import { promoBannery } from '@/lib/home-data';
 
 /**
  * Domovská stránka.
@@ -21,13 +23,18 @@ import { ProdejnaSekce } from '@/components/shop/home/ProdejnaSekce';
  *   → nejprodávanější (mřížka) → šev → promo bannery → šev
  *   → nákupní jistoty → newsletter → šev → kamenná prodejna
  *
- * Obsah sekcí žije v `src/lib/home-data.ts`, komponenty samotné jsou bez dat.
+ * Obsah sekcí žije v `src/lib/home-data.ts`, kategorie v databázi; komponenty
+ * samotné jsou bez dat.
  */
 export default async function HomePage() {
   /* Lhůta odeslání se propisuje do heru i do pruhu s jistotami – z `Settings`,
      ne natvrdo, a v režimu dovolené vůbec. Dřív tu byla doprava zdarma
      (`prahDopravaZdarma`); ta se dnes ukazuje jen v košíku a v pokladně. */
-  const nastaveni = await nacistNastaveni();
+  const [nastaveni, kategorie, poukaz] = await Promise.all([
+    nacistNastaveni(),
+    nacistNavigaci(),
+    odkazNaPoukaz(),
+  ]);
   const lhutaOdeslani = kratkaLhutaOdeslani(nastaveni);
   const adresaProdejny = rozlozitAdresu(nastaveni.adresaProvozovny);
 
@@ -38,7 +45,7 @@ export default async function HomePage() {
       {/* Karta se zespoda zanořuje do heru záporným marginem, odsazení si
           proto řeší sama. Bez `Reveal`: je nad ohybem, kde by naskakování
           jen zdrželo. */}
-      <CategoryBar />
+      <CategoryBar kategorie={kategorie} />
 
       {/* Dvě velikosti mezer, ne jedna.
           Předtím byl mezi všemi sekcemi stejný odstup, takže stránka neřekla
@@ -63,7 +70,7 @@ export default async function HomePage() {
         <Sev id="sev-nabidka" className="my-12 sm:my-16" />
 
         <Reveal>
-          <PromoBanners />
+          <PromoBanners bannery={promoBannery(poukaz)} />
         </Reveal>
 
         <Sev id="sev-servis" className="my-12 sm:my-16" />

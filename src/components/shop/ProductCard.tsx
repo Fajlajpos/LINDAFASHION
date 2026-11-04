@@ -4,30 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Heart, Sparkles, Gift } from 'lucide-react';
-import { CategoryGlyph, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
+import { CategoryGlyph, glyfKategorie, type CategoryGlyphName } from '@/components/shop/home/CategoryGlyph';
 import { CenaProduktu, StitekSlevy, slevaProduktu } from '@/components/shop/CenaProduktu';
 import { useFavorites } from '@/lib/favorites-context';
 import { stitekZemePuvodu } from '@/lib/zeme-puvodu';
 
-/**
- * Kategorie → ilustrace pro kartu bez fotografie.
- *
- * Párujeme přes název kategorie, ne přes slug: karta ho dostává jako jediný
- * údaj o zařazení. Diakritiku i tvary ošetřují volné regulární výrazy.
- */
-const GLYF_PODLE_KATEGORIE: ReadonlyArray<readonly [RegExp, CategoryGlyphName]> = [
-  [/pouk|dárk|dark/i, 'poukazy'],
-  [/šat|sat/i, 'saty'],
-  [/halenk|košil|kosil/i, 'halenky'],
-  [/svetr|kardig/i, 'svetry'],
-  [/sak|kabát|kabat/i, 'saka'],
-];
-
-const vyberGlyf = (kategorie?: string | null, jePoukaz?: boolean): CategoryGlyphName => {
-  if (jePoukaz) return 'poukazy';
-  const nalez = GLYF_PODLE_KATEGORIE.find(([vzor]) => vzor.test(kategorie ?? ''));
-  return nalez ? nalez[1] : 'vse';
-};
+const vyberGlyf = (kategorie?: string | null, jePoukaz?: boolean): CategoryGlyphName =>
+  jePoukaz ? 'poukazy' : glyfKategorie(kategorie);
 
 /**
  * Identita karty je `slug` – ID sem nepatří, karta ho k ničemu nepoužívá

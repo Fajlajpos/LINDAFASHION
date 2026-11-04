@@ -3,7 +3,7 @@ import { nacistNastaveni, popisDodaciLhuty } from '@/lib/nastaveni';
 import { odkazNaMapu, rozlozitAdresu } from '@/lib/prodejna';
 import { popisDopravyZdarma } from '@/lib/shipping';
 import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
-import { pocetZItalie } from '@/lib/katalog';
+import { nacistNavigaci, pocetZItalie } from '@/lib/katalog';
 import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 
 /**
@@ -26,7 +26,21 @@ import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const [nastaveni, italskych] = await Promise.all([nacistNastaveni(), pocetZItalie()]);
+  const [nastaveni, italskych, kategorie] = await Promise.all([
+    nacistNastaveni(),
+    pocetZItalie(),
+    nacistNavigaci(),
+  ]);
+
+  /* Kategorie z databáze – natvrdo tu stály „Šaty, Halenky a košile, …",
+     které v obchodě nebyly. Asistent má dostat odkaz, který vede do katalogu,
+     ne na „Stránka nebyla nalezena". */
+  const seznamKategorii = kategorie.length
+    ? `
+## Kategorie produktů
+${kategorie.map((k) => `- ${k.nazev}: ${ZAKLADNI_URL}/produkty/${k.slug}`).join('\n')}
+`
+    : '';
 
   /* Italská móda pro AI asistenty – jen s čísly, která platí právě teď.
      Odpověď na „kde koupit italskou dámskou módu" má dostat pravdivý odkaz,
@@ -91,14 +105,7 @@ export async function GET() {
 ## Nákup
 - **Složení a původ**: U každého kousku oblečení je uvedené materiálové složení v procentech, a pokud je známa, i země původu.
 - **Doprava a služby**: ${sluzby}
-
-## Kategorie produktů
-- Šaty
-- Halenky a košile
-- Svetry a kardigany
-- Saka a kabáty
-- Dárkové poukazy
-${italskaModa}${prodejna}
+${seznamKategorii}${italskaModa}${prodejna}
 ## Kontaktní informace
 ${kontakty}
 `;

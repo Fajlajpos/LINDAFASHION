@@ -8,7 +8,7 @@ import { nacistNastaveni, zpravaODovolene } from '@/lib/nastaveni';
 import { mistniProvozovnaLd, organizaceLd } from '@/lib/strukturovana-data';
 import { jeNastaveno as platbaKartouNastavena } from '@/lib/gopay';
 import { dostupneDopravy } from '@/lib/shipping';
-import { pocetZItalie } from '@/lib/katalog';
+import { nacistNavigaci, pocetZItalie } from '@/lib/katalog';
 import { kratkaAdresa } from '@/lib/prodejna';
 
 /**
@@ -37,10 +37,11 @@ function nabizeneSluzby(nastaveni: Awaited<ReturnType<typeof nacistNastaveni>>):
  * oprávnění záleží, se používá `overitUzivatele()`.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [session, nastaveni, italskych] = await Promise.all([
+  const [session, nastaveni, italskych, kategorie] = await Promise.all([
     getSession(),
     nacistNastaveni(),
     pocetZItalie(),
+    nacistNavigaci(),
   ]);
 
   const zprava = zpravaODovolene(nastaveni);
@@ -54,6 +55,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       zapisVRejstriku={nastaveni.zapisVRejstriku}
       sluzby={nabizeneSluzby(nastaveni)}
       italskaModa={italskych > 0}
+      kategorie={kategorie}
       adresaProdejny={kratkaAdresa(nastaveni.adresaProvozovny)}
       captchaSiteKey={siteKey()}
       prihlasen={session !== null}
@@ -74,6 +76,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         <Header
           user={session ? { jmeno: session.jmeno, email: session.email, role: session.role } : null}
           vacationMode={{ active: nastaveni.rezimDovolene, message: zprava }}
+          kategorie={kategorie}
         />
         <main id="obsah" className="flex-1">
           {children}

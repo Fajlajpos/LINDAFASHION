@@ -3,32 +3,30 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, Heart, User, LayoutDashboard, Menu, X, Search, Sparkles } from 'lucide-react';
+import { ShoppingBag, Heart, User, LayoutDashboard, Menu, X, Search, Sparkles, ChevronDown } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 import { VyhledavaciPole } from '@/components/shop/VyhledavaciPole';
+import type { KategorieNavigace } from '@/lib/katalog';
 
 interface HeaderProps {
   user?: { jmeno?: string | null; email: string; role?: string | null } | null;
   vacationMode?: { active: boolean; message?: string | null };
+  /** Hlavní kategorie z databáze v pořadí z administrace (`nacistNavigaci`). */
+  kategorie?: KategorieNavigace[];
 }
 
 /* Kategorie míří na vlastní cestu `/produkty/[kategorie]`, ne na
-   `?kategorie=` nad `/produkty`. Ta routa už existuje (dřív ne, odtud starý
-   tvar odkazů) a obojí vykresluje tentýž `KatalogVypis`, takže obsah je
-   stejný. Rozdíl je v rychlosti: `<Link>` přednačítá podle cesty, kdežto
-   všechny čtyři odkazy s query parametrem vypadají jako jedna a táž
-   `/produkty` – přednačetla se z nich nanejvýš jedna a zbytek se pokaždé
-   táhl ze serveru až po kliknutí. Cesta navíc drží drobečkovou navigaci
-   a kanonickou adresu. */
-const NAV_LINKS = [
-  { href: '/produkty', label: 'Kolekce' },
-  { href: '/produkty/saty', label: 'Šaty' },
-  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
-  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty/darkove-poukazy', label: 'Poukazy' },
-  { href: '/o-mne', label: 'O mně' },
-];
+   `?kategorie=` nad `/produkty`. Obojí vykresluje tentýž `KatalogVypis`, ale
+   `<Link>` přednačítá podle cesty – odkazy s query parametrem vypadají jako
+   jedna a táž `/produkty` a přednačetl by se nanejvýš jeden.
+
+   Seznam kategorií přichází z databáze. Natvrdo tu bývaly „Šaty, Halenky,
+   Svetry, Poukazy", které v databázi nebyly, a končily na „Stránka nebyla
+   nalezena". Dvanáct kategorií se do řádku vedle loga nevejde, proto
+   „Kolekce" na počítači rozbaluje panel. Speciální nabídka má vlastní
+   položku – je to jediná kategorie, kterou má smysl mít na očích pořád. */
+const SPECIALNI_NABIDKA = 'specialni-nabidka';
 
 /** Počty nad 9 zkracujeme, aby se odznak nerozjel mimo ikonu. */
 const formatBadge = (count: number) => (count > 9 ? '9+' : String(count));
@@ -50,8 +48,11 @@ const jeKompaktniStranka = (pathname: string | null) => pathname !== '/';
 export const Header: React.FC<HeaderProps> = ({
   user,
   vacationMode,
+  kategorie = [],
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [kolekceOtevreno, setKolekceOtevreno] = useState(false);
+  const specialniNabidka = kategorie.find((k) => k.slug === SPECIALNI_NABIDKA) ?? null;
   const [searchOpen, setSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -61,6 +62,13 @@ export const Header: React.FC<HeaderProps> = ({
   const isCompact = isScrolled || jeKompaktniStranka(pathname);
 
   const searchToggleRef = useRef<HTMLButtonElement>(null);
+  const kolekceRef = useRef<HTMLDivElement>(null);
+  const kolekceTlacitkoRef = useRef<HTMLButtonElement>(null);
+  const zavritKolekciCasovac = useRef<number | undefined>(undefined);
+  /* Panel otevřený najetím myši: klik, který po najetí přijde, ho má nechat
+     otevřený, ne zavřít. Myš totiž nejdřív najede a teprve pak klikne –
+     prosté přepnutí panel otevřelo a vzápětí zavřelo. */
+  const otevrenoNajetim = useRef(false);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
 
   // Cart & Favorites Context
@@ -121,6 +129,51 @@ export const Header: React.FC<HeaderProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileMenuOpen]);
+
+  /* Panel kolekcí: navigace ho zavře (klik na odkaz mění cestu), stejně jako
+     Escape a klik mimo. Najetí myší ho jen otevírá jako zkratku – hlavní cesta
+     je klik, jinak by se na dotykovém notebooku nedal otevřít vůbec. */
+  useEffect(() => {
+    setKolekceOtevreno(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!kolekceOtevreno) {
+      otevrenoNajetim.current = false;
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setKolekceOtevreno(false);
+      kolekceTlacitkoRef.current?.focus();
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!kolekceRef.current?.contains(event.target as Node)) setKolekceOtevreno(false);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [kolekceOtevreno]);
+
+  useEffect(() => () => window.clearTimeout(zavritKolekciCasovac.current), []);
+
+  /* Myš panel otevře najetím a zavře s malou prodlevou – přejezd z tlačítka
+     do panelu přes mezeru by ho jinak zavřel dřív, než do něj kurzor dojede. */
+  const najetiNaKolekci = (event: React.PointerEvent) => {
+    if (event.pointerType !== 'mouse') return;
+    window.clearTimeout(zavritKolekciCasovac.current);
+    if (!kolekceOtevreno) otevrenoNajetim.current = true;
+    setKolekceOtevreno(true);
+  };
+  const odjetiZKolekce = (event: React.PointerEvent) => {
+    if (event.pointerType !== 'mouse') return;
+    zavritKolekciCasovac.current = window.setTimeout(() => setKolekceOtevreno(false), 200);
+  };
 
   /* Fokus do pole si řeší `VyhledavaciPole` samo: montuje se až otevřením,
      takže „fokus po namountování“ je totéž co „fokus po otevření“ – a hlavička
@@ -209,19 +262,103 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label="Hlavní navigace"
               className="hidden lg:flex items-center gap-1.5 xl:gap-4 text-[11px] xl:text-xs font-medium tracking-wider uppercase text-linda-espresso whitespace-nowrap"
             >
-              {NAV_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  /* Hover je jen přebarvení do cognacu – nic dalšího.
-                     `rounded-full` je kvůli globálnímu `:focus-visible`
-                     prstenci, aby při procházení klávesnicí obepnul slovo
-                     a nekreslil kolem něj hranatý obdélník. */
-                  className="rounded-full py-2 transition-colors duration-200 hover:text-linda-cognac"
-                >
-                  {label}
+              {kategorie.length === 0 ? (
+                <Link href="/produkty" className="rounded-full py-2 transition-colors duration-200 hover:text-linda-cognac">
+                  Kolekce
                 </Link>
-              ))}
+              ) : (
+                <div
+                  ref={kolekceRef}
+                  className="relative"
+                  onPointerEnter={najetiNaKolekci}
+                  onPointerLeave={odjetiZKolekce}
+                >
+                  <button
+                    ref={kolekceTlacitkoRef}
+                    type="button"
+                    onClick={() => {
+                      if (kolekceOtevreno && otevrenoNajetim.current) {
+                        otevrenoNajetim.current = false;
+                        return;
+                      }
+                      otevrenoNajetim.current = false;
+                      setKolekceOtevreno((o) => !o);
+                    }}
+                    aria-expanded={kolekceOtevreno}
+                    aria-controls="panel-kolekci"
+                    className={`flex cursor-pointer items-center gap-1 rounded-full py-2 uppercase tracking-wider transition-colors duration-200 hover:text-linda-cognac ${
+                      kolekceOtevreno ? 'text-linda-cognac' : ''
+                    }`}
+                  >
+                    Kolekce
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-200 ${kolekceOtevreno ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  {/* Krémová karta se `shadow-neuFloat`: leží přes fotku v heru, kde bílé
+                      světlo z `neuLg` maluje kolem karty mléčnou svatozář. `pt-3`
+                      na obalu je neviditelný most mezi tlačítkem a kartou –
+                      kurzor jím projede, aniž by opustil oblast panelu. */}
+                  {kolekceOtevreno && (
+                    <div id="panel-kolekci" className="absolute left-0 top-full z-50 pt-3">
+                      <div className="animate-fadeIn w-[30rem] rounded-2xl bg-linda-cream p-3 normal-case tracking-normal shadow-neuFloat">
+                        <Link
+                          href="/produkty"
+                          onClick={() => setKolekceOtevreno(false)}
+                          className="flex min-h-touch items-center justify-between rounded-xl px-4 font-serif text-lg text-linda-espresso transition-all duration-200 hover:bg-linda-sandLight hover:text-linda-cognac hover:shadow-neuInsetSm"
+                        >
+                          Celý katalog
+                          <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-linda-cognac">
+                            Vše
+                          </span>
+                        </Link>
+                        <ul className="mt-1 grid grid-cols-2 gap-0.5 border-t border-linda-sand/50 pt-2">
+                          {kategorie.map(({ nazev, slug }) => {
+                            const aktivni = pathname === `/produkty/${slug}`;
+                            return (
+                              <li key={slug}>
+                                <Link
+                                  href={`/produkty/${slug}`}
+                                  onClick={() => setKolekceOtevreno(false)}
+                                  aria-current={aktivni ? 'page' : undefined}
+                                  className={`flex min-h-touch items-center rounded-xl px-4 text-sm font-medium transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm ${
+                                    slug === SPECIALNI_NABIDKA
+                                      ? 'text-linda-cognac hover:text-linda-cognacHover'
+                                      : 'text-linda-espresso hover:text-linda-cognac'
+                                  } ${aktivni ? 'bg-linda-sandLight shadow-neuInsetSm' : ''}`}
+                                >
+                                  {nazev}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {specialniNabidka && (
+                <Link
+                  href={`/produkty/${specialniNabidka.slug}`}
+                  className="rounded-full py-2 text-linda-cognac transition-colors duration-200 hover:text-linda-cognacHover"
+                >
+                  {specialniNabidka.nazev}
+                </Link>
+              )}
+
+              {/* Hover je jen přebarvení do cognacu – nic dalšího.
+                  `rounded-full` je kvůli globálnímu `:focus-visible` prstenci,
+                  aby při procházení klávesnicí obepnul slovo. */}
+              <Link href="/o-mne" className="rounded-full py-2 transition-colors duration-200 hover:text-linda-cognac">
+                O mně
+              </Link>
+              <Link href="/kontakt" className="rounded-full py-2 transition-colors duration-200 hover:text-linda-cognac">
+                Kontakt
+              </Link>
             </nav>
           </div>
 
@@ -417,16 +554,49 @@ export const Header: React.FC<HeaderProps> = ({
             </Link>
           )}
 
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex min-h-touch items-center justify-center border-b border-linda-sand/40"
+          <Link
+            href="/produkty"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex min-h-touch items-center justify-center border-b border-linda-sand/40"
+          >
+            Celý katalog
+          </Link>
+
+          {/* Kategorie ve dvou sloupcích a bez verzálek: dvanáct řádků pod
+              sebou by zásuvku natáhlo přes dvě obrazovky a „Kalhoty a džíny"
+              ve verzálkách s prostrkáním by se na půl šířky nevešly. */}
+          {kategorie.length > 0 && (
+            <ul
+              aria-label="Kategorie"
+              className="grid grid-cols-2 gap-x-2 border-b border-linda-sand/40 py-2 text-sm normal-case tracking-normal"
             >
-              {label}
-            </Link>
-          ))}
+              {kategorie.map(({ nazev, slug }) => {
+                const aktivni = pathname === `/produkty/${slug}`;
+                return (
+                  <li key={slug}>
+                    <Link
+                      href={`/produkty/${slug}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={aktivni ? 'page' : undefined}
+                      className={`flex min-h-touch items-center justify-center rounded-xl px-2 transition-all duration-200 active:bg-linda-sandLight active:shadow-neuInsetSm ${
+                        slug === SPECIALNI_NABIDKA ? 'font-semibold text-linda-cognac' : ''
+                      } ${aktivni ? 'bg-linda-sandLight shadow-neuInsetSm' : ''}`}
+                    >
+                      {nazev}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <Link
+            href="/o-mne"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex min-h-touch items-center justify-center border-b border-linda-sand/40"
+          >
+            O mně
+          </Link>
           <Link
             href="/kontakt"
             onClick={() => setMobileMenuOpen(false)}

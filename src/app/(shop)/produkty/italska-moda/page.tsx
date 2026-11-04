@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Italská móda – dámské oblečení vyrobené v Itálii | LINDA FASHION',
     description:
-      'Dámské oblečení vyrobené v Itálii z nabídky butiku LINDA FASHION – šaty, halenky, svetry, saka a kabáty. Země původu je uvedená u každého kousku.',
+      'Dámské oblečení vyrobené v Itálii z nabídky butiku LINDA FASHION. Země původu je uvedená u každého kousku.',
     alternates: { canonical: CESTA_ITALSKA_MODA },
     ...(pocet === 0 ? { robots: { index: false, follow: true } } : {}),
   };

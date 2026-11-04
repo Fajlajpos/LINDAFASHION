@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-import { PROMO_BANNERY } from '@/lib/home-data';
+import type { HomePromo } from '@/lib/home-data';
 import { MediaFrame } from './MediaFrame';
 
 /**
@@ -20,10 +20,10 @@ import { MediaFrame } from './MediaFrame';
  * šířku. Pás přes celou šířku nad textem kartu zbytečně natáhl a ilustrace
  * se v něm ztrácela.
  */
-export const PromoBanners: React.FC = () => (
+export const PromoBanners: React.FC<{ bannery: HomePromo[] }> = ({ bannery }) => (
   <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Aktuální nabídky">
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-      {PROMO_BANNERY.map((promo) => (
+      {bannery.map((promo) => (
         <div
           key={promo.cta.href}
           className="relative flex flex-col overflow-hidden rounded-2xl bg-linda-sandLight shadow-neu sm:min-h-[280px] sm:flex-row"

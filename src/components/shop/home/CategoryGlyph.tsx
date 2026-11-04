@@ -8,6 +8,25 @@ export type CategoryGlyphName =
   | 'saka'
   | 'poukazy';
 
+/**
+ * Kategorie → ilustrace (karta bez fotky, rozcestník na úvodní stránce).
+ *
+ * Páruje se přes název, ne přes slug: karta produktu dostává jako jediný
+ * údaj o zařazení název kategorie, a kategorie zakládá majitelka sama.
+ * Diakritiku i tvary ošetřují volné regulární výrazy; co nepasuje, dostane
+ * obecné ramínko.
+ */
+const GLYF_PODLE_KATEGORIE: ReadonlyArray<readonly [RegExp, CategoryGlyphName]> = [
+  [/pouk|dárk|dark/i, 'poukazy'],
+  [/šat|sat/i, 'saty'],
+  [/halenk|košil|kosil/i, 'halenky'],
+  [/svetr|kardig|pleten|mikin/i, 'svetry'],
+  [/sak|kabát|kabat|bund/i, 'saka'],
+];
+
+export const glyfKategorie = (nazev?: string | null): CategoryGlyphName =>
+  GLYF_PODLE_KATEGORIE.find(([vzor]) => vzor.test(nazev ?? ''))?.[1] ?? 'vse';
+
 interface CategoryGlyphProps {
   name: CategoryGlyphName;
   className?: string;

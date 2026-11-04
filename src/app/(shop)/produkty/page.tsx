@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Katalog kolekcí | LINDA FASHION',
   description:
-    'Kompletní nabídka dámské módy v italském stylu – šaty, halenky, svetry, saka a kabáty.',
+    'Kompletní nabídka dámské módy v italském stylu – šaty, pleteniny, mikiny, kalhoty, sukně, halenky, bundy i doplňky.',
   alternates: { canonical: '/produkty' },
 };
 

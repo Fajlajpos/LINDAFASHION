@@ -134,7 +134,7 @@ export default async function OMnePage() {
               <p>
                 Z té radosti vznikl{' '}
               <strong className="font-medium text-linda-cognac">LINDA FASHION</strong> – malý
-                butik s dámskou módou, kde nabízím šaty, halenky, svetry, saka a kabáty. Kousky,
+                butik s dámskou módou, kde nabízím šaty, pleteniny, mikiny, kalhoty, sukně, halenky, bundy i doplňky. Kousky,
                 které se dají nosit každý den i na výjimečnou příležitost.
               </p>
             </div>

@@ -36,8 +36,8 @@ const TITULEK = 'LINDA FASHION | Dámská móda v italském stylu';
 export const metadata: Metadata = {
   metadataBase: new URL(ZAKLADNI_URL),
   title: TITULEK,
-  description: 'Butik s nadčasovou dámskou módou v italském stylu. Šaty, halenky, svetry, saka a kabáty.',
-  keywords: 'dámská móda, dámské oblečení, šaty, halenky, svetry, saka, kabáty, butik, Linda Fashion',
+  description: 'Butik s nadčasovou dámskou módou v italském stylu – šaty, pleteniny, mikiny, kalhoty, sukně, halenky, bundy i doplňky.',
+  keywords: 'dámská móda, dámské oblečení, šaty, pleteniny, mikiny, kalhoty, džíny, sukně, halenky, bundy, saka, doplňky, butik, Linda Fashion',
   authors: [{ name: 'LINDA FASHION' }],
   openGraph: {
     title: TITULEK,

@@ -1,8 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { CategoryGlyph } from './CategoryGlyph';
-import { KATEGORIE_ROZCESTNIK } from '@/lib/home-data';
+import { CategoryGlyph, glyfKategorie } from './CategoryGlyph';
+import type { KategorieNavigace } from '@/lib/katalog';
+
+/** Do kolika polí se karta na `lg` roztáhne na celou šířku; víc se posouvá. */
+const NA_SIRKU = 6;
 
 /**
  * Rozcestník kategorií: karta se zaoblenými rohy, která se zespoda mírně
@@ -28,7 +31,14 @@ import { KATEGORIE_ROZCESTNIK } from '@/lib/home-data';
  * kousek jinak useknutý a vypadalo to jako chyba.
  *
  * Pod `lg` se pole posouvají vodorovně; že řada pokračuje, napovídá prolnutí
- * u pravé hrany karty.
+ * u pravé hrany karty. Při víc než šesti kategoriích se posouvají i na `lg` –
+ * dvanáct polí v jedné řadě by mělo po ~100 px a „Kalhoty a džíny" by se
+ * lámaly na tři řádky.
+ *
+ * Kategorie jsou z databáze (`nacistNavigaci`), stejné jako v menu.
+ * Jediné pole na celou šířku by vypadalo jako chyba, takže pod dvě kategorie
+ * se karta nevykreslí vůbec – na celý katalog vede tlačítko v heru.
+ * Speciální nabídka má zvýraznění, jaké dřív měly poukazy.
  */
 /*
  * Záporný margin je půlka výšky karty, ne náhodné číslo. Karta měří 112 px
@@ -36,13 +46,19 @@ import { KATEGORIE_ROZCESTNIK } from '@/lib/home-data';
  * ji tedy zanoří do heru přesně do poloviny a spodní hrana fotky vede jejím
  * středem. Když se změní výška čipu, musí se s ní posunout i tohle.
  */
-export const CategoryBar: React.FC = () => (
+export const CategoryBar: React.FC<{ kategorie: KategorieNavigace[] }> = ({ kategorie: seznam }) => {
+  if (seznam.length < 2) return null;
+  const naSirku = seznam.length <= NA_SIRKU;
+
+  return (
   <section aria-label="Kategorie" className="relative z-10 -mt-14 lg:-mt-16">
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="relative overflow-hidden rounded-3xl bg-linda-cream p-2 shadow-neuFloat">
         <ul className="flex snap-x overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {KATEGORIE_ROZCESTNIK.map((kategorie, i) => (
-            <li key={kategorie.href} className="relative shrink-0 snap-start p-1 lg:flex-1">
+          {seznam.map(({ nazev, slug }, i) => {
+            const zvyraznit = slug === 'specialni-nabidka';
+            return (
+            <li key={slug} className={`relative shrink-0 snap-start p-1 ${naSirku ? 'lg:flex-1' : ''}`}>
               {/* Krátká ryska mezi poli. U prvního pole ji nechceme – kreslila
                   by svislou linku hned u hrany karty. */}
               {i > 0 && (
@@ -53,13 +69,13 @@ export const CategoryBar: React.FC = () => (
               )}
 
               <Link
-                href={kategorie.href}
-                className="group relative flex h-[88px] w-[148px] items-center overflow-hidden rounded-2xl px-4 transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm sm:h-24 sm:w-[184px] sm:px-6 lg:w-full"
+                href={`/produkty/${slug}`}
+                className={`group relative flex h-[88px] w-[148px] items-center overflow-hidden rounded-2xl px-4 transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm sm:h-24 sm:w-[184px] sm:px-6 ${naSirku ? 'lg:w-full' : ''}`}
               >
                 <CategoryGlyph
-                  name={kategorie.glyph}
+                  name={glyfKategorie(nazev)}
                   className={`pointer-events-none absolute -right-4 bottom-0 h-[88px] w-[88px] transition-all duration-300 ease-out group-hover:-translate-y-1 motion-reduce:transform-none sm:-right-5 sm:h-24 sm:w-24 ${
-                    kategorie.accent
+                    zvyraznit
                       ? 'opacity-60 group-hover:opacity-85'
                       : 'opacity-40 group-hover:opacity-70'
                   }`}
@@ -67,25 +83,27 @@ export const CategoryBar: React.FC = () => (
 
                 <span
                   className={`relative font-serif text-lg leading-tight tracking-wide transition-colors duration-200 sm:text-xl ${
-                    kategorie.accent
+                    zvyraznit
                       ? 'text-linda-cognac group-hover:text-linda-cognacHover'
                       : 'text-linda-espresso group-hover:text-linda-cognac'
                   }`}
                 >
-                  {kategorie.label}
+                  {nazev}
                 </span>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
 
         {/* Náznak, že řada pokračuje za hranou karty. `pointer-events-none`,
             ať nepřekáží kliknutí na poslední pole. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-14 rounded-r-3xl bg-gradient-to-l from-linda-cream to-transparent lg:hidden"
+          className={`pointer-events-none absolute inset-y-0 right-0 w-14 rounded-r-3xl bg-gradient-to-l from-linda-cream to-transparent ${naSirku ? 'lg:hidden' : ''}`}
         />
       </div>
     </div>
   </section>
-);
+  );
+};

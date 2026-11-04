@@ -5,26 +5,14 @@
  * `null` a `MediaFrame` na jejich místě vykreslí značkovou výplň. Až fotky
  * přibudou do /public, stačí doplnit cestu sem, komponenty se nemění.
  *
- * Kategorie vedou na vlastní cestu `/produkty/[kategorie]`. Query tvar
- * `/produkty?kategorie=…` pochází z doby, kdy ta routa neexistovala, a
- * zbytečně zdržoval: `<Link>` přednačítá podle cesty, takže se z pěti dlaždic
- * rozcestníku dala přednačíst nanejvýš jedna.
+ * Kategorie tu nejsou – rozcestník, menu i patička je čtou z databáze
+ * (`nacistNavigaci` v katalog.ts).
  */
 
 import type { KratkaLhuta } from './nastaveni';
 
 /** Název plastické ilustrace z `CategoryGlyph`. */
 export type GlyphName = 'vse' | 'saty' | 'halenky' | 'svetry' | 'saka' | 'poukazy';
-
-/** Pole rozcestníku kategorií pod herem. */
-export interface HomeCategoryRow {
-  /** Krátký název – pole pruhu je úzké, delší text by se lámal. */
-  label: string;
-  href: string;
-  glyph: GlyphName;
-  /** Poukazy nejsou kategorie oblečení – pole se odliší tmavým podkladem. */
-  accent?: boolean;
-}
 
 export interface HomePromo {
   eyebrow: string;
@@ -46,45 +34,36 @@ export interface HomeTrustItem {
 
 
 /**
- * Rozcestník kategorií v pruhu pod herem.
+ * Promo bannery pod dlaždicemi kategorií.
  *
- * Pět polí: na `lg` si každé vezme pětinu šířky obrazovky, pod ním se pruh
- * posouvá vodorovně. „Vše“ tu není – na celý katalog vede hlavní tlačítko
- * v heru i položka „Kolekce“ v hlavičce, třetí odkaz na totéž místo by byl
- * jen šum.
+ * Banner s poukazem vedl na `/produkty/darkove-poukazy`, kategorii, která
+ * v databázi nebyla – končil na „Stránka nebyla nalezena". Teď míří přímo
+ * na zveřejněný poukaz, a dokud žádný není, banner se nevykreslí.
  */
-export const KATEGORIE_ROZCESTNIK: HomeCategoryRow[] = [
-  { label: 'Šaty', href: '/produkty/saty', glyph: 'saty' },
-  { label: 'Halenky', href: '/produkty/halenky-a-kosile', glyph: 'halenky' },
-  { label: 'Svetry', href: '/produkty/svetry-a-kardigany', glyph: 'svetry' },
-  { label: 'Saka', href: '/produkty/saka-a-kabaty', glyph: 'saka' },
-  {
-    label: 'Poukazy',
-    href: '/produkty/darkove-poukazy',
-    glyph: 'poukazy',
-    accent: true,
-  },
-];
-
-/** Dvojice bannerů pod dlaždicemi kategorií. */
-export const PROMO_BANNERY: HomePromo[] = [
-  {
-    eyebrow: 'Nová kolekce',
-    titleLines: ['Novinky sezóny', 'právě dorazily'],
-    cta: { label: 'Prohlédnout novinky', href: '/produkty' },
-    obrazek: null,
-    glyph: 'saty',
-    alt: '',
-  },
-  {
-    eyebrow: 'Tip na dárek',
-    titleLines: ['Dárkový poukaz', 'potěší vždy'],
-    cta: { label: 'Vybrat poukaz', href: '/produkty/darkove-poukazy' },
-    obrazek: null,
-    glyph: 'poukazy',
-    alt: '',
-  },
-];
+export function promoBannery(odkazNaPoukaz: string | null): HomePromo[] {
+  return [
+    {
+      eyebrow: 'Nová kolekce',
+      titleLines: ['Novinky sezóny', 'právě dorazily'],
+      cta: { label: 'Prohlédnout novinky', href: '/produkty' },
+      obrazek: null,
+      glyph: 'saty',
+      alt: '',
+    },
+    ...(odkazNaPoukaz
+      ? [
+          {
+            eyebrow: 'Tip na dárek',
+            titleLines: ['Dárkový poukaz', 'potěší vždy'] as [string, string],
+            cta: { label: 'Vybrat poukaz', href: odkazNaPoukaz },
+            obrazek: null,
+            glyph: 'poukazy' as const,
+            alt: '',
+          },
+        ]
+      : []),
+  ];
+}
 
 /**
  * Nákupní jistoty pod herem.

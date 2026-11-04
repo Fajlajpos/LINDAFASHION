@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Footer } from '@/components/shop/Footer';
+import type { KategorieNavigace } from '@/lib/katalog';
 import { CookieBanner } from '@/components/shop/CookieBanner';
 import { AnalytickeSkripty } from '@/components/shop/AnalytickeSkripty';
 import { CartProvider } from '@/lib/cart-context';
@@ -20,6 +21,8 @@ interface Props {
   sluzby?: string[];
   /** Je v nabídce aspoň jeden kousek z Itálie? Podle toho odkaz v patičce. */
   italskaModa?: boolean;
+  /** Kategorie do patičky – stejný seznam jako menu v hlavičce. */
+  kategorie?: KategorieNavigace[];
   /** Krátká adresa kamenné prodejny do patičky. */
   adresaProdejny?: string | null;
   /** Veřejný klíč Turnstile pro newsletter v patičce. */
@@ -50,6 +53,7 @@ export function ShopProviders({
   zapisVRejstriku,
   sluzby = [],
   italskaModa = false,
+  kategorie = [],
   adresaProdejny = null,
   captchaSiteKey = null,
   prihlasen = false,
@@ -81,6 +85,7 @@ export function ShopProviders({
             zapisVRejstriku={zapisVRejstriku}
             sluzby={sluzby}
             italskaModa={italskaModa}
+            kategorie={kategorie}
             adresaProdejny={adresaProdejny}
             captchaSiteKey={captchaSiteKey}
           />

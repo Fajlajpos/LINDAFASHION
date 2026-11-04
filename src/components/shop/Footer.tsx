@@ -6,6 +6,7 @@ import { ArrowRight, Facebook, Instagram, MapPin } from 'lucide-react';
 import { poslatJson } from '@/lib/api-klient';
 import { Captcha } from '@/components/ui/Captcha';
 import { CESTA_ITALSKA_MODA } from '@/lib/zeme-puvodu';
+import type { KategorieNavigace } from '@/lib/katalog';
 
 interface FooterProps {
   onOpenCookieSettings?: () => void;
@@ -28,22 +29,16 @@ interface FooterProps {
   sluzby?: string[];
   /** Odkaz „Italská móda" jen tehdy, když je v nabídce aspoň jeden kousek z Itálie. */
   italskaModa?: boolean;
+  /** Hlavní kategorie z databáze – stejný seznam jako menu. */
+  kategorie?: KategorieNavigace[];
   /** „Rokycanova 1929, Sokolov" – kamenná prodejna, `null` = řádek se neukáže. */
   adresaProdejny?: string | null;
   captchaSiteKey?: string | null;
 }
 
 /* Kategorie přes vlastní cestu, ne přes `?kategorie=` – viz komentář
-   u `NAV_LINKS` v Header.tsx (přednačítání `<Link>` jde po cestě). */
-const KOLEKCE_ODKAZY = [
-  { href: '/produkty', label: 'Všechny kolekce' },
-  { href: '/produkty/saty', label: 'Šaty' },
-  { href: '/produkty/halenky-a-kosile', label: 'Halenky' },
-  { href: '/produkty/svetry-a-kardigany', label: 'Svetry' },
-  { href: '/produkty/darkove-poukazy', label: 'Poukazy' },
-  { href: '/o-mne', label: 'O mně' },
-];
-
+   v Header.tsx (přednačítání `<Link>` jde po cestě). Samotné kategorie
+   přicházejí z databáze; natvrdo tu bývaly takové, které neexistovaly. */
 /* „Odstoupit od smlouvy" je v patičce kvůli § 1830a o. z.: funkce pro
    odstoupení musí být **snadno dostupná** z prostředí, kde smlouva vznikla.
    Odkaz schovaný v obchodních podmínkách tu podmínku nesplňuje – patička je
@@ -117,13 +112,17 @@ export const Footer: React.FC<FooterProps> = ({
   zapisVRejstriku,
   sluzby = [],
   italskaModa = false,
+  kategorie = [],
   adresaProdejny = null,
   captchaSiteKey = null,
 }) => {
   const site = sestavitSite(socialInstagram, socialFacebook);
-  const kolekce = italskaModa
-    ? [KOLEKCE_ODKAZY[0], { href: CESTA_ITALSKA_MODA, label: 'Italská móda' }, ...KOLEKCE_ODKAZY.slice(1)]
-    : KOLEKCE_ODKAZY;
+  const kolekce = [
+    { href: '/produkty', label: 'Všechny kolekce' },
+    ...(italskaModa ? [{ href: CESTA_ITALSKA_MODA, label: 'Italská móda' }] : []),
+    ...kategorie.map(({ nazev, slug }) => ({ href: `/produkty/${slug}`, label: nazev })),
+    { href: '/o-mne', label: 'O mně' },
+  ];
 
   const [email, setEmail] = useState('');
   const [stav, setStav] = useState<'klid' | 'odesilam' | 'hotovo'>('klid');

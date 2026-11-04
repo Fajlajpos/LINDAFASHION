@@ -553,6 +553,40 @@ export const nacistKategorie = cache(async (): Promise<KategorieVypis[]> => {
   }));
 });
 
+/** Položka menu, rozcestníku a patičky. */
+export interface KategorieNavigace {
+  nazev: string;
+  slug: string;
+}
+
+/**
+ * Kategorie pro hlavičku, patičku, rozcestník na úvodní stránce a `/llms.txt`.
+ *
+ * Dřív byly ve všech čtyřech místech natvrdo „Šaty, Halenky, Svetry, Saka,
+ * Poukazy" – kategorie, které v databázi nebyly, takže odkazy končily na
+ * „Stránka nebyla nalezena". Teď jediný zdroj je databáze: všechny hlavní
+ * kategorie v pořadí z administrace, **i prázdné** – menu má ukazovat
+ * sortiment obchodu, jak ho majitelka založila (rozhodnutí z 2026-11).
+ * Prázdná kategorie vede na katalog s prázdným stavem, ne na 404.
+ * Boční panel katalogu dál ukazuje jen kategorie s nabídkou.
+ */
+export async function nacistNavigaci(): Promise<KategorieNavigace[]> {
+  const kategorie = await nacistKategorie();
+  return kategorie
+    .filter((k) => k.parentSlug === null)
+    .map(({ nazev, slug }) => ({ nazev, slug }));
+}
+
+/** Odkaz na první aktivní dárkový poukaz – pro banner na úvodní stránce. */
+export async function odkazNaPoukaz(): Promise<string | null> {
+  const poukaz = await db.product.findFirst({
+    where: { ...VEREJNE, jeDarkovyPoukaz: true },
+    orderBy: { createdAt: 'asc' },
+    select: { slug: true },
+  });
+  return poukaz ? `/produkt/${poukaz.slug}` : null;
+}
+
 export const nacistKategorii = cache(async (slug: string) => {
   return db.category.findUnique({
     where: { slug },
