@@ -4,13 +4,18 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { nacistDoporucene } from '@/lib/katalog';
 
 /**
- * Nejprodávanější kousky.
+ * Kousky, které majitelka v administraci označila jako doporučené.
+ *
+ * Nadpis dřív zněl „Nejoblíbenější – Nejčastěji volené kousky", jenže výběr
+ * nikdy nevycházel z prodejů, jen z ručního zaškrtnutí. Tvrzení o oblíbenosti,
+ * které nejde doložit, je klamavá obchodní praktika – proto „Vybrali jsme
+ * pro vás", což přesně popisuje, odkud výběr pochází.
  *
  * Používá stejnou kartu jako katalog `/produkty`, aby produkt vypadal na obou
  * místech identicky.
  *
  * Tři sloupce a šest kusů, ne čtyři na čtyři. Čtyři karty ve čtyřech sloupcích
- * dávaly jediný řádek – u sekce, která má ukázat, co se nejvíc prodává, to
+ * dávaly jediný řádek – u sekce, která má ukázat výběr z obchodu, to
  * působilo, že v obchodě skoro nic není. Dvě plné řady vypadají jako nabídka
  * a širší sloupec zároveň nechá kartě víc místa na fotku i název.
  *
@@ -30,8 +35,8 @@ export const BestSellers = async () => {
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="space-y-10">
         <SectionHeading
-          eyebrow="Nejoblíbenější"
-          title="Nejčastěji volené kousky"
+          eyebrow="Doporučujeme"
+          title="Vybrali jsme pro vás"
           action={{ href: '/produkty', label: 'Zobrazit vše' }}
         />
 

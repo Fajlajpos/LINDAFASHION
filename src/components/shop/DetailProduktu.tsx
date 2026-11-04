@@ -252,7 +252,9 @@ export function DetailProduktu({
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {produkt.sklademCelkem > 0 ? (
                 <span className="rounded-full bg-linda-sageLight px-2.5 py-1 text-xs font-medium text-linda-sage">
-                  Skladem &bull; ihned k odeslání
+                  {/* Jen „Skladem": „ihned k odeslání" odporovalo dodací lhůtě
+                      o řádek níž (odeslání až po přijetí platby). */}
+                  Skladem
                 </span>
               ) : (
                 <span className="rounded-full bg-linda-sandLight px-2.5 py-1 text-xs font-medium text-linda-espresso/75 shadow-neuInsetSm">
