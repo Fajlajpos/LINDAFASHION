@@ -53,9 +53,11 @@ export async function KatalogVypis({
 
   const { produkty, celkem, stranek, volnaShoda } = vysledek;
 
-  // V bočním panelu ukazujeme jen kategorie, ve kterých něco je – prázdná
-  // kategorie vede na prázdnou stránku a jen mate.
-  const viditelne = kategorie2.filter((k) => k.pocetProduktu > 0);
+  // Boční panel ukazuje stejné kategorie jako menu v hlavičce, i prázdné
+  // (rozhodnutí majitele webu, 2026-11) – menu a panel se nesmí rozcházet.
+  // Prázdná kategorie vede na katalog s hláškou „zatím tu nic není" a počet
+  // (0) u ní říká předem, co tam zákaznice najde.
+  const viditelne = kategorie2;
   const celkemVsech = kategorie2.reduce((s, k) => s + (k.parentSlug ? 0 : k.pocetProduktu), 0);
 
   const odkazSFiltrem = (slug: string | null) => (slug ? `/produkty/${slug}` : '/produkty');

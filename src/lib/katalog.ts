@@ -568,7 +568,7 @@ export interface KategorieNavigace {
  * kategorie v pořadí z administrace, **i prázdné** – menu má ukazovat
  * sortiment obchodu, jak ho majitelka založila (rozhodnutí z 2026-11).
  * Prázdná kategorie vede na katalog s prázdným stavem, ne na 404.
- * Boční panel katalogu dál ukazuje jen kategorie s nabídkou.
+ * Boční panel katalogu ukazuje tytéž kategorie (i s podkategoriemi).
  */
 export async function nacistNavigaci(): Promise<KategorieNavigace[]> {
   const kategorie = await nacistKategorie();

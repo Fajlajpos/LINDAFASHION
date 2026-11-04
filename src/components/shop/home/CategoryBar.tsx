@@ -36,8 +36,9 @@ const NA_SIRKU = 6;
  * lámaly na tři řádky.
  *
  * Kategorie jsou z databáze (`nacistNavigaci`), stejné jako v menu.
- * Jediné pole na celou šířku by vypadalo jako chyba, takže pod dvě kategorie
- * se karta nevykreslí vůbec – na celý katalog vede tlačítko v heru.
+ * Karta je vidět vždycky (majitel webu, 2026-11) – i dokud má obchod jen
+ * jednu kategorii. Tehdy před ni přibude pole „Celý katalog", protože jediné
+ * pole přes celou šířku by vypadalo jako chyba.
  * Speciální nabídka má zvýraznění, jaké dřív měly poukazy.
  */
 /*
@@ -47,18 +48,21 @@ const NA_SIRKU = 6;
  * středem. Když se změní výška čipu, musí se s ní posunout i tohle.
  */
 export const CategoryBar: React.FC<{ kategorie: KategorieNavigace[] }> = ({ kategorie: seznam }) => {
-  if (seznam.length < 2) return null;
-  const naSirku = seznam.length <= NA_SIRKU;
+  const pole = [
+    ...(seznam.length < 2 ? [{ nazev: 'Celý katalog', href: '/produkty', slug: null }] : []),
+    ...seznam.map(({ nazev, slug }) => ({ nazev, href: `/produkty/${slug}`, slug })),
+  ];
+  const naSirku = pole.length <= NA_SIRKU;
 
   return (
   <section aria-label="Kategorie" className="relative z-10 -mt-14 lg:-mt-16">
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="relative overflow-hidden rounded-3xl bg-linda-cream p-2 shadow-neuFloat">
         <ul className="flex snap-x overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {seznam.map(({ nazev, slug }, i) => {
+          {pole.map(({ nazev, href, slug }, i) => {
             const zvyraznit = slug === 'specialni-nabidka';
             return (
-            <li key={slug} className={`relative shrink-0 snap-start p-1 ${naSirku ? 'lg:flex-1' : ''}`}>
+            <li key={href} className={`relative shrink-0 snap-start p-1 ${naSirku ? 'lg:flex-1' : ''}`}>
               {/* Krátká ryska mezi poli. U prvního pole ji nechceme – kreslila
                   by svislou linku hned u hrany karty. */}
               {i > 0 && (
@@ -69,11 +73,11 @@ export const CategoryBar: React.FC<{ kategorie: KategorieNavigace[] }> = ({ kate
               )}
 
               <Link
-                href={`/produkty/${slug}`}
+                href={href}
                 className={`group relative flex h-[88px] w-[148px] items-center overflow-hidden rounded-2xl px-4 transition-all duration-200 hover:bg-linda-sandLight hover:shadow-neuInsetSm sm:h-24 sm:w-[184px] sm:px-6 ${naSirku ? 'lg:w-full' : ''}`}
               >
                 <CategoryGlyph
-                  name={glyfKategorie(nazev)}
+                  name={slug === null ? 'vse' : glyfKategorie(nazev)}
                   className={`pointer-events-none absolute -right-4 bottom-0 h-[88px] w-[88px] transition-all duration-300 ease-out group-hover:-translate-y-1 motion-reduce:transform-none sm:-right-5 sm:h-24 sm:w-24 ${
                     zvyraznit
                       ? 'opacity-60 group-hover:opacity-85'
