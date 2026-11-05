@@ -284,6 +284,15 @@ h1, h2, h3, h4, h5, h6, .font-editorial {
   background-clip: padding-box;
 }
 
+/* Nativní mazací křížek u `input type="search"` (Chrome, Edge, Safari) je
+ * modrý a třídou se obarvit nedá – v krémovém poli působil cize, proto pryč.
+ * Typ `search` zůstává kvůli klávesnici na mobilu a sémantice. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 html {
   scrollbar-width: thin;
   scrollbar-color: theme('colors.linda.stone') theme('colors.linda.sandLight');

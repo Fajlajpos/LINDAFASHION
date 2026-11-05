@@ -600,7 +600,7 @@ export const Header: React.FC<HeaderProps> = ({
           <Link
             href="/kontakt"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-center min-h-touch text-linda-sage"
+            className="flex items-center justify-center min-h-touch"
           >
             Kontakt &amp; Showroom
           </Link>
