@@ -163,6 +163,8 @@ const TLACITKO_FOTKY =
 
 /** Hodnota, kterou `Vyber` používá pro „nevybráno“ – prázdný řetězec by kolidoval s názvem. */
 const RUCNE = '__rucne__';
+/** Volba „výrobcem je prodávající“ – vlastní značení zboží od neznámého dodavatele. */
+const PRODAVAJICI = '__prodavajici__';
 
 interface RozbalovaciProps {
   nadpis: string;
@@ -252,6 +254,8 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
 
   /** Výrobci už použití v katalogu – jen předvyplnění, produkty se na ně nenavazují. */
   const [vyrobci, setVyrobci] = useState<UlozenyVyrobce[]>([]);
+  /** Prodávající jako výrobce (vlastní visačka) – z nastavení, `null` když v něm údaje chybí. */
+  const [prodavajici, setProdavajici] = useState<UlozenyVyrobce | null>(null);
 
   const [form, setForm] = useState({
     nazev: produkt?.nazev ?? '',
@@ -314,8 +318,13 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
      * proto nikam nehlásí, aby nepřebila skutečnou chybu z kategorií.
      */
     void (async () => {
-      const vysledek = await nacist<{ vyrobci: UlozenyVyrobce[] }>('/api/admin/vyrobci');
-      if (!zruseno && vysledek.ok) setVyrobci(vysledek.data.vyrobci);
+      const vysledek = await nacist<{ vyrobci: UlozenyVyrobce[]; prodavajici: UlozenyVyrobce | null }>(
+        '/api/admin/vyrobci'
+      );
+      if (!zruseno && vysledek.ok) {
+        setVyrobci(vysledek.data.vyrobci);
+        setProdavajici(vysledek.data.prodavajici);
+      }
     })();
 
     return () => {
@@ -325,7 +334,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
 
   /** Předvyplní celý blok výrobce podle dřív uloženého kousku. */
   const pouzitVyrobce = (nazev: string) => {
-    const v = vyrobci.find((x) => x.nazev === nazev);
+    const v = nazev === PRODAVAJICI ? prodavajici : vyrobci.find((x) => x.nazev === nazev);
     if (!v) return;
 
     setForm((p) => ({
@@ -342,6 +351,13 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
       zemePuvodu: p.zemePuvodu || (v.zemePuvodu ?? ''),
     }));
   };
+
+  /** Výrobcem je sám prodávající – údaje přesně odpovídají nastavení firmy. */
+  const jeVlastniZnaceni =
+    !!prodavajici &&
+    form.vyrobceNazev.trim() === prodavajici.nazev &&
+    form.vyrobceAdresa.trim() === prodavajici.adresa &&
+    form.vyrobceEmail.trim() === prodavajici.email;
 
   /** Odkazy na náhledy, ať je po odchodu z formuláře uvolníme všechny. */
   const nahledy = useRef<string[]>([]);
@@ -831,7 +847,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             <h2 className="font-serif text-xl text-linda-espresso">Výrobce</h2>
             <p className="mt-1 text-xs text-linda-espresso/70">
               Vyžaduje nařízení EU 2023/988 (GPSR). Bez údajů o výrobci produkt nelze uložit –
-              zboží bez nich se nesmí nabízet.
+              zboží bez nich se nesmí nabízet. Když dodavatele neznáte, zvolte vlastní značení.
             </p>
           </div>
 
@@ -840,7 +856,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             u každého kousku znovu. Nabídka je jen předvyplnění: produkt si
             údaje nese dál sám, aby platily i po tom, co dodavatel skončí.
           */}
-          {vyrobci.length > 0 && (
+          {(vyrobci.length > 0 || prodavajici) && (
             <div className="text-xs">
               <label htmlFor="ulozeny-vyrobce" className="mb-1 block font-semibold text-linda-espresso">
                 Převzít od dříve zadaného výrobce
@@ -850,7 +866,13 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                 trida="w-full"
                 disabled={odesilam}
                 ikona={<Factory className="h-3.5 w-3.5" aria-hidden="true" />}
-                hodnota={vyrobci.some((v) => v.nazev === form.vyrobceNazev) ? form.vyrobceNazev : RUCNE}
+                hodnota={
+                  jeVlastniZnaceni
+                    ? PRODAVAJICI
+                    : vyrobci.some((v) => v.nazev === form.vyrobceNazev)
+                      ? form.vyrobceNazev
+                      : RUCNE
+                }
                 onZmena={(hodnota) =>
                   hodnota === RUCNE
                     ? setForm((p) => ({
@@ -867,10 +889,48 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
                 }
                 moznosti={[
                   { hodnota: RUCNE, popisek: 'Nový výrobce – vyplnit ručně' },
+                  ...(prodavajici
+                    ? [
+                        {
+                          hodnota: PRODAVAJICI,
+                          popisek: 'Vlastní značení – výrobcem jsem já',
+                          poznamka: prodavajici.nazev,
+                        },
+                      ]
+                    : []),
                   ...vyrobci.map((v) => ({ hodnota: v.nazev, popisek: v.nazev, poznamka: v.adresa })),
                 ]}
               />
             </div>
+          )}
+
+          {/* Vlastní značení platí jen s fyzickou visačkou – údaje na webu
+              musí sedět s tím, co zákaznice najde na kusu. */}
+          {jeVlastniZnaceni && (
+            <div className="rounded-xl bg-linda-sandLight p-4 text-xs text-linda-espresso shadow-neuInsetSm">
+              <p className="font-semibold">Před prodejem na kus připevněte visačku</p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-linda-espresso/80">
+                <li>
+                  Se stejnými údaji jako tady: {prodavajici?.nazev}, {prodavajici?.adresa},{' '}
+                  {prodavajici?.email}.
+                </li>
+                <li>Když visačka na oděv nejde, stačí štítek na obalový sáček.</li>
+                <li>
+                  Složení materiálu musí být česky (Bavlna, ne Cotton/Cotone) – pokud na
+                  původním štítku čeština chybí, dopište ji na tutéž visačku.
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {!prodavajici && (
+            <p className="text-xs text-linda-espresso/70">
+              Neznáte výrobce? Doplňte v{' '}
+              <Link href="/admin/nastaveni" className="font-semibold text-linda-cognac underline">
+                nastavení
+              </Link>{' '}
+              název, sídlo a e-mail firmy – pak tu půjde zvolit vlastní značení.
+            </p>
           )}
 
           <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
