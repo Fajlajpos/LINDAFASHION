@@ -201,6 +201,7 @@ export async function PUT(request: Request, { params }: Kontext) {
           zemePuvodu: vstup.jeDarkovyPoukaz ? null : vstup.zemePuvodu?.trim() || null,
           slozeniMaterialu: vstup.jeDarkovyPoukaz ? null : vstup.slozeniMaterialu?.trim() || null,
           obsahujeZivocisneCasti: vstup.jeDarkovyPoukaz ? false : (vstup.obsahujeZivocisneCasti ?? false),
+          fotkyUpraveneAi: vstup.fotkyUpraveneAi ?? false,
 
           // Přepočítat i při úpravě: přejmenovaný produkt by se jinak dál
           // hledal pod starým názvem a pod novým vůbec.

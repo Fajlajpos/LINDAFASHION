@@ -175,6 +175,7 @@ export const produktSchema = z
      * který je má.
      */
     obsahujeZivocisneCasti: z.boolean().optional().default(false),
+    fotkyUpraveneAi: z.boolean().optional().default(false),
 
     varianty: z.array(variantaSchema).min(1, 'Přidejte alespoň jednu variantu.').max(60),
     fotky: z.array(nahranaFotkaSchema).max(30).optional().default([]),

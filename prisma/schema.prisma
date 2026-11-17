@@ -247,6 +247,12 @@ model Product {
   /// protože `slozeniMaterialu` popisuje jen textilní část výrobku.
   obsahujeZivocisneCasti Boolean @default(false)
 
+  /// Modelka nebo pozadí na fotkách jsou vytvořené pomocí AI (zboží samo je
+  /// skutečné). Detail produktu to pak řekne u galerie – fotorealistický
+  /// člověk, který neexistuje, se nesmí tvářit jako skutečná fotografie
+  /// (čl. 50 AI Act) a zákaznice má vědět, že rozhoduje skutečný kus.
+  fotkyUpraveneAi Boolean @default(false)
+
   cenovaHistorie PriceHistory[]
 
   // Katalog filtruje na aktivní a řadí podle novinek; admin listuje po kategoriích.

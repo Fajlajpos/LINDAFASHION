@@ -415,6 +415,7 @@ export interface ProduktDetail extends ProduktVypis {
    */
   slozeniMaterialu: string | null;
   obsahujeZivocisneCasti: boolean;
+  fotkyUpraveneAi: boolean;
   vyrobceNazev: string | null;
   vyrobceAdresa: string | null;
   vyrobceEmail: string | null;
@@ -466,6 +467,7 @@ export const nacistProdukt = cache(async (slug: string): Promise<ProduktDetail |
     sku: p.sku,
     slozeniMaterialu: p.slozeniMaterialu,
     obsahujeZivocisneCasti: p.obsahujeZivocisneCasti,
+    fotkyUpraveneAi: p.fotkyUpraveneAi,
     vyrobceNazev: p.vyrobceNazev,
     vyrobceAdresa: p.vyrobceAdresa,
     vyrobceEmail: p.vyrobceEmail,

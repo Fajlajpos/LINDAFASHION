@@ -112,6 +112,7 @@ export default async function DetailProduktuPage({ params }: { params: { id: str
 
           slozeniMaterialu: produkt.slozeniMaterialu,
           obsahujeZivocisneCasti: produkt.obsahujeZivocisneCasti,
+          fotkyUpraveneAi: produkt.fotkyUpraveneAi,
           vyrobceNazev: produkt.vyrobceNazev,
           vyrobceAdresa: produkt.vyrobceAdresa,
           vyrobceEmail: produkt.vyrobceEmail,

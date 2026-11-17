@@ -65,6 +65,7 @@ export interface PocatecniProdukt {
   // GPSR + nařízení o textilu – viz sekce „Zákonné údaje o výrobku“ ve formuláři.
   slozeniMaterialu: string | null;
   obsahujeZivocisneCasti: boolean;
+  fotkyUpraveneAi: boolean;
   vyrobceNazev: string | null;
   vyrobceAdresa: string | null;
   vyrobceEmail: string | null;
@@ -270,6 +271,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
 
     slozeniMaterialu: produkt?.slozeniMaterialu ?? '',
     obsahujeZivocisneCasti: produkt?.obsahujeZivocisneCasti ?? false,
+    fotkyUpraveneAi: produkt?.fotkyUpraveneAi ?? false,
     vyrobceNazev: produkt?.vyrobceNazev ?? '',
     vyrobceAdresa: produkt?.vyrobceAdresa ?? '',
     vyrobceEmail: produkt?.vyrobceEmail ?? '',
@@ -518,6 +520,7 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
 
       slozeniMaterialu: form.slozeniMaterialu || null,
       obsahujeZivocisneCasti: form.obsahujeZivocisneCasti,
+      fotkyUpraveneAi: form.fotkyUpraveneAi,
       vyrobceNazev: form.vyrobceNazev || null,
       vyrobceAdresa: form.vyrobceAdresa || null,
       vyrobceEmail: form.vyrobceEmail || null,
@@ -1494,6 +1497,23 @@ export function FormularProduktu({ produkt, skrytNahravaniFotek = false }: Props
             className="h-4 w-4 cursor-pointer accent-linda-cognac"
           />
           <span className="text-linda-espresso/85">Doporučený produkt (zvýrazní se na úvodní stránce a v katalogu půjde napřed). Štítek „Nová kolekce“ dostane každý nový produkt sám na {DNY_NOVINKY} dní.</span>
+        </label>
+
+        {/* Tady, ne u fotek: při úpravě produktu je galerie mimo formulář
+            (`SpravaFotek`), takže by se políčko u nové a upravované položky
+            ukazovalo jinde. */}
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <input
+            type="checkbox"
+            checked={form.fotkyUpraveneAi}
+            disabled={odesilam}
+            onChange={(e) => setForm({ ...form, fotkyUpraveneAi: e.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-linda-cognac"
+          />
+          <span className="text-linda-espresso/85">
+            Modelka nebo pozadí na fotkách jsou vytvořené pomocí AI (u galerie se zobrazí
+            upozornění). Samotné oblečení musí na fotce vypadat přesně jako skutečný kus.
+          </span>
         </label>
       </div>
 

@@ -173,6 +173,7 @@ export async function POST(request: Request) {
         // Nařízení (EU) 1007/2011 – materiálové složení textilu v procentech.
         slozeniMaterialu: vstup.jeDarkovyPoukaz ? null : vstup.slozeniMaterialu?.trim() || null,
         obsahujeZivocisneCasti: vstup.jeDarkovyPoukaz ? false : (vstup.obsahujeZivocisneCasti ?? false),
+        fotkyUpraveneAi: vstup.fotkyUpraveneAi ?? false,
 
         /* Text pro hledání se odvozuje z polí výš, takže musí vzniknout
            u každého zápisu produktu – jinak nový kousek v katalogu je, ale

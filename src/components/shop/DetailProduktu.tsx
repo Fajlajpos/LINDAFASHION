@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Sparkles,
   Truck,
+  Info,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
@@ -223,6 +224,19 @@ export function DetailProduktu({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Čl. 50 AI Act + klamavá praktika: fotorealistická modelka, která
+              neexistuje, se nesmí tvářit jako fotografie. Hned pod galerií,
+              ne v podmínkách – tam ji nikdo nečte. */}
+          {maFotky && produkt.fotkyUpraveneAi && (
+            <p className="flex items-start gap-2 text-xs text-linda-espresso/75">
+              <Info className="mt-px h-3.5 w-3.5 shrink-0 text-linda-cognac" aria-hidden="true" />
+              <span>
+                Modelka a pozadí na fotografiích jsou vytvořené pomocí AI. Oblečení na nich odpovídá
+                skutečnému kusu.
+              </span>
+            </p>
           )}
         </div>
 
