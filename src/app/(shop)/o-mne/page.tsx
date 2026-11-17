@@ -108,7 +108,16 @@ export default async function OMnePage() {
                     className="object-cover"
                     priority
                   />
-                ) : (
+                ) : null}
+                {/* Zapuštěný stín musí ležet NAD fotkou – na rámečku pod ní ho
+                    obrázek celý zakryje a fotka pak vypadá nalepená. */}
+                {fotka && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-3xl shadow-neuInset"
+                  />
+                )}
+                {fotka ? null : (
                   <div className="flex h-full items-center justify-center">
                     <span className="flex h-24 w-24 items-center justify-center rounded-full bg-linda-cream shadow-neu">
                       <UserRound
