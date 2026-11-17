@@ -65,14 +65,14 @@ export const HeroSplit: React.FC<{ lhutaOdeslani: KratkaLhuta | null }> = ({ lhu
           se nedá zaostřit ani proklikat, takže navigaci klávesnicí to nemíchá. */}
       <div className="relative aspect-[4/3] w-full sm:aspect-[16/10] lg:order-last lg:aspect-auto lg:h-auto">
         <MediaFrame
-          src="/hero-amalfi.jpg"
-          alt="Žena v lněných šatech opřená o omítnutou zeď nad mořem"
+          src="/hero-zima.jpg"
+          alt="Žena v krémovém kabátě a roláku opřená o kamennou zeď se zimní výzdobou"
           sizes="(min-width: 1024px) 50vw, 100vw"
           priority
           quality={90}
-          /* 65 % drží ženu na pravé třetině pásu a nechá u spáry kus moře –
-             jediná studená barva na celé stránce, hned vedle teplé omítky. */
-          objectPosition="object-[65%_center]"
+          /* Fotka je na výšku a žena stojí vpravo: 70 % ji drží v záběru
+             a 8 % shora nechá hlavu celou v obraze, i když mobil ořízne výšku na 4:3. */
+          objectPosition="object-[70%_8%]"
         />
 
         {/* Stín, který stěna vrhá do fotky. Fyzikálně sedí na světlo zleva
