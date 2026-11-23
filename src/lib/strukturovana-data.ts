@@ -11,6 +11,8 @@ import type { ProduktDetail } from './katalog';
 import type { NastaveniWebu } from './nastaveni';
 import { odkazNaMapu, oteviraciDobaProSchema, rozlozitAdresu } from './prodejna';
 import { adresaWebu } from './adresa-webu';
+import { dostupneDopravy } from './shipping';
+import { DNU_NA_ODSTOUPENI } from './lhuty';
 
 export const ZAKLADNI_URL = adresaWebu('https://lindafashion.cz');
 
@@ -91,8 +93,51 @@ export function mistniProvozovnaLd(nastaveni: NastaveniWebu) {
   };
 }
 
-export function produktLd(produkt: ProduktDetail) {
+/**
+ * Doprava pro Google Merchant listings (`shippingDetails`).
+ *
+ * Ceny jdou z `dostupneDopravy()` – stejný zdroj jako pokladna, takže
+ * výsledky hledání nemohou slibovat jinou cenu, než se naúčtuje. Bez
+ * nastavené dopravy se pole vynechá: neuvedená cena je lepší než vymyšlená.
+ * Doba přepravy 1–2 dny je obvyklá doba českých dopravců po předání
+ * zásilky; vlastní lhůtu odeslání bere z `dodaciLhutaDnu`.
+ */
+function dopravaLd(cena: number, nastaveni: NastaveniWebu) {
+  const prah = nastaveni.prahDopravaZdarma;
+  const zdarma = prah != null && cena >= prah;
+
+  return dostupneDopravy(nastaveni).map((d) => ({
+    '@type': 'OfferShippingDetails',
+    shippingLabel: d.nazev,
+    shippingRate: { '@type': 'MonetaryAmount', value: (zdarma ? 0 : d.cena).toFixed(2), currency: 'CZK' },
+    shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'CZ' },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: nastaveni.dodaciLhutaDnu, unitCode: 'DAY' },
+      transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 2, unitCode: 'DAY' },
+    },
+  }));
+}
+
+/**
+ * Vrácení zboží (`hasMerchantReturnPolicy`) – 14 dní od převzetí (§ 1829),
+ * poštou, náklady na vrácení nese kupující (obchodní podmínky).
+ */
+function vraceniLd() {
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'CZ',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: DNU_NA_ODSTOUPENI,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+    merchantReturnLink: absolutni('/odstoupeni'),
+  };
+}
+
+export function produktLd(produkt: ProduktDetail, nastaveni: NastaveniWebu) {
   const cena = produkt.cenaPoSleve ?? produkt.cena;
+  const doprava = dopravaLd(cena, nastaveni);
   const dostupnost =
     produkt.sklademCelkem > 0
       ? 'https://schema.org/InStock'
@@ -121,6 +166,8 @@ export function produktLd(produkt: ProduktDetail) {
       availability: dostupnost,
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', name: 'LINDA FASHION' },
+      ...(doprava.length ? { shippingDetails: doprava } : {}),
+      hasMerchantReturnPolicy: vraceniLd(),
     },
   };
 }

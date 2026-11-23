@@ -93,7 +93,7 @@ export default async function DetailProduktPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-7xl space-y-16 px-4 py-12 sm:px-6 lg:px-8">
       {/* Strukturovaná data pro vyhledávače a AI asistenty (sekce 12). */}
-      <JsonLd data={produktLd(produkt)} />
+      <JsonLd data={produktLd(produkt, nastaveni)} />
       <JsonLd data={drobeckyLd(drobecky)} />
 
       <nav aria-label="Drobečková navigace">
