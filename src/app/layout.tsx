@@ -1,23 +1,30 @@
 import type { Metadata, Viewport } from 'next';
-import { Cormorant_Garamond, Plus_Jakarta_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import '../styles/globals.css';
 import { ZAKLADNI_URL } from '@/lib/strukturovana-data';
 
-// Samohostované fonty: bez render-blocking requestu na Google a bez CLS
-// (`display: swap` + automatický fallback s upravenými metrikami).
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700'],
-  style: ['normal', 'italic'],
+// Fonty leží v repozitáři (`src/fonts`), ne na Google Fonts. `next/font/google`
+// je stahoval při každém `next build` a výpadek té odpovědi shodil produkční
+// build na Coolify už dvakrát (`TypeError: Cannot read properties of null
+// (reading '1')` v loaderu), bez jakékoli změny v kódu. Soubory jsou
+// variabilní fonty z github.com/google/fonts (OFL), zúžené na latin +
+// latin-ext – čeština tam je celá. Bez CLS dál: `display: swap` a fallback
+// s upravenými metrikami generuje `next/font/local` stejně.
+const cormorant = localFont({
+  src: [
+    { path: '../fonts/cormorant-garamond.woff2', weight: '300 700', style: 'normal' },
+    { path: '../fonts/cormorant-garamond-italic.woff2', weight: '300 700', style: 'italic' },
+  ],
   variable: '--font-cormorant',
   display: 'swap',
+  fallback: ['Georgia', 'serif'],
 });
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['300', '400', '500', '600', '700'],
+const jakarta = localFont({
+  src: [{ path: '../fonts/plus-jakarta-sans.woff2', weight: '200 800', style: 'normal' }],
   variable: '--font-jakarta',
   display: 'swap',
+  fallback: ['system-ui', 'sans-serif'],
 });
 
 /*
